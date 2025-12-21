@@ -1,0 +1,139 @@
+
+import React from 'react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, ShieldAlert } from 'lucide-react';
+
+export const ISLAMIC_QUOTES = [
+  {
+    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّاسِ",
+    en: "The best of people are those who are most beneficial to people.",
+    bn: "মানুষের মধ্যে সেই সর্বোত্তম, যে মানুষের জন্য সবচেয়ে বেশি উপকারী।"
+  },
+  {
+    arabic: "إِنَّ اللَّهَ جَمِيلٌ يُحِبُّ الْجَمَالَ",
+    en: "Indeed, Allah is Beautiful and He loves beauty.",
+    bn: "নিশ্চয়ই আল্লাহ সুন্দর এবং তিনি সৌন্দর্যকে পছন্দ করেন।"
+  },
+  {
+    arabic: "الرَّاحِمُونَ يَرْحَمُهُمُ الرَّحْمَنُ",
+    en: "The merciful will be shown mercy by the Most Merciful.",
+    bn: "দয়ালু ব্যক্তিদের ওপর পরম দয়াময় (আল্লাহ) দয়া করেন।"
+  },
+  {
+    arabic: "الدِّينُ النَّصِيحَةُ",
+    en: "Religion is sincere advice (wishing well for others).",
+    bn: "দীন হলো (সবার জন্য) একনিষ্ঠ শুভকামনা।"
+  }
+];
+
+export const TRANSLATIONS = {
+  en: {
+    home: "Home",
+    leadership: "Leadership",
+    events: "Events",
+    about: "About Us",
+    donation: "Donation",
+    impact: "Impact",
+    admin: "Admin Panel",
+    slogan: "Education · Unity · Service · Peace · Sports",
+    established: "Established: 10 June 1988",
+    donate: "Donate Now",
+    callToAction: "Request / Complaint / Application",
+    donorName: "Donor Name",
+    anonymous: "Anonymous",
+    amount: "Amount",
+    phone: "Phone Number",
+    txid: "Transaction ID",
+    purpose: "Donation Purpose",
+    submit: "Submit",
+    totalDonations: "Total Donations",
+    activeEvents: "Active Events",
+    members: "Members",
+    address: "Address",
+    email: "Email",
+    recentDonors: "Recent Donors",
+    incomeExpense: "Income & Expense",
+    downloadReceipt: "Download Receipt",
+    generateLetterhead: "Generate Letterhead",
+    settings: "Settings",
+    syncData: "Sync Database",
+    logout: "Logout",
+    paymentInstructions: "Please send money to our mobile banking numbers and provide the Transaction ID below.",
+    copy: "Copy",
+    copied: "Copied!",
+    adminLogin: "Admin Login",
+    password: "Password",
+    login: "Login",
+    approve: "Approve",
+    reject: "Reject",
+    delete: "Delete",
+    dashboard: "Dashboard",
+    financials: "Financials",
+    letterhead: "Letterhead",
+    categories: ["Education", "Health", "Mosque/Madrasa", "Sports", "General Welfare"],
+    inspiration: "Daily Inspiration"
+  },
+  bn: {
+    home: "মূল পাতা",
+    leadership: "নেতৃবৃন্দ",
+    events: "ইভেন্টস",
+    about: "আমাদের সম্পর্কে",
+    donation: "অনুদান",
+    impact: "প্রভাব",
+    admin: "এডমিন প্যানেল",
+    slogan: "শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া",
+    established: "প্রতিষ্ঠিত: ১০ জুন ১৯৮৮",
+    donate: "অনুদান দিন",
+    callToAction: "আবেদন / অভিযোগ / অনুরোধ",
+    donorName: "দাতার নাম",
+    anonymous: "নাম প্রকাশে অনিচ্ছুক",
+    amount: "পরিমাণ",
+    phone: "মোবাইল নম্বর",
+    txid: "ট্রানজেকশন আইডি",
+    purpose: "অণুদানের উদ্দেশ্য",
+    submit: "জমা দিন",
+    totalDonations: "মোট অনুদান",
+    activeEvents: "চলমান ইভেন্টস",
+    members: "সদস্যবৃন্দ",
+    address: "ঠিকানা",
+    email: "ইমেইল",
+    recentDonors: "সাম্প্রতিক দাতাগণ",
+    incomeExpense: "আয় ও ব্যয়",
+    downloadReceipt: "রসিদ ডাউনলোড",
+    generateLetterhead: "লেটারহেড তৈরি",
+    settings: "সেটিংস",
+    syncData: "ডাটাবেস সিঙ্ক",
+    logout: "লগআউট",
+    paymentInstructions: "অনুগ্রহ করে নিচের নাম্বারে টাকা পাঠিয়ে ট্রানজেকশন আইডিটি প্রদান করুন।",
+    copy: "কপি",
+    copied: "কপি হয়েছে!",
+    adminLogin: "এডমিন লগইন",
+    password: "পাসওয়ার্ড",
+    login: "লগইন",
+    approve: "অনুমোদন",
+    reject: "বাতিল",
+    delete: "মুছে ফেলুন",
+    dashboard: "ড্যাশবোর্ড",
+    financials: "আর্থিক হিসাব",
+    letterhead: "লেটারহেড",
+    categories: ["শিক্ষা", "চিকিৎসা", "মসজিদ/মাদরাসা", "ক্রীড়া", "সাধারণ কল্যাণ"],
+    inspiration: "প্রতিদিনের প্রেরণা"
+  }
+};
+
+export const NAV_ITEMS = [
+  { label: 'home', path: '/', icon: <Home size={20} /> },
+  { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
+  { label: 'events', path: '/events', icon: <Calendar size={20} /> },
+  { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
+  { label: 'impact', path: '/impact', icon: <PieChart size={20} /> },
+];
+
+export const ADMIN_NAV_ITEMS = [
+  { label: 'dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
+  { label: 'leadership', path: '/admin/leadership', icon: <Users size={20} /> },
+  { label: 'donation', path: '/admin/donations', icon: <Heart size={20} /> },
+  { label: 'events', path: '/admin/events', icon: <Calendar size={20} /> },
+  { label: 'financials', path: '/admin/financials', icon: <PieChart size={20} /> },
+  { label: 'letterhead', path: '/admin/letterhead', icon: <FileText size={20} /> },
+  { label: 'settings', path: '/admin/settings', icon: <Settings size={20} /> },
+];

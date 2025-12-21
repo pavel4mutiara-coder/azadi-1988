@@ -1,0 +1,7 @@
+{
+  "name": "Azadi Social Welfare Organization",
+  "description": "A production-ready bilingual social welfare platform for Azadi Social Welfare Organization with admin panel, donation management, and digital letterhead system.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
