@@ -36,10 +36,9 @@ interface AppState {
   retryCloudConnection: () => void;
 }
 
-const DB_NAME = 'AzadiSocietyAppDB_v1';
+const DB_NAME = 'AzadiSocietyAppDB_v2';
 const STORE_NAME = 'permanent_storage';
 
-// New High-Stability CDN Link for Google Drive
 const LOGO_ID = "1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
 const NEW_LOGO_URL = `https://lh3.googleusercontent.com/d/${LOGO_ID}`;
 
@@ -64,10 +63,6 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   youtube: "https://youtube.com/@azadisocialwelfareorganization?si=gD7Akj6EdMYjHuFe",
   whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
 };
-
-const DEFAULT_LEADERSHIP: Leadership[] = [
-  { id: 'p1', nameEn: 'Md. Abdus Sabir (Tutul)', nameBn: 'মোঃ আব্দুছ ছাবির (টুটুল)', designationEn: 'President', designationBn: 'সভাপতি', messageEn: '', messageBn: '', phone: '01711975488', image: NEW_LOGO_URL, order: 1 },
-];
 
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -136,7 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [financials, setFinancials] = useState<FinancialRecord[]>([]);
   const [settings, setSettings] = useState<OrganizationSettings>(DEFAULT_SETTINGS);
   const [letterhead, setLetterhead] = useState<LetterheadConfig>({
-    leaderName: "মোঃ আব্দuছ ছাবির (টুটুল)",
+    leaderName: "মোঃ আব্দুছ ছাবির (টুটুল)",
     designation: "সভাপতি",
     signature: "",
     stampText: "আজাদী সমাজ কল্যাণ সংঘ, সিলেট",
@@ -156,11 +151,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.lang) setLang(localData.lang);
         if (localData.theme) setTheme(localData.theme);
         if (localData.donations) setDonations(localData.donations);
-        if (localData.leadership?.length > 5) setLeadership(localData.leadership);
+        if (localData.leadership?.length) setLeadership(localData.leadership);
         if (localData.events) setEvents(localData.events);
         if (localData.financials) setFinancials(localData.financials);
         
-        // Merge settings and ensure logo is fixed
         setSettings({ 
           ...DEFAULT_SETTINGS, 
           ...localData.settings,
@@ -176,7 +170,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCloudErrorType(type as any);
         if (error) setCloudErrorMessage(error);
       } else if (cloudData) {
-        if (cloudData.settings?.nameBn) {
+        if (cloudData.settings) {
           setSettings({ 
             ...DEFAULT_SETTINGS, 
             ...cloudData.settings,

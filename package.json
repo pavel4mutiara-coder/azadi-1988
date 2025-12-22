@@ -5,10 +5,10 @@
   "description": "Azadi Social Welfare Organization Android App",
   "main": "index.tsx",
   "scripts": {
-    "build": "echo 'Building assets...'",
-    "android:add": "npx cap add android",
-    "android:open": "npx cap open android",
-    "android:sync": "npx cap sync android"
+    "build": "npx cap copy",
+    "sync": "npx cap sync android",
+    "open:android": "npx cap open android",
+    "make:apk": "npx cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
