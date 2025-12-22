@@ -1,0 +1,22 @@
+
+{
+  "name": "আজাদী সমাজ কল্যাণ সংঘ",
+  "short_name": "আজাদী",
+  "description": "Azadi Social Welfare Organization Official Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#065f46",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=192&h=192&fit=crop",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=512&h=512&fit=crop",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

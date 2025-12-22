@@ -1,4 +1,5 @@
 
+// AppContext.tsx: Manages global state including bilingual settings and cloud synchronization.
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, Donation, Leadership, Event, FinancialRecord, OrganizationSettings, LetterheadConfig, DonationStatus } from './types';
 import { saveToCloud, loadFromCloud, reEnableCloudNetwork } from './firebase';
@@ -17,8 +18,9 @@ interface AppState {
   cloudSynced: boolean;
   cloudApiError: boolean;
   cloudErrorType: 'api-disabled' | 'not-found' | 'billing-required' | 'auth' | 'none';
-  cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
+  // Added cloudErrorMessage property to fix error in AdminDashboard.tsx
   cloudErrorMessage: string;
+  cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
   setLang: (lang: Language) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   login: (password: string) => boolean;
@@ -31,12 +33,11 @@ interface AppState {
   addFinancialRecord: (record: Omit<FinancialRecord, 'id' | 'date'>) => void;
   updateLeadership: (leadership: Leadership[]) => void;
   updateEvents: (events: Event[]) => void;
-  clearAllData: () => void;
   syncDatabase: () => void;
   retryCloudConnection: () => void;
 }
 
-const DB_NAME = 'AzadiSocietyFinalDB_v1';
+const DB_NAME = 'AzadiSocietyAppDB_v1';
 const STORE_NAME = 'permanent_storage';
 
 const DEFAULT_SETTINGS: OrganizationSettings = {
@@ -130,9 +131,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoaded, setIsLoaded] = useState(false);
   const [cloudSynced, setCloudSynced] = useState(false);
   const [cloudErrorType, setCloudErrorType] = useState<'api-disabled' | 'not-found' | 'billing-required' | 'auth' | 'none'>('none');
+  // Added cloudErrorMessage state
+  const [cloudErrorMessage, setCloudErrorMessage] = useState('');
   const [cloudApiError, setCloudApiError] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
-  const [cloudErrorMessage, setCloudErrorMessage] = useState('');
 
   useEffect(() => {
     const startApp = async () => {
@@ -148,17 +150,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.letterhead) setLetterhead(localData.letterhead);
       }
 
-      const { data: cloudData, type } = await loadFromCloud();
+      // Capture error message from cloud load
+      const { data: cloudData, type, error } = await loadFromCloud();
       if (type) {
         setCloudApiError(true);
         setCloudErrorType(type as any);
+        if (error) setCloudErrorMessage(error);
       } else if (cloudData) {
         if (cloudData.settings?.nameBn) setSettings(cloudData.settings);
         if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
-        if (cloudData.events) setEvents(cloudData.events);
         if (cloudData.donations) setDonations(cloudData.donations);
-        if (cloudData.financials) setFinancials(cloudData.financials);
-        if (cloudData.letterhead) setLetterhead(cloudData.letterhead);
         setCloudSynced(true);
       }
       setIsLoaded(true);
@@ -170,14 +171,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isLoaded) {
       const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
       dbSave(state);
-      
       const timer = setTimeout(async () => {
         if (!cloudApiError) {
           const result = await saveToCloud(state);
           setCloudSynced(result.success);
-          if (!result.success && result.type) {
+          // Store error message if cloud save fails
+          if (result.error) setCloudErrorMessage(result.error);
+          if (result.type) {
             setCloudApiError(true);
-            setCloudErrorType(result.type as any);
+            setCloudErrorType(result.type);
           }
         }
       }, 5000);
@@ -192,7 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError, cloudErrorType, cloudSyncStatus, cloudErrorMessage,
+      lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError, cloudErrorType, cloudErrorMessage, cloudSyncStatus,
       setLang, setTheme, login, logout: () => setIsAdmin(false),
       addDonation: (d) => {
         const newD = { ...d, id: Date.now().toString(), status: isAdmin ? DonationStatus.APPROVED : DonationStatus.PENDING, date: new Date().toISOString() };
@@ -208,26 +210,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       updateLeadership: (l) => setLeadership(l),
       updateEvents: (ev) => setEvents(ev),
-      clearAllData: async () => {
-        if (window.confirm("মুছে ফেলতে চান?")) {
-          const db = await initDB();
-          const tx = db.transaction(STORE_NAME, 'readwrite');
-          tx.objectStore(STORE_NAME).clear();
-          tx.oncomplete = () => window.location.reload();
-        }
-      },
       syncDatabase: async () => {
         setCloudSyncStatus('syncing');
-        const { data: cloudData } = await loadFromCloud();
+        const { data: cloudData, error, type } = await loadFromCloud();
         if (cloudData) {
           if (cloudData.donations) setDonations(cloudData.donations);
           if (cloudData.settings) setSettings(cloudData.settings);
           setCloudSyncStatus('success');
-          alert("Synced Successfully!");
+          setCloudSynced(true);
+        } else {
+          setCloudSyncStatus('error');
+          if (error) setCloudErrorMessage(error);
+          if (type) setCloudErrorType(type);
         }
       },
       retryCloudConnection: async () => {
-        setCloudSyncStatus('syncing');
         const enabled = await reEnableCloudNetwork();
         if (enabled) window.location.reload();
       }

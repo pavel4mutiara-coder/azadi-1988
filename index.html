@@ -1,9 +1,18 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azadi Social Welfare Organization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare</title>
+    
+    <!-- PWA & Mobile Meta -->
+    <meta name="theme-color" content="#065f46">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=192&h=192&fit=crop">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -11,9 +20,10 @@
         theme: {
           extend: {
             colors: {
-              slate: {
-                950: '#020617',
-              }
+              slate: { 950: '#020617' }
+            },
+            screens: {
+              'xs': '400px',
             }
           }
         }
@@ -27,76 +37,29 @@
             --font-bengali: 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
             --font-english: 'Inter', sans-serif;
         }
-
         body {
             font-family: var(--font-english), var(--font-bengali);
-            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
         }
-
-        /* Enforce high-quality Bengali font for all Bengali script */
-        [lang="bn"], .bengali, :lang(bn) { 
-            font-family: var(--font-bengali) !important;
-            line-height: 1.6;
-            font-weight: 500;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: var(--font-bengali), var(--font-english);
-            letter-spacing: -0.01em;
-        }
+        [lang="bn"], .bengali { font-family: var(--font-bengali) !important; }
         
-        .arabic-calligraphy { font-family: 'serif'; font-style: italic; }
+        /* Custom scrollbar for better UI */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
         
-        .official-stamp {
-            width: 130px;
-            height: 130px;
-            border: 4px double #065f46;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 12px;
-            position: relative;
-            transform: rotate(-12deg);
-            opacity: 0.85;
-            color: #065f46;
-            font-weight: 800;
-            font-size: 11px;
-            text-transform: uppercase;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .dark .official-stamp {
-            border-color: #34d399;
-            color: #34d399;
-        }
-        
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #1e293b; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .dark ::-webkit-scrollbar-thumb:hover { background: #334155; }
-
-        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
+        /* Print settings */
         @media print {
             .no-print { display: none !important; }
-            body { background: white !important; color: black !important; }
+            body { background: white !important; }
         }
 
-        /* Improved accessibility focus states */
-        :focus-visible {
-            outline: 2px solid #10b981;
-            outline-offset: 2px;
+        /* App-like transitions */
+        .page-transition { animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 <script type="importmap">
@@ -111,7 +74,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-emerald-100 dark:selection:bg-emerald-900/40 selection:text-emerald-900 dark:selection:text-emerald-100">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen">
     <div id="root"></div>
 </body>
 </html>

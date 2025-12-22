@@ -1,7 +1,13 @@
 {
-  "name": "Azadi Social Welfare Organization",
-  "description": "A production-ready bilingual social welfare platform for Azadi Social Welfare Organization with admin panel, donation management, and digital letterhead system.",
+  "name": "Azadi Social Welfare",
+  "short_name": "Azadi",
+  "description": "Official App of Azadi Social Welfare Organization (Est. 1988)",
   "requestFramePermissions": [
-    "camera"
-  ]
+    "camera",
+    "microphone"
+  ],
+  "theme_color": "#065f46",
+  "background_color": "#020617",
+  "display": "standalone",
+  "orientation": "portrait"
 }
