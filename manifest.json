@@ -9,12 +9,12 @@
   "theme_color": "#065f46",
   "icons": [
     {
-      "src": "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=192&h=192&fit=crop",
+      "src": "https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=512&h=512&fit=crop",
+      "src": "https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID",
       "sizes": "512x512",
       "type": "image/png"
     }

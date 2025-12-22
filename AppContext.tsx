@@ -18,7 +18,6 @@ interface AppState {
   cloudSynced: boolean;
   cloudApiError: boolean;
   cloudErrorType: 'api-disabled' | 'not-found' | 'billing-required' | 'auth' | 'none';
-  // Added cloudErrorMessage property to fix error in AdminDashboard.tsx
   cloudErrorMessage: string;
   cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
   setLang: (lang: Language) => void;
@@ -51,7 +50,7 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   email: "azadisocialwelfareorganization@gmail.com",
   establishedBn: "১০ জুন ১৯৮৮ (২৭ শে জৈষ্ঠ ১৩৯৫)",
   establishedEn: "10 June 1988",
-  logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
+  logo: "https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID",
   flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Flag_of_Bangladesh.svg/200px-Flag_of_Bangladesh.svg.png",
   adminWhatsApp: "8801711975488",
   bkash: "01711975488",
@@ -131,7 +130,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoaded, setIsLoaded] = useState(false);
   const [cloudSynced, setCloudSynced] = useState(false);
   const [cloudErrorType, setCloudErrorType] = useState<'api-disabled' | 'not-found' | 'billing-required' | 'auth' | 'none'>('none');
-  // Added cloudErrorMessage state
   const [cloudErrorMessage, setCloudErrorMessage] = useState('');
   const [cloudApiError, setCloudApiError] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
@@ -150,7 +148,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.letterhead) setLetterhead(localData.letterhead);
       }
 
-      // Capture error message from cloud load
       const { data: cloudData, type, error } = await loadFromCloud();
       if (type) {
         setCloudApiError(true);
@@ -175,7 +172,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!cloudApiError) {
           const result = await saveToCloud(state);
           setCloudSynced(result.success);
-          // Store error message if cloud save fails
           if (result.error) setCloudErrorMessage(result.error);
           if (result.type) {
             setCloudApiError(true);
