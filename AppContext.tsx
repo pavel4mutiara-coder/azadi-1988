@@ -55,8 +55,39 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   adminWhatsApp: "8801711975488",
   bkash: "01711975488",
   nagad: "01711975488",
-  roket: "01711975488"
+  roket: "01711975488",
+  facebook: "https://facebook.com",
+  youtube: "https://youtube.com",
+  whatsappChannel: "https://whatsapp.com"
 };
+
+// Full Committee Leadership Data provided by User
+const DEFAULT_LEADERSHIP: Leadership[] = [
+  { id: 'p1', nameEn: 'Md. Abdus Sabir (Tutul)', nameBn: 'মোঃ আব্দুছ ছাবির (টুটুল)', designationEn: 'President', designationBn: 'সভাপতি', messageEn: '', messageBn: '', phone: '01711975488', image: DEFAULT_SETTINGS.logo, order: 1 },
+  { id: 'vp1', nameEn: 'Adv. Shahanur', nameBn: 'এস এস নুরুল হুদা চৌঃ (এডঃ শাহানুর)', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 2 },
+  { id: 'vp2', nameEn: 'Aminur Rahman (Shamim)', nameBn: 'আমিনুর রহমান (শামীম)', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 3 },
+  { id: 'vp3', nameEn: 'Jubed Ahmad', nameBn: 'জুবেদ আহমদ', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 4 },
+  { id: 'gs1', nameEn: 'Junel Ahmad', nameBn: 'জুনেল আহমদ', designationEn: 'General Secretary', designationBn: 'সাধারণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 5 },
+  { id: 'ags1', nameEn: 'Kawser Ahmad (Pappu)', nameBn: 'কাওসার আহমদ (পাপ্পু)', designationEn: 'Asst. General Secretary', designationBn: 'সহ-সাধারণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 6 },
+  { id: 'os1', nameEn: 'Tareq Ahmad', nameBn: 'তারেক আহমদ', designationEn: 'Organizing Secretary', designationBn: 'সাংগঠনিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 7 },
+  { id: 'os2', nameEn: '', nameBn: '', designationEn: 'Asst. Organizing Secretary', designationBn: 'সহ-সাংগঠনিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 8 },
+  { id: 'sws1', nameEn: 'Najib Salam', nameBn: 'নাজিব সালাম', designationEn: 'Social Welfare Secretary', designationBn: 'সমাজ কল্যাণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 9 },
+  { id: 'sws2', nameEn: 'Samin Ahmad Limon', nameBn: 'সামিন আহমদ লিমন', designationEn: 'Asst. Social Welfare Secretary', designationBn: 'সহ-সমাজ কল্যাণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 10 },
+  { id: 'trs1', nameEn: 'Abdul Malik (Biplob)', nameBn: 'আব্দুল মালিক (বিপ্লব)', designationEn: 'Treasurer', designationBn: 'অর্থ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 11 },
+  { id: 'trs2', nameEn: 'Abdul Hadi (Rumman)', nameBn: 'আব্দুল হাদী (রুম্মান)', designationEn: 'Asst. Treasurer', designationBn: 'সহ-অর্থ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 12 },
+  { id: 'pubs1', nameEn: 'Arafat Islam (Boni)', nameBn: 'আরাফাত ইসলাম (বনি)', designationEn: 'Publicity Secretary', designationBn: 'প্রচার সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 13 },
+  { id: 'pubs2', nameEn: '', nameBn: '', designationEn: 'Asst. Publicity Secretary', designationBn: 'সহ-প্রচার সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 14 },
+  { id: 'sps1', nameEn: 'Rafayat Malik (Rafi)', nameBn: 'রাফায়াত মালিক (রাফি)', designationEn: 'Sports Secretary', designationBn: 'ক্রীড়া সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 15 },
+  { id: 'sps2', nameEn: 'Harun Ahmad', nameBn: 'হারুণ আহমদ', designationEn: 'Asst. Sports Secretary', designationBn: 'সহ-ক্রীড়া সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 16 },
+  { id: 'rels1', nameEn: 'Nayeem Ahmad', nameBn: 'নাঈম আহমদ', designationEn: 'Religious Secretary', designationBn: 'ধর্ম সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 17 },
+  { id: 'rels2', nameEn: '', nameBn: '', designationEn: 'Asst. Religious Secretary', designationBn: 'সহ-ধর্ম সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 18 },
+  { id: 'edus1', nameEn: 'Shafayat Rasul (Alif)', nameBn: 'শাফায়াত রসুল (আলিফ)', designationEn: 'Education & Cultural Secretary', designationBn: 'শিক্ষা-সাহিত্য ও সাংস্কৃতিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 19 },
+  { id: 'edus2', nameEn: 'Aminul Islam (Nabil)', nameBn: 'আমিনুল ইসলাম (নাবিল)', designationEn: 'Asst. Education & Cultural Secretary', designationBn: 'সহ-শিক্ষা-সাহিত্য ও সাংস্কৃতিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 20 },
+  { id: 'wom1', nameEn: '', nameBn: '', designationEn: 'Women\'s Affairs Secretary', designationBn: 'মহিলা সম্পাদিকা', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 21 },
+  { id: 'wom2', nameEn: '', nameBn: '', designationEn: 'Asst. Women\'s Affairs Secretary', designationBn: 'সহ-মহিলা সম্পাদিকা', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 22 },
+  { id: 'off1', nameEn: '', nameBn: '', designationEn: 'Office Secretary', designationBn: 'দপ্তর সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 23 },
+  { id: 'off2', nameEn: '', nameBn: '', designationEn: 'Asst. Office Secretary', designationBn: 'সহ-দপ্তর সম্পাদক', messageEn: '', messageBn: '', phone: '', image: DEFAULT_SETTINGS.logo, order: 24 }
+];
 
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -102,7 +133,11 @@ export const compressImage = (base64Str: string, maxWidth = 800, maxHeight = 800
       }
       canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
+      if (ctx) {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+      }
       resolve(canvas.toDataURL('image/jpeg', 0.8));
     };
     img.onerror = () => resolve(base64Str);
@@ -141,11 +176,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.lang) setLang(localData.lang);
         if (localData.theme) setTheme(localData.theme);
         if (localData.donations) setDonations(localData.donations);
-        if (localData.leadership) setLeadership(localData.leadership);
+        if (localData.leadership?.length > 5) setLeadership(localData.leadership);
+        else setLeadership(DEFAULT_LEADERSHIP); // Load full committee if local is incomplete
         if (localData.events) setEvents(localData.events);
         if (localData.financials) setFinancials(localData.financials);
-        if (localData.settings) setSettings(localData.settings);
+        if (localData.settings) {
+          setSettings({ 
+            ...DEFAULT_SETTINGS, 
+            ...localData.settings,
+            logo: localData.settings.logo || DEFAULT_SETTINGS.logo 
+          });
+        }
         if (localData.letterhead) setLetterhead(localData.letterhead);
+      } else {
+        setLeadership(DEFAULT_LEADERSHIP);
       }
 
       const { data: cloudData, type, error } = await loadFromCloud();
@@ -154,7 +198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCloudErrorType(type as any);
         if (error) setCloudErrorMessage(error);
       } else if (cloudData) {
-        if (cloudData.settings?.nameBn) setSettings(cloudData.settings);
+        if (cloudData.settings?.nameBn) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
         if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
         if (cloudData.donations) setDonations(cloudData.donations);
         setCloudSynced(true);
@@ -211,7 +255,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data: cloudData, error, type } = await loadFromCloud();
         if (cloudData) {
           if (cloudData.donations) setDonations(cloudData.donations);
-          if (cloudData.settings) setSettings(cloudData.settings);
+          if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
+          if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
           setCloudSyncStatus('success');
           setCloudSynced(true);
         } else {

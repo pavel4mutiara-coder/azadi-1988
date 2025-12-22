@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp, compressImage } from '../AppContext';
 import { TRANSLATIONS } from '../constants';
-import { Settings, Save, Globe, Mail, Upload, CheckCircle } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Upload, CheckCircle, Facebook, Youtube, MessageCircle, RefreshCcw, Image as ImageIcon } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
   const { lang, settings, saveSettings } = useApp();
@@ -18,14 +18,24 @@ export const SettingsManager: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = async () => {
+      reader.onload = async () => {
         const base64 = reader.result as string;
-        // Compress image before saving to state
-        const compressed = await compressImage(base64);
-        setFormData(prev => ({ ...prev, [key]: compressed }));
+        try {
+          // Compress image before saving to state
+          const compressed = await compressImage(base64);
+          setFormData(prev => ({ ...prev, [key]: compressed }));
+        } catch (err) {
+          console.error("Compression error:", err);
+          setFormData(prev => ({ ...prev, [key]: base64 }));
+        }
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const restoreOriginalLogo = () => {
+    const originalLogo = "https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID";
+    setFormData(prev => ({ ...prev, logo: originalLogo }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -66,30 +76,46 @@ export const SettingsManager: React.FC = () => {
             <div className="grid sm:grid-cols-2 gap-8 relative z-10">
                <div className="space-y-4">
                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 block ml-1">Official Logo</label>
-                 <div className="relative group">
-                   <div className="w-full h-48 bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center overflow-hidden transition-all group-hover:border-emerald-500">
-                     <div className="w-36 h-36 relative rounded-full border-[4px] border-emerald-600 bg-white p-2 shadow-2xl flex items-center justify-center overflow-hidden">
-                        <img src={formData.logo} className="w-full h-full object-contain relative z-10" alt="Logo Preview" />
-                     </div>
+                 <div className="flex flex-col gap-4">
+                   <div className="relative w-full aspect-square bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center overflow-hidden">
+                      {formData.logo ? (
+                        <div className="w-40 h-40 relative rounded-full border-[4px] border-emerald-600 bg-white p-2 shadow-2xl flex items-center justify-center overflow-hidden">
+                          <img src={formData.logo} className="w-full h-full object-contain relative z-10" alt="Logo Preview" onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://via.placeholder.com/150?text=Logo+Error";
+                          }} />
+                        </div>
+                      ) : (
+                        <ImageIcon size={48} className="text-slate-300" />
+                      )}
                    </div>
-                   <label className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 bg-emerald-600/90 backdrop-blur-md rounded-[2rem] text-white transition-all">
-                     <Upload size={28} className="mb-2" /> 
-                     <span className="font-black text-xs uppercase tracking-widest">Update Logo</span>
-                     <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'logo')} />
-                   </label>
+                   <div className="flex flex-col gap-2">
+                     <label htmlFor="logo-upload" className="w-full cursor-pointer flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md">
+                       <Upload size={18} /> Update Logo
+                     </label>
+                     <button type="button" onClick={restoreOriginalLogo} className="w-full flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                       <RefreshCcw size={18} /> Restore Original
+                     </button>
+                     <input id="logo-upload" type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'logo')} />
+                   </div>
                  </div>
                </div>
+
                <div className="space-y-4">
                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 block ml-1">Flag</label>
-                 <div className="relative group">
-                   <div className="w-full h-48 bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center overflow-hidden transition-all group-hover:border-emerald-500">
-                     <img src={formData.flag} className="w-40 h-24 object-cover rounded-xl shadow-lg" alt="Flag Preview" />
+                 <div className="flex flex-col gap-4">
+                   <div className="w-full aspect-square bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center overflow-hidden">
+                     {formData.flag ? (
+                        <img src={formData.flag} className="w-40 h-24 object-cover rounded-xl shadow-lg" alt="Flag Preview" />
+                     ) : (
+                        <ImageIcon size={48} className="text-slate-300" />
+                     )}
                    </div>
-                   <label className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 bg-emerald-600/90 backdrop-blur-md rounded-[2rem] text-white transition-all">
-                     <Upload size={28} className="mb-2" /> 
-                     <span className="font-black text-xs uppercase tracking-widest">Update Flag</span>
-                     <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'flag')} />
-                   </label>
+                   <div className="flex flex-col gap-2">
+                     <label htmlFor="flag-upload" className="w-full cursor-pointer flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md">
+                       <Upload size={18} /> Update Flag
+                     </label>
+                     <input id="flag-upload" type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'flag')} />
+                   </div>
                  </div>
                </div>
             </div>
@@ -108,6 +134,35 @@ export const SettingsManager: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">Slogan</label>
                 <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.sloganBn} onChange={e => setFormData({...formData, sloganBn: e.target.value})} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-8">
+            <h3 className="text-2xl font-black flex items-center gap-4 text-slate-900 dark:text-white">
+              <Facebook className="text-blue-600" /> Social Media Links
+            </h3>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">Facebook Page URL</label>
+                <div className="relative">
+                  <Facebook size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" />
+                  <input type="url" placeholder="https://facebook.com/page" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold" value={formData.facebook} onChange={e => setFormData({...formData, facebook: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">YouTube Channel URL</label>
+                <div className="relative">
+                  <Youtube size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-red-600" />
+                  <input type="url" placeholder="https://youtube.com/@channel" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold" value={formData.youtube} onChange={e => setFormData({...formData, youtube: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">WhatsApp Channel URL</label>
+                <div className="relative">
+                  <MessageCircle size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600" />
+                  <input type="url" placeholder="https://whatsapp.com/channel/..." className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold" value={formData.whatsappChannel} onChange={e => setFormData({...formData, whatsappChannel: e.target.value})} />
+                </div>
               </div>
             </div>
           </div>

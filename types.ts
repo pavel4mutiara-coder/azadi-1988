@@ -71,6 +71,9 @@ export interface OrganizationSettings {
   bkash: string;
   nagad: string;
   roket: string;
+  facebook: string;
+  youtube: string;
+  whatsappChannel: string;
 }
 
 export interface LetterheadConfig {

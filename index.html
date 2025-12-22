@@ -65,12 +65,24 @@
             --font-bengali: 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
             --font-english: 'Inter', sans-serif;
         }
+        
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: var(--font-english), var(--font-bengali);
-            -webkit-tap-highlight-color: transparent;
             user-select: none;
             -webkit-user-select: none;
+            overflow-x: hidden;
+            width: 100%;
         }
+
+        .safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
         [lang="bn"], .bengali { font-family: var(--font-bengali) !important; }
         
         ::-webkit-scrollbar { width: 4px; }
@@ -85,6 +97,11 @@
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Prevent text scaling issues on rotate */
+        html {
+            -webkit-text-size-adjust: 100%;
         }
     </style>
 
@@ -102,7 +119,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>
