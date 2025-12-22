@@ -2,7 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../AppContext';
 import { TRANSLATIONS } from '../constants';
-import { FileText, Printer, Save, Edit3, MapPin, Phone, Mail, Upload, Eraser, PenTool, Check } from 'lucide-react';
+import { FileText, Printer, Save, Edit3, MapPin, Phone, Mail, Upload, Eraser, PenTool, Check, Download } from 'lucide-react';
+
+declare var html2pdf: any;
 
 export const LetterheadManager: React.FC = () => {
   const { lang, settings, letterhead, saveLetterhead } = useApp();
@@ -11,7 +13,9 @@ export const LetterheadManager: React.FC = () => {
   const [viewMode, setViewMode] = useState<'bn' | 'en'>(lang);
   const [today, setToday] = useState('');
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const letterheadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString(viewMode === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
@@ -49,6 +53,29 @@ export const LetterheadManager: React.FC = () => {
 
   const handleSave = () => { saveLetterhead(localConfig); alert(lang === 'bn' ? 'লেটারহেড সংরক্ষিত হয়েছে!' : 'Letterhead saved!'); };
 
+  const handleDownloadPDF = async () => {
+    if (!letterheadRef.current) return;
+    setIsGeneratingPdf(true);
+
+    const element = letterheadRef.current;
+    const opt = {
+      margin: 0,
+      filename: `Azadi_Letterhead_${Date.now()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert(lang === 'bn' ? 'পিডিএফ তৈরিতে সমস্যা হয়েছে!' : 'Failed to generate PDF!');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-200 dark:border-slate-800 pb-8 no-print">
@@ -65,6 +92,9 @@ export const LetterheadManager: React.FC = () => {
             <button onClick={() => setViewMode('en')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${viewMode === 'en' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-md' : 'text-slate-500'}`}>English</button>
           </div>
           <button onClick={handleSave} className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl hover:bg-emerald-700 transition-all"><Save size={20} /> {t.submit}</button>
+          <button onClick={handleDownloadPDF} disabled={isGeneratingPdf} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50">
+            <Download size={20} className={isGeneratingPdf ? 'animate-bounce' : ''} /> {isGeneratingPdf ? (lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...') : (lang === 'bn' ? 'ডাউনলোড PDF' : 'Download PDF')}
+          </button>
           <button onClick={() => window.print()} className="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl transition-all"><Printer size={20} /> Print</button>
         </div>
       </div>
@@ -99,7 +129,7 @@ export const LetterheadManager: React.FC = () => {
         </div>
 
         <div className="lg:col-span-8 bg-slate-100 dark:bg-slate-950 p-8 md:p-12 rounded-[3.5rem] border border-slate-200 dark:border-slate-800 shadow-inner print:p-0 print:border-0 print:bg-white">
-          <div className="bg-white p-12 md:p-14 shadow-2xl min-h-[1100px] w-full text-slate-900 mx-auto relative flex flex-col print:shadow-none print:m-0 print:p-12">
+          <div ref={letterheadRef} className="bg-white p-12 md:p-14 shadow-2xl min-h-[1100px] w-full text-slate-900 mx-auto relative flex flex-col print:shadow-none print:m-0 print:p-12">
             
             {/* Header Structure: Slogan Centered Top */}
             <div className="border-b-[4px] border-emerald-800 pb-10 flex flex-col items-center relative">
