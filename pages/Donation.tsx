@@ -40,11 +40,12 @@ export const Donation: React.FC = () => {
     }
 
     // Phone validation (Bangladeshi Format: 01 followed by 9 digits)
+    // Supports 013, 014, 015, 016, 017, 018, 019
     const phoneRegex = /^01[3-9]\d{8}$/;
     if (!formData.phone) {
       errs.phone = lang === 'bn' ? 'মোবাইল নম্বর লিখুন' : 'Phone is required';
     } else if (!phoneRegex.test(formData.phone)) {
-      errs.phone = lang === 'bn' ? 'সঠিক ১১ ডিজিট নম্বর লিখুন (যেমন: 017...)' : 'Enter valid 11-digit BD number (e.g. 017...)';
+      errs.phone = lang === 'bn' ? 'সঠিক ১১ ডিজিট নম্বর লিখুন (০১৮...)' : 'Enter valid 11-digit BD number (e.g. 018...)';
     }
 
     // Name validation
@@ -76,7 +77,12 @@ export const Donation: React.FC = () => {
     e.preventDefault();
     if (!isValid) {
       // Mark all as touched to show errors
-      const allTouched = Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {});
+      const allTouched = {
+        donorName: true,
+        amount: true,
+        phone: true,
+        transactionId: true,
+      };
       setTouched(allTouched);
       return;
     }
@@ -182,11 +188,15 @@ export const Donation: React.FC = () => {
                 <input 
                   required 
                   type="tel" 
+                  maxLength={11}
                   onBlur={() => handleBlur('phone')}
                   className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-4.5 rounded-2xl focus:ring-2 ring-emerald-500/20 dark:ring-emerald-400/10 outline-none transition-all text-slate-900 dark:text-white font-bold`} 
                   placeholder="01XXXXXXXXX" 
                   value={formData.phone} 
-                  onChange={e => setFormData({...formData, phone: e.target.value})} 
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    if (val.length <= 11) setFormData({...formData, phone: val});
+                  }} 
                 />
                 {touched.phone && errors.phone && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.phone}</p>}
               </div>

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp, compressImage } from '../AppContext';
 import { TRANSLATIONS } from '../constants';
-import { Users, Plus, Trash2, Edit2, Upload } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, Upload, AlertTriangle, X } from 'lucide-react';
 import { Leadership } from '../types';
 
 export const LeadershipManager: React.FC = () => {
@@ -10,6 +10,7 @@ export const LeadershipManager: React.FC = () => {
   const t = TRANSLATIONS[lang];
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Omit<Leadership, 'id'>>({
     nameEn: '',
@@ -39,7 +40,7 @@ export const LeadershipManager: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image) {
-      alert('দয়া করে একটি ছবি আপলোড করুন।');
+      alert(lang === 'bn' ? 'দয়া করে একটি ছবি আপলোড করুন।' : 'Please upload a photo.');
       return;
     }
     if (editingId) {
@@ -65,9 +66,10 @@ export const LeadershipManager: React.FC = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('আপনি কি নিশ্চিত?')) {
-      updateLeadership(leadership.filter(l => l.id !== id));
+  const handleConfirmDelete = () => {
+    if (deleteConfirmId) {
+      updateLeadership(leadership.filter(l => l.id !== deleteConfirmId));
+      setDeleteConfirmId(null);
     }
   };
 
@@ -77,15 +79,17 @@ export const LeadershipManager: React.FC = () => {
     setShowForm(true);
   };
 
+  const leaderToDelete = leadership.find(l => l.id === deleteConfirmId);
+
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
+    <div className="space-y-10 animate-in fade-in duration-500 relative">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 dark:text-white flex items-center gap-3">
             <Users className="text-emerald-500" />
             {t.leadership}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Bilingual Leadership Management</p>
+          <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">Bilingual Leadership Management</p>
         </div>
         <button 
           onClick={() => { resetForm(); setShowForm(true); }}
@@ -97,7 +101,7 @@ export const LeadershipManager: React.FC = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-2xl space-y-8">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-2xl space-y-8 animate-in slide-in-from-top-4">
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="flex flex-col items-center gap-4">
               <div className="relative group">
@@ -158,7 +162,7 @@ export const LeadershipManager: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {leadership.map(leader => (
-          <div key={leader.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex items-center gap-4 group">
+          <div key={leader.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex items-center gap-4 group hover:border-emerald-500/50 transition-all">
             <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-emerald-500/10">
               <img src={leader.image} className="w-full h-full object-cover" alt={leader.nameEn} />
             </div>
@@ -168,11 +172,49 @@ export const LeadershipManager: React.FC = () => {
             </div>
             <div className="flex flex-col gap-2">
               <button onClick={() => handleEdit(leader)} className="p-2 text-slate-400 hover:text-emerald-500 transition-all"><Edit2 size={16} /></button>
-              <button onClick={() => handleDelete(leader.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
+              <button onClick={() => setDeleteConfirmId(leader.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Custom Deletion Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[3rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-8 animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-20 h-20 rounded-3xl bg-rose-50 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center shadow-inner">
+                <AlertTriangle size={40} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'সদস্য মুছে ফেলুন?' : 'Confirm Deletion'}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                  {lang === 'bn' 
+                    ? `আপনি কি নিশ্চিত যে আপনি "${leaderToDelete?.nameBn}"-কে তালিকা থেকে মুছে ফেলতে চান?` 
+                    : `Are you sure you want to remove "${leaderToDelete?.nameEn}" from the committee list?`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black py-4 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button 
+                onClick={handleConfirmDelete}
+                className="flex-1 bg-rose-600 text-white font-black py-4 rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
+              >
+                {lang === 'bn' ? 'মুছে ফেলুন' : 'Delete Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

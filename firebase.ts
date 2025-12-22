@@ -10,11 +10,15 @@ import {
   persistentMultipleTabManager,
   disableNetwork,
   enableNetwork,
-  onSnapshotsInSync
+  onSnapshotsInSync,
+  setLogLevel
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Database Engineer Note: ACTIVE PROJECT IS azadi-93ad1
 export const FIREBASE_PROJECT_ID = "azadi-93ad1";
+
+// Silence internal SDK logs to prevent console clutter during first-time setup
+setLogLevel('silent');
 
 const firebaseConfig = {
   apiKey: "AIzaSyAoliEs1RFNRO_aKhUN5LycqmjuWFDXiGw",
@@ -39,23 +43,41 @@ export const db = initializeFirestore(app, {
 /**
  * Enhanced Save function with detailed error reporting
  */
-export const saveToCloud = async (data: any, isRetry = false): Promise<{success: boolean, error?: string, type?: 'auth' | 'not-found' | 'api-disabled'}> => {
+export const saveToCloud = async (data: any, isRetry = false): Promise<{success: boolean, error?: string, type?: 'auth' | 'not-found' | 'api-disabled' | 'billing-required'}> => {
   try {
     const docRef = doc(db, "azadi_organization", "state_v2");
     await setDoc(docRef, data);
+    // Success! Clear all error flags
     localStorage.removeItem('azadi_cloud_disabled');
+    localStorage.removeItem('azadi_db_missing');
+    localStorage.removeItem('azadi_billing_required');
     return { success: true };
   } catch (e: any) {
     const errorMsg = e.message?.toLowerCase() || '';
-    console.error("Cloud Error Code:", e.code);
-    console.error("Cloud Error Message:", errorMsg);
+    const errorCode = e.code || '';
     
-    if (errorMsg.includes('not exist') || errorMsg.includes('not-found')) {
-      return { success: false, error: "Database instance missing. Visit Firebase Console and 'Create Database'.", type: 'not-found' };
+    // Catch Billing Required specifically (Required for some projects to use Firestore)
+    if (errorMsg.includes('billing') || errorMsg.includes('billing-enabled') || errorMsg.includes('requires billing')) {
+      localStorage.setItem('azadi_billing_required', 'true');
+      return { 
+        success: false, 
+        error: "Google Cloud Billing must be enabled for project " + FIREBASE_PROJECT_ID, 
+        type: 'billing-required' 
+      };
+    }
+
+    // Specifically catch database not found / not exist
+    if (errorMsg.includes('not exist') || errorMsg.includes('not-found') || errorCode === 'not-found') {
+      localStorage.setItem('azadi_db_missing', 'true');
+      return { 
+        success: false, 
+        error: "Firestore database instance (default) is missing. Please create it in the Firebase console.", 
+        type: 'not-found' 
+      };
     }
     
-    // Catch API disabled specifically
-    if (errorMsg.includes('not been used') || errorMsg.includes('api has not been used') || errorMsg.includes('disabled')) {
+    // Catch API disabled specifically (403 or explicit message)
+    if (errorMsg.includes('not been used') || errorMsg.includes('api has not been used') || errorMsg.includes('disabled') || (errorCode === 'permission-denied' && errorMsg.includes('api'))) {
       if (!isRetry) {
         localStorage.setItem('azadi_cloud_disabled', 'true');
         disableNetwork(db).catch(() => {});
@@ -63,10 +85,15 @@ export const saveToCloud = async (data: any, isRetry = false): Promise<{success:
       return { success: false, error: "Cloud Firestore API is not enabled in Google Cloud Console.", type: 'api-disabled' };
     }
 
-    if (e.code === 'permission-denied') {
+    if (errorCode === 'permission-denied') {
       return { success: false, error: "Permission Denied. Check your Firestore Security Rules.", type: 'auth' };
     }
     
+    // Handle offline/network issues
+    if (errorCode === 'unavailable') {
+        return { success: false, error: "Cloud service is currently unavailable. Working in offline mode." };
+    }
+
     return { success: false, error: e.message };
   }
 };
@@ -74,20 +101,37 @@ export const saveToCloud = async (data: any, isRetry = false): Promise<{success:
 /**
  * Loads data from Cloud.
  */
-export const loadFromCloud = async (): Promise<{data: any | null, error?: string, type?: string}> => {
+export const loadFromCloud = async (): Promise<{data: any | null, error?: string, type?: 'auth' | 'not-found' | 'api-disabled' | 'billing-required'}> => {
   try {
     const docRef = doc(db, "azadi_organization", "state_v2");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       localStorage.removeItem('azadi_cloud_disabled');
+      localStorage.removeItem('azadi_db_missing');
+      localStorage.removeItem('azadi_billing_required');
       return { data: docSnap.data() };
     }
     return { data: null };
   } catch (e: any) {
     const errorMsg = e.message?.toLowerCase() || '';
-    if (errorMsg.includes('not-found') || errorMsg.includes('not exist')) return { data: null, type: 'not-found' };
-    if (errorMsg.includes('disabled') || errorMsg.includes('not been used')) return { data: null, type: 'api-disabled' };
-    return { data: null, error: e.message };
+    const errorCode = e.code || '';
+    
+    if (errorMsg.includes('billing') || errorMsg.includes('billing-enabled') || errorMsg.includes('requires billing')) {
+        localStorage.setItem('azadi_billing_required', 'true');
+        return { data: null, type: 'billing-required' };
+    }
+
+    if (errorMsg.includes('not-found') || errorMsg.includes('not exist') || errorCode === 'not-found') {
+        localStorage.setItem('azadi_db_missing', 'true');
+        return { data: null, type: 'not-found' };
+    }
+    
+    if (errorMsg.includes('disabled') || errorMsg.includes('not been used') || (errorCode === 'permission-denied' && errorMsg.includes('api'))) {
+        localStorage.setItem('azadi_cloud_disabled', 'true');
+        return { data: null, type: 'api-disabled' };
+    }
+        
+    return { data: null, error: e.message as any };
   }
 };
 
@@ -96,6 +140,8 @@ export const loadFromCloud = async (): Promise<{data: any | null, error?: string
  */
 export const reEnableCloudNetwork = async () => {
   localStorage.removeItem('azadi_cloud_disabled');
+  localStorage.removeItem('azadi_db_missing');
+  localStorage.removeItem('azadi_billing_required');
   try {
     await enableNetwork(db);
     return true;
@@ -103,4 +149,4 @@ export const reEnableCloudNetwork = async () => {
     console.error("Enable Network Failed:", e);
     return false;
   }
-};
+}
