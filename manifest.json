@@ -2,23 +2,31 @@
 {
   "name": "আজাদী সমাজ কল্যাণ সংঘ",
   "short_name": "আজাদী",
-  "description": "Azadi Social Welfare Organization Official Platform",
+  "description": "Azadi Social Welfare Organization Official Platform - Est. 1988",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#065f46",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
       "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
@@ -26,6 +34,26 @@
       "type": "image/png"
     }
   ],
-  "orientation": "portrait",
-  "categories": ["social", "welfare", "education"]
+  "shortcuts": [
+    {
+      "name": "Donation",
+      "url": "/#/donation",
+      "icons": [{ "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh", "sizes": "192x192" }]
+    },
+    {
+      "name": "Events",
+      "url": "/#/events",
+      "icons": [{ "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["social", "welfare", "non-profit"],
+  "screenshots": [
+    {
+      "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home Screen of Azadi App"
+    }
+  ]
 }

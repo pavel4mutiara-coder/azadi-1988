@@ -1,12 +1,13 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext';
 import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS } from '../constants';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, Languages, LogOut, Heart, MapPin, Phone, Mail, 
   Loader2, LayoutDashboard, Home, PieChart, Users, Calendar,
-  ShieldCheck, Facebook, Youtube, MessageCircle, Lock, ShieldAlert
+  ShieldCheck, Facebook, Youtube, MessageCircle, Lock, ShieldAlert,
+  DownloadCloud, X
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -15,7 +16,37 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const t = TRANSLATIONS[lang];
   const isPublicPage = !location.pathname.startsWith('/admin');
 
-  // Hardcoded stable fallback
+  // PWA Install Prompt Logic
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      // Only show banner if not already installed and on mobile
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        setShowInstallBanner(true);
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      setDeferredPrompt(null);
+      setShowInstallBanner(false);
+      console.log('PWA was installed');
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowInstallBanner(false);
+    }
+  };
+
   const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
 
   const OrganizationSeal = ({ className = "w-12 h-12" }: { className?: string }) => (
@@ -36,7 +67,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const openSocialLink = (url: string) => {
     if (!url) return;
-    // For native behavior in WebView, we ensure it's absolute
     const targetUrl = url.startsWith('http') ? url : `https://${url}`;
     window.open(targetUrl, '_blank');
   };
@@ -55,6 +85,29 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <div className={`flex flex-col min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'dark' : ''} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100`} lang={lang}>
+      {/* PWA Install Banner */}
+      {showInstallBanner && (
+        <div className="fixed bottom-24 left-4 right-4 z-[100] bg-emerald-900 text-white p-4 rounded-3xl shadow-2xl border border-emerald-700 animate-in slide-in-from-bottom-10 lg:hidden flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shrink-0">
+               <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App Icon" />
+            </div>
+            <div>
+              <p className="font-black text-sm bengali">অ্যাপটি ইন্সটল করুন</p>
+              <p className="text-[10px] opacity-70 font-bold bengali">সহজ ও দ্রুত ব্যবহারের জন্য</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleInstallClick} className="bg-white text-emerald-900 px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 shadow-lg">
+              <DownloadCloud size={16} /> ইন্সটল
+            </button>
+            <button onClick={() => setShowInstallBanner(false)} className="p-2 text-white/50 hover:text-white">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 no-print shadow-sm">
         <div className="container mx-auto px-4 h-18 sm:h-22 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-3 sm:gap-4 group min-w-0 flex-1 lg:flex-initial">
@@ -78,6 +131,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Desktop Install Button */}
+            {deferredPrompt && (
+              <button onClick={handleInstallClick} className="hidden lg:flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 border border-emerald-100 dark:border-emerald-800 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all">
+                <DownloadCloud size={16} /> Install App
+              </button>
+            )}
+
             <Link to="/admin" title={isAdmin ? t.dashboard : t.adminLogin} className={`p-2.5 sm:p-3 rounded-xl transition-all border shadow-sm flex items-center gap-2 ${isAdmin ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200'}`}>
               <ShieldAlert size={18} />
               <span className="hidden xl:inline text-[10px] font-black uppercase tracking-widest bengali">
@@ -103,7 +163,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {children}
       </main>
 
-      <footer className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 pt-16 md:pt-24 pb-12">
+      {/* Bottom Nav for Mobile - Like an App */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between z-[90] shadow-[0_-10px_30px_rgba(0,0,0,0.05)] no-print">
+        {NAV_ITEMS.map((item) => (
+          <Link key={item.path} to={item.path} className={`flex flex-col items-center gap-1.5 ${location.pathname === item.path ? 'text-emerald-600' : 'text-slate-400'}`}>
+            <div className={`p-2 rounded-2xl transition-all ${location.pathname === item.path ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 shadow-inner' : ''}`}>
+              {React.cloneElement(item.icon as React.ReactElement<any>, { size: 24 })}
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest bengali">{t[item.label as keyof typeof t] as string}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <footer className="hidden lg:block bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 pt-16 md:pt-24 pb-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 pb-16">
             <div className="lg:col-span-5 space-y-8">
