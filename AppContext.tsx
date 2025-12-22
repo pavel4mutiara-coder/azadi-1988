@@ -16,6 +16,8 @@ interface AppState {
   isLoaded: boolean;
   cloudSynced: boolean;
   cloudApiError: boolean;
+  cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
+  cloudErrorMessage: string;
   setLang: (lang: Language) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   login: (password: string) => boolean;
@@ -126,6 +128,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoaded, setIsLoaded] = useState(false);
   const [cloudSynced, setCloudSynced] = useState(false);
   const [cloudApiError, setCloudApiError] = useState(localStorage.getItem('azadi_cloud_disabled') === 'true');
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
+  const [cloudErrorMessage, setCloudErrorMessage] = useState('');
 
   useEffect(() => {
     const startApp = async () => {
@@ -141,11 +145,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.letterhead) setLetterhead(localData.letterhead);
       }
 
-      const { data: cloudData, apiDisabled } = await loadFromCloud();
-      if (apiDisabled) {
+      const { data: cloudData, error, type } = await loadFromCloud();
+      if (error || type) {
         setCloudApiError(true);
-      } else {
-        setCloudApiError(false);
+        setCloudErrorMessage(error || `System type: ${type}`);
       }
       
       if (cloudData) {
@@ -163,22 +166,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && !cloudApiError) {
       const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
       dbSave(state);
       
       const timer = setTimeout(async () => {
         const result = await saveToCloud(state);
         setCloudSynced(result.success);
-        if (result.apiDisabled) {
-          setCloudApiError(true);
-        } else {
-          setCloudApiError(false);
+        if (!result.success && result.error) {
+           setCloudErrorMessage(result.error);
+           if (result.type === 'api-disabled') setCloudApiError(true);
+        } else if (result.success) {
+           setCloudApiError(false);
+           setCloudErrorMessage('');
         }
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [lang, theme, donations, leadership, events, financials, settings, letterhead, isLoaded]);
+  }, [lang, theme, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudApiError]);
 
   const login = (password: string) => {
     if (password === 'azadi1988') { setIsAdmin(true); return true; }
@@ -195,37 +200,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const syncDatabase = async () => {
-    const { data: cloudData, apiDisabled } = await loadFromCloud();
-    if (apiDisabled) {
-      alert("Cloud API is still disabled. Please enable it in the Google Cloud Console first.");
+    setCloudSyncStatus('syncing');
+    const { data: cloudData, error } = await loadFromCloud();
+    if (error) {
+      setCloudSyncStatus('error');
+      setCloudErrorMessage(error);
       return;
     }
     
     if (cloudData) {
+      setCloudSyncStatus('success');
       alert("Cloud Sync Successful!");
       window.location.reload();
     } else {
-      alert("No data found or connection issue. Trying to push local data...");
       const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
-      await saveToCloud(state);
+      const result = await saveToCloud(state);
+      if (result.success) {
+        setCloudSyncStatus('success');
+      } else {
+        setCloudSyncStatus('error');
+      }
     }
   };
 
   const retryCloudConnection = async () => {
-    await reEnableCloudNetwork();
-    const result = await saveToCloud({ lang, theme, donations, leadership, events, financials, settings, letterhead });
+    setCloudSyncStatus('syncing');
+    setCloudErrorMessage('কানেকশন চেক করা হচ্ছে...');
+    
+    // Attempt re-enable
+    const enabled = await reEnableCloudNetwork();
+    if (!enabled) {
+      setCloudSyncStatus('error');
+      setCloudErrorMessage('Network Enable Failed');
+      return;
+    }
+    
+    // Give Firestore network a longer moment to re-initialize
+    await new Promise(r => setTimeout(r, 1500));
+    
+    const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
+    // Pass true to indicate this is a manual retry, avoiding auto-disable
+    const result = await saveToCloud(state, true);
+    
     if (result.success) {
       setCloudSynced(true);
       setCloudApiError(false);
-      alert("Database Connected Successfully!");
+      setCloudSyncStatus('success');
+      setCloudErrorMessage('');
+      alert("অভিনন্দন! ডাটাবেজ সফলভাবে সংযুক্ত হয়েছে।");
+      window.location.reload();
     } else {
-      alert("Still unable to connect. Did you click 'Enable' in the Cloud Console?");
+      setCloudSyncStatus('error');
+      setCloudErrorMessage(result.error || 'Unknown Error');
+      if (result.type === 'api-disabled') {
+        alert("Firestore API এখনও সচল হয়নি। গুগল কনসোলে গিয়ে 'Enable' বাটনে ক্লিক করে ২-৩ মিনিট অপেক্ষা করুন।");
+      } else if (result.type === 'not-found') {
+        alert("Firestore ডাটাবেজ তৈরি করা হয়নি। দয়া করে 'Create Database' বাটনে ক্লিক করুন।");
+      } else {
+        alert("কানেকশন ব্যর্থ। গুগল ক্লাউডে প্রজেক্ট আইডি 'azadi-93ad1' ঠিক আছে কিনা চেক করুন।");
+      }
     }
   };
 
   return (
     <AppContext.Provider value={{
-      lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError,
+      lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError, cloudSyncStatus, cloudErrorMessage,
       setLang, setTheme, login, logout: () => setIsAdmin(false),
       addDonation: (d) => {
         const newD = { ...d, id: Date.now().toString(), status: DonationStatus.PENDING, date: new Date().toISOString() };

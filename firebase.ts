@@ -13,73 +13,86 @@ import {
   onSnapshotsInSync
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Database Engineer Note: ACTIVE PROJECT IS azadi-93ad1
+export const FIREBASE_PROJECT_ID = "azadi-93ad1";
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDxw9RA6f6vHJSEGtkQr6I9rLcrmaWNpDI",
-  authDomain: "hussain-5124c.firebaseapp.com",
-  projectId: "hussain-5124c",
-  storageBucket: "hussain-5124c.firebasestorage.app",
-  messagingSenderId: "926810630370",
-  appId: "1:926810630370:web:3ff9b561ef4c728dac56bb",
-  measurementId: "G-YR2E5VH6WH"
+  apiKey: "AIzaSyAoliEs1RFNRO_aKhUN5LycqmjuWFDXiGw",
+  authDomain: `${FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: FIREBASE_PROJECT_ID,
+  storageBucket: `${FIREBASE_PROJECT_ID}.firebasestorage.app`,
+  messagingSenderId: "957941587028",
+  appId: "1:957941587028:web:8125c3c5f7106efe0aa1c1",
+  measurementId: "G-X6079WQEKQ"
 };
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with high-performance persistent cache
+// Initialize Firestore with robust local persistence
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
 });
 
-// Listener to check sync status
-onSnapshotsInSync(db, () => {
-  console.log("Database Sync: Everything is up to date.");
-});
-
 /**
- * Robust Save function that detects API status
+ * Enhanced Save function with detailed error reporting
  */
-export const saveToCloud = async (data: any): Promise<{success: boolean, apiDisabled?: boolean}> => {
+export const saveToCloud = async (data: any, isRetry = false): Promise<{success: boolean, error?: string, type?: 'auth' | 'not-found' | 'api-disabled'}> => {
   try {
     const docRef = doc(db, "azadi_organization", "state_v2");
     await setDoc(docRef, data);
     localStorage.removeItem('azadi_cloud_disabled');
     return { success: true };
   } catch (e: any) {
-    console.error("Cloud Save Error:", e.code);
-    if (e.code === 'permission-denied' || e.message?.toLowerCase().includes('disabled')) {
-      localStorage.setItem('azadi_cloud_disabled', 'true');
-      return { success: false, apiDisabled: true };
+    const errorMsg = e.message?.toLowerCase() || '';
+    console.error("Cloud Error Code:", e.code);
+    console.error("Cloud Error Message:", errorMsg);
+    
+    if (errorMsg.includes('not exist') || errorMsg.includes('not-found')) {
+      return { success: false, error: "Database instance missing. Visit Firebase Console and 'Create Database'.", type: 'not-found' };
     }
-    return { success: false };
+    
+    // Catch API disabled specifically
+    if (errorMsg.includes('not been used') || errorMsg.includes('api has not been used') || errorMsg.includes('disabled')) {
+      if (!isRetry) {
+        localStorage.setItem('azadi_cloud_disabled', 'true');
+        disableNetwork(db).catch(() => {});
+      }
+      return { success: false, error: "Cloud Firestore API is not enabled in Google Cloud Console.", type: 'api-disabled' };
+    }
+
+    if (e.code === 'permission-denied') {
+      return { success: false, error: "Permission Denied. Check your Firestore Security Rules.", type: 'auth' };
+    }
+    
+    return { success: false, error: e.message };
   }
 };
 
 /**
- * Direct Load function
+ * Loads data from Cloud.
  */
-export const loadFromCloud = async (): Promise<{data: any | null, apiDisabled?: boolean}> => {
+export const loadFromCloud = async (): Promise<{data: any | null, error?: string, type?: string}> => {
   try {
     const docRef = doc(db, "azadi_organization", "state_v2");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       localStorage.removeItem('azadi_cloud_disabled');
-      return { data: docSnap.data(), apiDisabled: false };
+      return { data: docSnap.data() };
     }
-    return { data: null, apiDisabled: false };
+    return { data: null };
   } catch (e: any) {
-    if (e.code === 'permission-denied' || e.message?.toLowerCase().includes('disabled')) {
-      localStorage.setItem('azadi_cloud_disabled', 'true');
-      return { data: null, apiDisabled: true };
-    }
-    return { data: null, apiDisabled: false };
+    const errorMsg = e.message?.toLowerCase() || '';
+    if (errorMsg.includes('not-found') || errorMsg.includes('not exist')) return { data: null, type: 'not-found' };
+    if (errorMsg.includes('disabled') || errorMsg.includes('not been used')) return { data: null, type: 'api-disabled' };
+    return { data: null, error: e.message };
   }
 };
 
 /**
- * Explicitly try to reconnect the network
+ * Re-connects the database network
  */
 export const reEnableCloudNetwork = async () => {
   localStorage.removeItem('azadi_cloud_disabled');
@@ -87,6 +100,7 @@ export const reEnableCloudNetwork = async () => {
     await enableNetwork(db);
     return true;
   } catch (e) {
+    console.error("Enable Network Failed:", e);
     return false;
   }
 };
