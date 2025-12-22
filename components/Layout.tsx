@@ -5,7 +5,8 @@ import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS } from '../constants';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, Languages, LogOut, Heart, MapPin, Phone, Mail, 
-  Loader2, LayoutDashboard, Home, PieChart, Users, Calendar
+  Loader2, LayoutDashboard, Home, PieChart, Users, Calendar,
+  ShieldCheck, Lock
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -83,13 +84,23 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Admin Panel Button */}
+            {isPublicPage && (
+              <Link to="/admin" className="p-2 sm:p-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 transition-all items-center gap-2 text-[10px] sm:text-xs font-black uppercase flex group">
+                <ShieldCheck size={18} className="group-hover:rotate-12 transition-transform" />
+                <span className="text-slate-700 dark:text-slate-300 hidden sm:inline">{t.admin}</span>
+              </Link>
+            )}
+
             <button onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')} className="p-2 sm:p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all items-center gap-2 text-[10px] sm:text-xs font-black uppercase flex">
               <Languages size={18} className="text-emerald-600 dark:text-emerald-400" />
               <span className="text-slate-700 dark:text-slate-300 hidden xs:inline">{lang.toUpperCase()}</span>
             </button>
+            
             <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="p-2.5 sm:p-3 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-800 group shadow-sm">
               {theme === 'light' ? <Moon size={18} className="text-slate-600" /> : <Sun size={18} className="text-amber-400" />}
             </button>
+            
             {isAdmin && <button onClick={logout} className="p-2.5 sm:p-3 rounded-xl text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 transition-all"><LogOut size={18} /></button>}
           </div>
         </div>
