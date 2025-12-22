@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
+    <!-- Android Specific Meta -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#065f46">
+    
     <!-- Primary Meta Tags -->
     <title>আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare</title>
     <meta name="title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
@@ -15,16 +20,10 @@
     <meta property="og:url" content="https://azadi-1988.vercel.app/">
     <meta property="og:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
     <meta property="og:description" content="মানবসেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা। শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া।">
-    <meta property="og:image" content="https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
-    <!-- PWA & Mobile Meta -->
-    <meta name="theme-color" content="#065f46">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
-    
-    <!-- Icons (Favicon) -->
-    <link rel="icon" type="image/png" href="https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -46,7 +45,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
     
-    <!-- PDF Generation Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
@@ -68,13 +66,13 @@
             width: 100%;
             text-rendering: optimizeLegibility;
             -webkit-font-smoothing: antialiased;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* Essential for Bengali ligatures - prevent letter-spacing from breaking them */
         [lang="bn"], .bengali { 
             font-family: var(--font-bengali) !important; 
             letter-spacing: normal !important;
-            word-spacing: normal !important;
         }
         
         @media print {
@@ -87,10 +85,6 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        /* Standardize line heights for better readability */
-        p { line-height: 1.6; }
-        h1, h2, h3 { line-height: 1.2; }
     </style>
 
     <script type="importmap">

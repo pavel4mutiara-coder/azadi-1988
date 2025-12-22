@@ -4,10 +4,13 @@
   "description": "Official App of Azadi Social Welfare Organization (Est. 1988)",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ],
   "theme_color": "#065f46",
   "background_color": "#020617",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "package_name": "com.azadi.society",
+  "version": "1.0.0"
 }

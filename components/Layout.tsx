@@ -15,32 +15,30 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const t = TRANSLATIONS[lang];
   const isPublicPage = !location.pathname.startsWith('/admin');
 
+  // Hardcoded stable fallback
+  const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
+
   const OrganizationSeal = ({ className = "w-12 h-12" }: { className?: string }) => (
     <div className={`${className} relative rounded-full border-[2px] sm:border-[3px] border-emerald-600 dark:border-emerald-500 bg-white p-1 shadow-lg overflow-hidden flex items-center justify-center group-hover:scale-105 transition-all duration-300 ring-4 ring-emerald-500/10 shrink-0`}>
       <div className="absolute inset-0 border-[2px] sm:border-[4px] border-emerald-50 dark:border-emerald-950/20 rounded-full"></div>
       <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white relative z-10">
         <img 
-          src={settings.logo} 
-          alt="Organization Logo" 
+          src={LATEST_LOGO} 
+          alt="Azadi Society Logo" 
           className="w-full h-full object-contain p-0.5" 
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh';
+            (e.target as HTMLImageElement).src = LATEST_LOGO;
           }}
         />
       </div>
     </div>
   );
 
-  const getNavColor = (path: string, isActive: boolean) => {
-    if (!isActive) return 'text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400';
-    switch(path) {
-      case '/': return 'text-emerald-600 dark:text-emerald-400';
-      case '/leadership': return 'text-amber-600 dark:text-amber-400';
-      case '/events': return 'text-blue-600 dark:text-blue-400';
-      case '/donation': return 'text-rose-600 dark:text-rose-400';
-      case '/impact': return 'text-purple-600 dark:text-purple-400';
-      default: return 'text-emerald-600 dark:text-emerald-400';
-    }
+  const openSocialLink = (url: string) => {
+    if (!url) return;
+    // For native behavior in WebView, we ensure it's absolute
+    const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+    window.open(targetUrl, '_blank');
   };
 
   if (!isLoaded) {
@@ -54,16 +52,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       </div>
     );
   }
-
-  const mobileNavItemsLeft = isAdmin && !isPublicPage 
-    ? [ADMIN_NAV_ITEMS[0], ADMIN_NAV_ITEMS[1]]
-    : [NAV_ITEMS[0], NAV_ITEMS[1]];
-
-  const mobileNavItemsRight = isAdmin && !isPublicPage 
-    ? [ADMIN_NAV_ITEMS[3], ADMIN_NAV_ITEMS[4]]
-    : [NAV_ITEMS[2], NAV_ITEMS[4]];
-
-  const centerItem = isAdmin && !isPublicPage ? ADMIN_NAV_ITEMS[2] : NAV_ITEMS[3];
 
   return (
     <div className={`flex flex-col min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'dark' : ''} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100`} lang={lang}>
@@ -90,7 +78,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            {/* Admin Entry Button */}
             <Link to="/admin" title={isAdmin ? t.dashboard : t.adminLogin} className={`p-2.5 sm:p-3 rounded-xl transition-all border shadow-sm flex items-center gap-2 ${isAdmin ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200'}`}>
               <ShieldAlert size={18} />
               <span className="hidden xl:inline text-[10px] font-black uppercase tracking-widest bengali">
@@ -133,19 +120,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               
               <div className="flex items-center gap-5 pt-4">
                 {settings.facebook && (
-                  <a href={settings.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:scale-110 transition-all shadow-md border border-blue-100 dark:border-blue-800">
+                  <button onClick={() => openSocialLink(settings.facebook)} className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:scale-110 transition-all shadow-md border border-blue-100 dark:border-blue-800">
                     <Facebook size={24} />
-                  </a>
+                  </button>
                 )}
                 {settings.youtube && (
-                  <a href={settings.youtube} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center hover:scale-110 transition-all shadow-md border border-red-100 dark:border-red-800">
+                  <button onClick={() => openSocialLink(settings.youtube)} className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center hover:scale-110 transition-all shadow-md border border-red-100 dark:border-red-800">
                     <Youtube size={24} />
-                  </a>
+                  </button>
                 )}
                 {settings.whatsappChannel && (
-                  <a href={settings.whatsappChannel} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:scale-110 transition-all shadow-md border border-emerald-100 dark:border-emerald-800">
+                  <button onClick={() => openSocialLink(settings.whatsappChannel)} className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:scale-110 transition-all shadow-md border border-emerald-100 dark:border-emerald-800">
                     <MessageCircle size={24} />
-                  </a>
+                  </button>
                 )}
               </div>
             </div>

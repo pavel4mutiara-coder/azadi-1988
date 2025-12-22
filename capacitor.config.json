@@ -1,0 +1,16 @@
+
+{
+  "appId": "com.azadi.society",
+  "appName": "Azadi Social Welfare",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "allowNavigation": ["lh3.googleusercontent.com", "drive.google.com"],
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
