@@ -15,16 +15,7 @@
     <meta property="og:url" content="https://azadi-1988.vercel.app/">
     <meta property="og:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
     <meta property="og:description" content="মানবসেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা। শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া।">
-    <meta property="og:image" content="https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://azadi-1988.vercel.app/">
-    <meta property="twitter:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
-    <meta property="twitter:description" content="মানবসেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা। শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া।">
-    <meta property="twitter:image" content="https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID">
+    <meta property="og:image" content="https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
     <!-- PWA & Mobile Meta -->
     <meta name="theme-color" content="#065f46">
@@ -33,9 +24,7 @@
     <link rel="manifest" href="/manifest.json">
     
     <!-- Icons (Favicon) -->
-    <link rel="icon" type="image/png" sizes="32x32" href="https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID">
-    <link rel="icon" type="image/png" sizes="16x16" href="https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID">
+    <link rel="icon" type="image/png" href="https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -55,14 +44,14 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@100..800&family=Noto+Sans+Bengali:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
     
     <!-- PDF Generation Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         :root {
-            --font-bengali: 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
+            --font-bengali: 'Noto Sans Bengali', sans-serif;
             --font-english: 'Inter', sans-serif;
         }
         
@@ -77,16 +66,16 @@
             -webkit-user-select: none;
             overflow-x: hidden;
             width: 100%;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .safe-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
+        /* Essential for Bengali ligatures - prevent letter-spacing from breaking them */
+        [lang="bn"], .bengali { 
+            font-family: var(--font-bengali) !important; 
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
         }
-
-        [lang="bn"], .bengali { font-family: var(--font-bengali) !important; }
-        
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
         
         @media print {
             .no-print { display: none !important; }
@@ -99,10 +88,9 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Prevent text scaling issues on rotate */
-        html {
-            -webkit-text-size-adjust: 100%;
-        }
+        /* Standardize line heights for better readability */
+        p { line-height: 1.6; }
+        h1, h2, h3 { line-height: 1.2; }
     </style>
 
     <script type="importmap">
@@ -111,10 +99,10 @@
     "react": "https://esm.sh/react@19.0.0",
     "react/": "https://esm.sh/react@19.0.0/",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "react-router-dom": "https://esm.sh/react-router-dom@7.1.1?deps=react@19.0.0,react-dom@19.0.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.471.0?deps=react@19.0.0"
+    "lucide-react": "https://esm.sh/lucide-react@0.471.0?deps=react@19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>

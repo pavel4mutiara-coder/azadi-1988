@@ -34,7 +34,7 @@ export const SettingsManager: React.FC = () => {
   };
 
   const restoreOriginalLogo = () => {
-    const originalLogo = "https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID";
+    const originalLogo = "https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
     setFormData(prev => ({ ...prev, logo: originalLogo }));
   };
 
@@ -81,7 +81,7 @@ export const SettingsManager: React.FC = () => {
                       {formData.logo ? (
                         <div className="w-40 h-40 relative rounded-full border-[4px] border-emerald-600 bg-white p-2 shadow-2xl flex items-center justify-center overflow-hidden">
                           <img src={formData.logo} className="w-full h-full object-contain relative z-10" alt="Logo Preview" onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://via.placeholder.com/150?text=Logo+Error";
+                            (e.target as HTMLImageElement).src = "https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
                           }} />
                         </div>
                       ) : (

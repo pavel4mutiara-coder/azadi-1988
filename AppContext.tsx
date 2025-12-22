@@ -44,20 +44,20 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   nameEn: "Azadi Social Welfare Organization",
   sloganBn: "শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া",
   sloganEn: "Education · Unity · Service · Peace · Sports",
-  addressBn: "রোড নং ০১, ওয়ার্ড নং ১৭, মিরবক্সটুলা, সিলেট, বাংলাদেশ",
-  addressEn: "Road No. 01, Ward No. 17, Mirbox Tula, Sylhet, Bangladesh",
+  addressBn: "রোড নং ০১, মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ",
+  addressEn: "Road No. 01, Mirbox Tula, Sylhet-3100, Bangladesh",
   phone: "+8801711975488",
   email: "azadisocialwelfareorganization@gmail.com",
   establishedBn: "১০ জুন ১৯৮৮ (২৭ শে জৈষ্ঠ ১৩৯৫)",
-  establishedEn: "10 June 1988",
-  logo: "https://drive.google.com/uc?export=view&id=1VYH9NzuVHOhTM_vXf3amTtTrTFhTAQID",
+  establishedEn: "Established: 10 June 1988",
+  logo: "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
   flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Flag_of_Bangladesh.svg/200px-Flag_of_Bangladesh.svg.png",
   adminWhatsApp: "8801711975488",
   bkash: "01711975488",
   nagad: "01711975488",
   roket: "01711975488",
-  facebook: "https://facebook.com",
-  youtube: "https://youtube.com",
+  facebook: "https://facebook.com/Azadi1988",
+  youtube: "https://youtube.com/@AzadiSocialWelfare",
   whatsappChannel: "https://whatsapp.com"
 };
 
@@ -177,7 +177,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.theme) setTheme(localData.theme);
         if (localData.donations) setDonations(localData.donations);
         if (localData.leadership?.length > 5) setLeadership(localData.leadership);
-        else setLeadership(DEFAULT_LEADERSHIP); // Load full committee if local is incomplete
+        else setLeadership(DEFAULT_LEADERSHIP);
         if (localData.events) setEvents(localData.events);
         if (localData.financials) setFinancials(localData.financials);
         if (localData.settings) {
