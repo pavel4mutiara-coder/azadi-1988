@@ -108,7 +108,7 @@ export const Donation: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-12 animate-in slide-in-from-bottom-2 duration-500 pb-20 bengali">
       
-      {/* Arabic Calligraphy Header Section with Standardized Typography */}
+      {/* Arabic Calligraphy Header Section */}
       <div className="relative overflow-hidden rounded-[3rem] bg-emerald-950 p-10 md:p-16 flex flex-col items-center justify-center text-center shadow-2xl border border-emerald-800 transition-all group">
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/arabic-bazazz.png')] group-hover:scale-110 transition-transform duration-1000"></div>
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full"></div>
@@ -138,7 +138,7 @@ export const Donation: React.FC = () => {
       </div>
 
       <div className="text-center space-y-4">
-        <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 dark:border-emerald-800 shadow-xl rotate-3">
+        <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200 dark:border-emerald-800 shadow-xl rotate-3">
           <Heart size={40} fill="currentColor" />
         </div>
         <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight">{t.donation}</h1>
@@ -165,34 +165,34 @@ export const Donation: React.FC = () => {
       </div>
 
       <div className="grid md:grid-cols-12 gap-10 items-start">
-        <form onSubmit={handleSubmit} className="md:col-span-7 bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+        <form onSubmit={handleSubmit} className="md:col-span-7 bg-emerald-100/40 dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-emerald-200 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
           
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-8 relative z-10">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+          <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-slate-800 pb-8 relative z-10">
+            <h3 className="text-2xl font-black text-emerald-900 dark:text-white flex items-center gap-3">
               <Wallet className="text-emerald-600 dark:text-emerald-400" />
               {lang === 'bn' ? 'অণুদান ফরম' : 'Donation Form'}
             </h3>
-            <label className="flex items-center gap-3 text-[10px] font-black cursor-pointer bg-slate-50 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 select-none hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
+            <label className="flex items-center gap-3 text-[10px] font-black cursor-pointer bg-white/70 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-emerald-200 dark:border-slate-800 select-none hover:bg-emerald-50 dark:hover:bg-slate-900 transition-colors">
               <input 
                 type="checkbox" 
-                className="w-5 h-5 text-emerald-600 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-lg cursor-pointer focus:ring-emerald-500" 
+                className="w-5 h-5 text-emerald-600 dark:bg-slate-950 border-emerald-300 dark:border-slate-700 rounded-lg cursor-pointer focus:ring-emerald-500" 
                 checked={formData.isAnonymous}
                 onChange={e => setFormData({...formData, isAnonymous: e.target.checked})}
               />
-              <span className="text-slate-700 dark:text-slate-300 uppercase tracking-widest">{t.anonymous}</span>
+              <span className="text-emerald-800 dark:text-slate-300 uppercase tracking-widest">{t.anonymous}</span>
             </label>
           </div>
           
           <div className="space-y-8 relative z-10">
             {!formData.isAnonymous && (
               <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">{t.donorName}</label>
+                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.donorName}</label>
                 <input 
                   required 
                   type="text" 
                   onBlur={() => handleBlur('donorName')}
-                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.donorName && errors.donorName ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold`} 
+                  className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.donorName && errors.donorName ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-emerald-800/30`} 
                   placeholder="আপনার পূর্ণ নাম লিখুন" 
                   value={formData.donorName} 
                   onChange={e => setFormData({...formData, donorName: e.target.value})} 
@@ -202,14 +202,14 @@ export const Donation: React.FC = () => {
             )}
             <div className="grid sm:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">{t.amount} (BDT)</label>
+                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.amount} (BDT)</label>
                 <div className="relative">
                   <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-emerald-600 dark:text-emerald-400 text-2xl">৳</span>
                   <input 
                     required 
                     type="number" 
                     onBlur={() => handleBlur('amount')}
-                    className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.amount && errors.amount ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black text-3xl tracking-tighter`} 
+                    className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.amount && errors.amount ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black text-3xl tracking-tighter placeholder-emerald-800/30`} 
                     placeholder="1000" 
                     value={formData.amount} 
                     onChange={e => setFormData({...formData, amount: e.target.value})} 
@@ -218,13 +218,13 @@ export const Donation: React.FC = () => {
                 {touched.amount && errors.amount && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.amount}</p>}
               </div>
               <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">{t.phone}</label>
+                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.phone}</label>
                 <input 
                   required 
                   type="tel" 
                   maxLength={11}
                   onBlur={() => handleBlur('phone')}
-                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold`} 
+                  className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-emerald-800/30`} 
                   placeholder="01XXXXXXXXX" 
                   value={formData.phone} 
                   onChange={e => {
@@ -236,12 +236,12 @@ export const Donation: React.FC = () => {
               </div>
             </div>
             <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">{t.txid}</label>
+              <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.txid}</label>
               <input 
                 required 
                 type="text" 
                 onBlur={() => handleBlur('transactionId')}
-                className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider`} 
+                className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider placeholder-emerald-800/30`} 
                 placeholder="TRX12345..." 
                 value={formData.transactionId} 
                 onChange={e => setFormData({...formData, transactionId: e.target.value})} 
@@ -249,8 +249,8 @@ export const Donation: React.FC = () => {
               {touched.transactionId && errors.transactionId && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.transactionId}</p>}
             </div>
             <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">{t.purpose}</label>
-              <select className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
+              <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.purpose}</label>
+              <select className="w-full bg-emerald-50/60 dark:bg-slate-950 border border-emerald-200/50 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-emerald-950 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
                 {t.categories.map((c: string) => <option key={c} value={c} className="font-bold py-3 bg-white dark:bg-slate-900">{c}</option>)}
               </select>
             </div>
@@ -278,9 +278,9 @@ export const Donation: React.FC = () => {
             <Receipt size={56} className="text-emerald-400 opacity-20 relative z-10" />
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[3.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl space-y-8">
-            <h3 className="text-xl font-black flex items-center gap-4 text-slate-900 dark:text-white">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <div className="bg-emerald-100/30 dark:bg-slate-900 p-8 rounded-[3.5rem] border border-emerald-200/60 dark:border-slate-800 shadow-2xl space-y-8">
+            <h3 className="text-xl font-black flex items-center gap-4 text-emerald-950 dark:text-white">
+              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100">
                 <User size={24} />
               </div>
               {t.recentDonors}
@@ -288,14 +288,14 @@ export const Donation: React.FC = () => {
             <div className="space-y-5 max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
               {approvedDonations.length === 0 ? (
                 <div className="py-20 text-center space-y-4 opacity-30">
-                   <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto">
+                   <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto">
                       <Heart size={32} className="text-slate-400" />
                    </div>
                    <p className="font-bold italic text-slate-500">No approved donations yet.</p>
                 </div>
               ) : (
                 approvedDonations.map(d => (
-                  <div key={d.id} className="p-6 rounded-[2rem] bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-emerald-500 transition-all shadow-sm">
+                  <div key={d.id} className="p-6 rounded-[2rem] bg-white/70 dark:bg-slate-950 border border-emerald-100 dark:border-slate-800 flex items-center justify-between group hover:border-emerald-500 transition-all shadow-sm">
                     <div className="space-y-1">
                       <div className="font-black text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                         {d.isAnonymous ? t.anonymous : d.donorName}

@@ -19,7 +19,7 @@ export const Impact: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <div className="text-center space-y-4 max-w-2xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-slate-50">{t.impact}</h1>
         <p className="text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
@@ -31,8 +31,8 @@ export const Impact: React.FC = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         {impactStats.map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-4 group hover:-translate-y-1 transition-transform">
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform`}>
+          <div key={i} className="bg-emerald-50/80 dark:bg-slate-900 p-8 rounded-[2rem] border border-emerald-100 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-4 group hover:-translate-y-1 transition-transform">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform shadow-inner`}>
               {React.cloneElement(stat.icon as React.ReactElement<any>, { size: 32 })}
             </div>
             <div>

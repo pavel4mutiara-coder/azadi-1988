@@ -1,12 +1,13 @@
 
-const CACHE_NAME = 'azadi-v3';
+const CACHE_NAME = 'azadi-v5-fast';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@100..900&family=Inter:wght@100..900&display=swap',
-  'https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh'
+  'https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh',
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -33,20 +34,17 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Stale-While-Revalidate Strategy for maximum speed
 self.addEventListener('fetch', (event) => {
-  // Stale-while-revalidate for faster loading
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
         }
         return networkResponse;
-      }).catch(() => {
-        // Fallback or generic error handling if network fails
       });
       return cachedResponse || fetchPromise;
     })

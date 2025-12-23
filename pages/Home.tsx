@@ -66,8 +66,8 @@ export const Home: React.FC = () => {
       {/* Feature Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
         {features.map((f, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col items-center text-center gap-6 hover:shadow-2xl transition-all hover:-translate-y-2 group cursor-default shadow-lg">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500 ring-1 ring-emerald-100 dark:ring-emerald-800">
+          <div key={i} className="bg-emerald-50/80 dark:bg-slate-900 p-8 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 flex flex-col items-center text-center gap-6 hover:shadow-2xl transition-all hover:-translate-y-2 group cursor-default shadow-lg">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500 ring-1 ring-emerald-100 dark:ring-emerald-800">
               {React.cloneElement(FEATURE_ICONS[i] as React.ReactElement<any>, { size: 28, className: "md:w-10 md:h-10" })}
             </div>
             <h3 className="font-black text-slate-900 dark:text-white text-xs sm:text-base md:text-xl uppercase tracking-widest leading-none bengali">{f}</h3>
@@ -91,8 +91,8 @@ export const Home: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {topLeaders.map((leader) => (
-            <div key={leader.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col items-center text-center group hover:-translate-y-1 transition-all shadow-md">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-500/10 mb-4 bg-slate-50 relative group-hover:border-emerald-500 transition-all">
+            <div key={leader.id} className="bg-emerald-50/60 dark:bg-slate-900 p-6 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 flex flex-col items-center text-center group hover:-translate-y-1 transition-all shadow-md hover:shadow-emerald-200/50 dark:hover:shadow-black/20">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-500/10 mb-4 bg-white dark:bg-slate-950 relative group-hover:border-emerald-500 transition-all">
                 <img src={leader.image || settings.logo} className="w-full h-full object-cover" alt={leader.nameBn} />
                 <div className="absolute inset-0 bg-emerald-900/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </div>
@@ -102,7 +102,7 @@ export const Home: React.FC = () => {
           ))}
         </div>
         
-        <Link to="/leadership" className="flex sm:hidden items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest">
+        <Link to="/leadership" className="flex sm:hidden items-center justify-center gap-2 bg-emerald-100/50 dark:bg-slate-800 text-emerald-800 dark:text-white w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-emerald-200 dark:border-transparent">
            {lang === 'bn' ? 'সকল নেতৃবৃন্দ' : 'View Committee'} <ArrowRight size={18} />
         </Link>
       </section>
@@ -124,8 +124,8 @@ export const Home: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-8">
           {recentEvents.length > 0 ? (
             recentEvents.map((event) => (
-              <div key={event.id} className="group bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl hover:shadow-2xl transition-all flex flex-col sm:flex-row border-b-8 border-b-amber-500/20">
-                <div className="sm:w-2/5 relative h-48 sm:h-auto overflow-hidden bg-slate-50">
+              <div key={event.id} className="group bg-emerald-50/50 dark:bg-slate-900 rounded-[3rem] border border-emerald-100 dark:border-slate-800 overflow-hidden shadow-xl hover:shadow-emerald-200/50 dark:hover:shadow-black/20 transition-all flex flex-col sm:flex-row border-b-8 border-b-amber-500/20">
+                <div className="sm:w-2/5 relative h-48 sm:h-auto overflow-hidden bg-white dark:bg-slate-950">
                   <img src={event.image} alt={event.titleBn} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                 </div>
                 <div className="p-8 sm:w-3/5 space-y-4 flex flex-col justify-center">
@@ -143,9 +143,9 @@ export const Home: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="col-span-full py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-center space-y-4">
-               <Calendar size={48} className="mx-auto text-slate-300" />
-               <p className="font-bold text-slate-400 uppercase tracking-widest text-xs">{lang === 'bn' ? 'কোন ইভেন্ট পাওয়া যায়নি' : 'No upcoming events'}</p>
+            <div className="col-span-full py-20 bg-emerald-50/30 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-emerald-200 dark:border-slate-800 text-center space-y-4">
+               <Calendar size={48} className="mx-auto text-emerald-200 dark:text-slate-700" />
+               <p className="font-bold text-emerald-300 dark:text-slate-600 uppercase tracking-widest text-xs">{lang === 'bn' ? 'কোন ইভেন্ট পাওয়া যায়নি' : 'No upcoming events'}</p>
             </div>
           )}
         </div>

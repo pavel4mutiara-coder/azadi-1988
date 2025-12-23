@@ -4,6 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- Resource Hints for faster connection -->
+    <link rel="preconnect" href="https://esm.sh">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://lh3.googleusercontent.com">
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
     
     <!-- PWA / Mobile App Specific Meta -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -13,21 +20,16 @@
     <meta name="theme-color" content="#065f46">
     <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
     
-    <!-- Primary Meta Tags -->
     <title>আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare</title>
-    <meta name="title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
-    <meta name="description" content="১৯৮৮ সাল থেকে আজাদী সমাজ কল্যাণ সংঘ মানবসেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা। শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া।">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://azadi-1988.vercel.app/">
-    <meta property="og:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
-    <meta property="og:description" content="মানবসেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা। শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া।">
-    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
+    <meta name="description" content="১৯৮৮ সাল থেকে আজাদী সমাজ কল্যাণ সংঘ মানবসেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা।">
 
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
+    <!-- Preload Critical Dependencies -->
+    <link rel="modulepreload" href="https://esm.sh/react@19.0.0">
+    <link rel="modulepreload" href="https://esm.sh/react-dom@19.0.0/client">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -36,19 +38,13 @@
           extend: {
             colors: {
               slate: { 950: '#020617' }
-            },
-            screens: {
-              'xs': '400px',
             }
           }
         }
       }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 
     <style>
         :root {
@@ -59,34 +55,35 @@
         * {
             -webkit-tap-highlight-color: transparent;
             box-sizing: border-box;
+            outline: none !important;
         }
 
+        /* Critical CSS to prevent layout shift */
         body {
             font-family: var(--font-english), var(--font-bengali);
             user-select: none;
             -webkit-user-select: none;
             overflow-x: hidden;
             width: 100%;
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
+            background-color: #f8fafc;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
+            margin: 0;
+            min-height: 100vh;
         }
 
-        [lang="bn"], .bengali { 
-            font-family: var(--font-bengali) !important; 
-            letter-spacing: normal !important;
-        }
+        .dark body { background-color: #020617; }
+
+        [lang="bn"], .bengali { font-family: var(--font-bengali) !important; }
         
+        /* Loading performance optimizations */
+        img { content-visibility: auto; }
+        .page-transition { animation: fastFade 0.2s ease-out; }
+        @keyframes fastFade { from { opacity: 0; } to { opacity: 1; } }
+
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; }
-        }
-
-        .page-transition { animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 
@@ -104,7 +101,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen overflow-x-hidden">
+<body>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

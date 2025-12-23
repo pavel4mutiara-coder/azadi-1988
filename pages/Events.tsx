@@ -9,7 +9,7 @@ export const Events: React.FC = () => {
   const t = TRANSLATIONS[lang];
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <div className="text-center space-y-4 max-w-2xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-slate-50">{t.events}</h1>
         <p className="text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
@@ -21,7 +21,7 @@ export const Events: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {events.map((event) => (
-          <div key={event.id} className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl hover:shadow-2xl transition-all flex flex-col sm:flex-row">
+          <div key={event.id} className="group bg-emerald-50/60 dark:bg-slate-900 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 overflow-hidden shadow-xl hover:shadow-emerald-200/50 dark:hover:shadow-2xl transition-all flex flex-col sm:flex-row">
             <div className="sm:w-2/5 relative h-48 sm:h-auto overflow-hidden bg-white dark:bg-slate-950">
               <img src={event.image} alt={lang === 'bn' ? event.titleBn : event.titleEn} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
               <div className="absolute top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
@@ -54,8 +54,10 @@ export const Events: React.FC = () => {
         ))}
         {events.length === 0 && (
           <div className="col-span-full py-20 text-center opacity-30">
-            <Calendar size={64} className="mx-auto text-slate-400 mb-4" />
-            <p className="font-black uppercase tracking-widest text-xs">No Events Found</p>
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar size={32} className="text-emerald-200 dark:text-slate-600" />
+            </div>
+            <p className="font-black uppercase tracking-widest text-xs text-emerald-300 dark:text-slate-600">No Events Found</p>
           </div>
         )}
       </div>

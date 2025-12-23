@@ -14,17 +14,24 @@ export const SettingsManager: React.FC = () => {
     setFormData(settings);
   }, [settings]);
 
-  // Enhanced URL normalization logic
+  /**
+   * Enhanced URL normalization to ensure links work across all devices
+   */
   const normalizeUrl = (url: string) => {
     if (!url) return '';
-    let trimmed = url.trim();
+    let trimmed = url.trim().replace(/\s+/g, '');
+    if (trimmed === '') return '';
+    
+    // If it already has a protocol, return as is
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
-    // Check if it's already a clean domain or path
+    
+    // Add https:// to common patterns or if dots/slashes are present
     if (trimmed.includes('.') || trimmed.includes('/')) {
         return `https://${trimmed}`;
     }
+    
     return trimmed;
   };
 
@@ -34,8 +41,11 @@ export const SettingsManager: React.FC = () => {
   };
 
   const testLink = (url: string) => {
-    if (!url) return alert(lang === 'bn' ? 'প্রথমে একটি লিঙ্ক লিখুন' : 'Please enter a link first');
     const normalized = normalizeUrl(url);
+    if (!normalized) {
+      alert(lang === 'bn' ? 'প্রথমে একটি লিঙ্ক লিখুন' : 'Please enter a link first');
+      return;
+    }
     window.open(normalized, '_blank');
   };
 
@@ -49,7 +59,6 @@ export const SettingsManager: React.FC = () => {
           const compressed = await compressImage(base64);
           setFormData(prev => ({ ...prev, [key]: compressed }));
         } catch (err) {
-          console.error("Compression error:", err);
           setFormData(prev => ({ ...prev, [key]: base64 }));
         }
       };
@@ -57,16 +66,11 @@ export const SettingsManager: React.FC = () => {
     }
   };
 
-  const restoreOriginalLogo = () => {
-    const originalLogo = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
-    setFormData(prev => ({ ...prev, logo: originalLogo }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSaveStatus('saving');
     
-    // Normalize all URLs one last time before saving
+    // Force normalization on all links before saving
     const finalData = {
       ...formData,
       facebook: normalizeUrl(formData.facebook),
@@ -101,167 +105,103 @@ export const SettingsManager: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="grid lg:grid-cols-2 gap-10">
         <div className="space-y-10">
-          <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-10 relative overflow-hidden">
-            <h3 className="text-2xl font-black flex items-center gap-4 text-slate-900 dark:text-white relative z-10">
-              <Globe className="text-emerald-500" /> লোগো ও সাধারণ তথ্য
+          <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-10">
+            <h3 className="text-2xl font-black flex items-center gap-4 text-slate-900 dark:text-white">
+              <Globe className="text-emerald-500" /> লোগো ও নাম
             </h3>
             
-            <div className="grid sm:grid-cols-2 gap-8 relative z-10">
+            <div className="grid sm:grid-cols-2 gap-8">
                <div className="space-y-4">
                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 block ml-1">অফিসিয়াল লোগো</label>
                  <div className="flex flex-col gap-4">
                    <div className="relative w-full aspect-square bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center overflow-hidden">
                       {formData.logo ? (
                         <div className="w-40 h-40 relative rounded-full border-[4px] border-emerald-600 bg-white p-2 shadow-2xl flex items-center justify-center overflow-hidden">
-                          <img src={formData.logo} className="w-full h-full object-contain relative z-10" alt="Logo Preview" />
+                          <img src={formData.logo} className="w-full h-full object-contain" alt="Logo" />
                         </div>
                       ) : (
                         <ImageIcon size={48} className="text-slate-300" />
                       )}
                    </div>
-                   <div className="flex flex-col gap-2">
-                     <label htmlFor="logo-upload" className="w-full cursor-pointer flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md">
-                       <Upload size={18} /> লোগো পরিবর্তন
-                     </label>
-                     <button type="button" onClick={restoreOriginalLogo} className="w-full flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
-                       <RefreshCcw size={18} /> আগের লোগো ফিরে পান
-                     </button>
+                   <label htmlFor="logo-upload" className="w-full cursor-pointer flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all shadow-md">
+                     <Upload size={18} /> লোগো পরিবর্তন
                      <input id="logo-upload" type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'logo')} />
-                   </div>
+                   </label>
                  </div>
                </div>
 
                <div className="space-y-4">
-                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 block ml-1">পতাকা</label>
+                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 block ml-1">জাতীয় পতাকা</label>
                  <div className="flex flex-col gap-4">
-                   <div className="w-full aspect-square bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center overflow-hidden">
-                     {formData.flag ? (
-                        <img src={formData.flag} className="w-40 h-24 object-cover rounded-xl shadow-lg" alt="Flag Preview" />
-                     ) : (
-                        <ImageIcon size={48} className="text-slate-300" />
-                     )}
+                   <div className="w-full aspect-square bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] flex items-center justify-center">
+                     <img src={formData.flag} className="w-40 h-24 object-cover rounded-xl shadow-lg" alt="Flag" />
                    </div>
-                   <div className="flex flex-col gap-2">
-                     <label htmlFor="flag-upload" className="w-full cursor-pointer flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md">
-                       <Upload size={18} /> পতাকা পরিবর্তন
-                     </label>
+                   <label htmlFor="flag-upload" className="w-full cursor-pointer flex items-center justify-center gap-2 bg-slate-800 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-black transition-all shadow-md">
+                     <Upload size={18} /> পতাকা পরিবর্তন
                      <input id="flag-upload" type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'flag')} />
-                   </div>
+                   </label>
                  </div>
                </div>
             </div>
 
-            <div className="space-y-6 relative z-10">
+            <div className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">নাম (বাংলা)</label>
                   <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.nameBn} onChange={e => setFormData({...formData, nameBn: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">নাম (English)</label>
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">Name (English)</label>
                   <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.nameEn} onChange={e => setFormData({...formData, nameEn: e.target.value})} />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">স্লোগান</label>
-                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.sloganBn} onChange={e => setFormData({...formData, sloganBn: e.target.value})} />
               </div>
             </div>
           </div>
 
           <div className="bg-emerald-50 dark:bg-emerald-950/20 p-8 md:p-10 rounded-[2.5rem] border-2 border-emerald-100 dark:border-emerald-800 shadow-xl space-y-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16"></div>
             <h3 className="text-2xl font-black flex items-center gap-4 text-emerald-900 dark:text-emerald-400">
-              <MessageCircle size={24} /> সোশ্যাল মিডিয়া প্রোফাইল
+              <MessageCircle size={24} /> সোশ্যাল মিডিয়া লিঙ্ক
             </h3>
             
-            <div className="bg-white/50 dark:bg-slate-950/50 p-6 rounded-2xl space-y-4 border border-emerald-100/50 dark:border-emerald-900/50">
-               <div className="flex items-start gap-3 text-emerald-800 dark:text-emerald-500">
-                 <Info size={18} className="mt-1 shrink-0" />
-                 <p className="text-xs font-bold leading-relaxed italic">
-                   সঠিকভাবে লিঙ্ক কাজ করার জন্য `https://` সহ পূর্ণাঙ্গ লিঙ্কটি কপি করে পেস্ট করুন। লিঙ্ক সেভ করার আগে পাশের "টেস্ট" বাটনে ক্লিক করে চেক করে নিন।
+            <div className="bg-white/50 dark:bg-slate-950/50 p-4 rounded-2xl space-y-2 border border-emerald-100/50">
+               <div className="flex items-start gap-2 text-emerald-800 dark:text-emerald-500">
+                 <Info size={16} className="mt-1 shrink-0" />
+                 <p className="text-[11px] font-bold leading-relaxed italic">
+                   লিঙ্কটি কাজ করছে কি না নিশ্চিত হতে সেভ করার আগে "টেস্ট লিঙ্ক" বাটনে ক্লিক করুন।
                  </p>
                </div>
             </div>
 
-            <div className="space-y-8">
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1 flex justify-between">
-                   ফেসবুক প্রোফাইল / পেজ <span>(Facebook)</span>
-                </label>
-                <div className="flex gap-2">
-                   <div className="relative flex-1">
-                     <Facebook size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" />
-                     <input 
-                       type="text" 
-                       placeholder="https://facebook.com/your-id" 
-                       className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold font-mono text-sm" 
-                       value={formData.facebook} 
-                       onChange={e => setFormData({...formData, facebook: e.target.value})}
-                       onBlur={() => handleUrlBlur('facebook')}
-                     />
-                   </div>
-                   <button 
-                     type="button" 
-                     onClick={() => testLink(formData.facebook)}
-                     className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 p-4 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 font-black text-[10px] uppercase border border-blue-100 dark:border-blue-800"
-                   >
-                     <ExternalLink size={16} /> টেস্ট
-                   </button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1 flex justify-between">
-                   ইউটিউব চ্যানেল <span>(YouTube)</span>
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Youtube size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-red-600" />
-                    <input 
-                      type="text" 
-                      placeholder="https://youtube.com/@your-channel" 
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold font-mono text-sm" 
-                      value={formData.youtube} 
-                      onChange={e => setFormData({...formData, youtube: e.target.value})}
-                      onBlur={() => handleUrlBlur('youtube')}
-                    />
+            <div className="space-y-6">
+              {[
+                { label: 'ফেসবুক লিঙ্ক (Facebook)', key: 'facebook', icon: <Facebook className="text-blue-600" /> },
+                { label: 'ইউটিউব লিঙ্ক (YouTube)', key: 'youtube', icon: <Youtube className="text-red-600" /> },
+                { label: 'হোয়াটসঅ্যাপ চ্যানেল (WhatsApp)', key: 'whatsappChannel', icon: <MessageCircle className="text-emerald-600" /> }
+              ].map(item => (
+                <div key={item.key} className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">{item.label}</label>
+                  <div className="flex gap-2">
+                     <div className="relative flex-1">
+                       <div className="absolute left-4 top-1/2 -translate-y-1/2">{item.icon}</div>
+                       <input 
+                         type="text" 
+                         placeholder="https://..." 
+                         className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold font-mono text-xs" 
+                         value={(formData as any)[item.key]} 
+                         onChange={e => setFormData({...formData, [item.key]: e.target.value})}
+                         onBlur={() => handleUrlBlur(item.key as any)}
+                       />
+                     </div>
+                     <button 
+                       type="button" 
+                       onClick={() => testLink((formData as any)[item.key])}
+                       className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center gap-2 font-black text-[10px] uppercase border border-slate-200 dark:border-slate-700"
+                     >
+                       <ExternalLink size={14} /> টেস্ট
+                     </button>
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => testLink(formData.youtube)}
-                    className="bg-red-50 dark:bg-red-900/30 text-red-600 p-4 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 font-black text-[10px] uppercase border border-red-100 dark:border-red-800"
-                  >
-                    <ExternalLink size={16} /> টেস্ট
-                  </button>
                 </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1 flex justify-between">
-                   হোয়াটসঅ্যাপ চ্যানেল / গ্রুপ <span>(WhatsApp)</span>
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <MessageCircle size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600" />
-                    <input 
-                      type="text" 
-                      placeholder="https://whatsapp.com/channel/..." 
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold font-mono text-sm" 
-                      value={formData.whatsappChannel} 
-                      onChange={e => setFormData({...formData, whatsappChannel: e.target.value})}
-                      onBlur={() => handleUrlBlur('whatsappChannel')}
-                    />
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => testLink(formData.whatsappChannel)}
-                    className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 p-4 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 font-black text-[10px] uppercase border border-emerald-100 dark:border-emerald-800"
-                  >
-                    <ExternalLink size={16} /> টেস্ট
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>

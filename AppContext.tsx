@@ -39,7 +39,6 @@ interface AppState {
 const DB_NAME = 'AzadiSocietyAppDB_v1';
 const STORE_NAME = 'permanent_storage';
 
-// New High-Stability CDN Link for Google Drive
 const LOGO_ID = "1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
 const NEW_LOGO_URL = `https://lh3.googleusercontent.com/d/${LOGO_ID}`;
 
@@ -64,10 +63,6 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   youtube: "https://youtube.com/@azadisocialwelfareorganization?si=gD7Akj6EdMYjHuFe",
   whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
 };
-
-const DEFAULT_LEADERSHIP: Leadership[] = [
-  { id: 'p1', nameEn: 'Md. Abdus Sabir (Tutul)', nameBn: 'মোঃ আব্দুছ ছাবির (টুটুল)', designationEn: 'President', designationBn: 'সভাপতি', messageEn: '', messageBn: '', phone: '01711975488', image: NEW_LOGO_URL, order: 1 },
-];
 
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -136,7 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [financials, setFinancials] = useState<FinancialRecord[]>([]);
   const [settings, setSettings] = useState<OrganizationSettings>(DEFAULT_SETTINGS);
   const [letterhead, setLetterhead] = useState<LetterheadConfig>({
-    leaderName: "মোঃ আব্দuছ ছাবির (টুটুল)",
+    leaderName: "মোঃ আব্দুছ ছাবির (টুটুল)",
     designation: "সভাপতি",
     signature: "",
     stampText: "আজাদী সমাজ কল্যাণ সংঘ, সিলেট",
@@ -149,45 +144,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cloudApiError, setCloudApiError] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
 
+  // Critical Logic: Show App Immediately using Local Storage
   useEffect(() => {
     const startApp = async () => {
+      // 1. First, load from local storage to show UI immediately
       const localData = await dbLoad();
       if (localData) {
         if (localData.lang) setLang(localData.lang);
         if (localData.theme) setTheme(localData.theme);
         if (localData.donations) setDonations(localData.donations);
-        if (localData.leadership?.length > 5) setLeadership(localData.leadership);
+        if (localData.leadership) setLeadership(localData.leadership);
         if (localData.events) setEvents(localData.events);
         if (localData.financials) setFinancials(localData.financials);
-        
-        // Merge settings and ensure logo is fixed
-        setSettings({ 
-          ...DEFAULT_SETTINGS, 
-          ...localData.settings,
-          logo: NEW_LOGO_URL 
-        });
-        
+        if (localData.settings) setSettings({ ...DEFAULT_SETTINGS, ...localData.settings, logo: NEW_LOGO_URL });
         if (localData.letterhead) setLetterhead(localData.letterhead);
       }
-
-      const { data: cloudData, type, error } = await loadFromCloud();
-      if (type) {
-        setCloudApiError(true);
-        setCloudErrorType(type as any);
-        if (error) setCloudErrorMessage(error);
-      } else if (cloudData) {
-        if (cloudData.settings?.nameBn) {
-          setSettings({ 
-            ...DEFAULT_SETTINGS, 
-            ...cloudData.settings,
-            logo: NEW_LOGO_URL
-          });
-        }
-        if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
-        if (cloudData.donations) setDonations(cloudData.donations);
-        setCloudSynced(true);
-      }
+      
+      // 2. Mark as loaded so UI appears instantly
       setIsLoaded(true);
+
+      // 3. Background: Sync from Cloud without blocking the user
+      try {
+        const { data: cloudData, type, error } = await loadFromCloud();
+        if (type) {
+          setCloudApiError(true);
+          setCloudErrorType(type as any);
+          if (error) setCloudErrorMessage(error);
+        } else if (cloudData) {
+          if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings, logo: NEW_LOGO_URL });
+          if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
+          if (cloudData.donations) setDonations(cloudData.donations);
+          if (cloudData.events) setEvents(cloudData.events);
+          if (cloudData.financials) setFinancials(cloudData.financials);
+          setCloudSynced(true);
+        }
+      } catch (err) {
+        console.warn("Background cloud sync failed, continuing with local data.");
+      }
     };
     startApp();
   }, []);
@@ -196,12 +189,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isLoaded) {
       const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
       dbSave(state);
+      
+      // Background auto-save to cloud
       const timer = setTimeout(async () => {
         if (!cloudApiError) {
           const result = await saveToCloud(state);
           setCloudSynced(result.success);
         }
-      }, 5000);
+      }, 10000); // Wait 10s after changes to sync (debounced)
       return () => clearTimeout(timer);
     }
   }, [lang, theme, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudApiError]);
@@ -236,6 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.donations) setDonations(cloudData.donations);
           if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
           if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
+          if (cloudData.events) setEvents(cloudData.events);
           setCloudSyncStatus('success');
           setCloudSynced(true);
         } else {
