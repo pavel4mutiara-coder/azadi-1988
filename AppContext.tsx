@@ -64,6 +64,33 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
 };
 
+const DEFAULT_LEADERSHIP: Leadership[] = [
+  { id: 'l1', nameEn: 'Md. Abdus Sabir (Tutul)', nameBn: 'মোঃ আব্দুছ ছাবির (টুটুল)', designationEn: 'President', designationBn: 'সভাপতি', messageEn: '', messageBn: '', phone: '01711975488', image: NEW_LOGO_URL, order: 1 },
+  { id: 'l2', nameEn: 'Adv. Shahanur', nameBn: 'এস এস নুরুল হুদা চৌঃ (এডঃ শাহানুর)', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 2 },
+  { id: 'l3', nameEn: 'Aminur Rahman (Shamim)', nameBn: 'আমিনুর রহমান (শামীম)', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 3 },
+  { id: 'l4', nameEn: 'Jubed Ahmad', nameBn: 'জুবেদ আহমদ', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 4 },
+  { id: 'l5', nameEn: 'Junel Ahmad', nameBn: 'জুনেল আহমদ', designationEn: 'General Secretary', designationBn: 'সাধারণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 5 },
+  { id: 'l6', nameEn: 'Kawser Ahmad (Pappu)', nameBn: 'কাওসার আহমদ (পাপ্পু)', designationEn: 'Asst. General Secretary', designationBn: 'সহ-সাধারণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 6 },
+  { id: 'l7', nameEn: 'Tareq Ahmad', nameBn: 'তারেক আহমদ', designationEn: 'Organizing Secretary', designationBn: 'সাংগঠনিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 7 },
+  { id: 'l8', nameEn: '', nameBn: '', designationEn: 'Asst. Organizing Secretary', designationBn: 'সহ-সাংগঠনিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 8 },
+  { id: 'l9', nameEn: 'Najib Salam', nameBn: 'নাজিব সালাম', designationEn: 'Social Welfare Secretary', designationBn: 'সমাজ কল্যাণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 9 },
+  { id: 'l10', nameEn: 'Samin Ahmad Limon', nameBn: 'সামিন আহমদ লিমন', designationEn: 'Asst. Social Welfare Secretary', designationBn: 'সহ-সমাজ কল্যাণ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 10 },
+  { id: 'l11', nameEn: 'Abdul Malik (Biplob)', nameBn: 'আব্দুল মালিক (বিপ্লব)', designationEn: 'Treasurer', designationBn: 'অর্থ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 11 },
+  { id: 'l12', nameEn: 'Abdul Hadi (Rumman)', nameBn: 'আব্দুল হাদী (রুম্মান)', designationEn: 'Asst. Treasurer', designationBn: 'সহ-অর্থ সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 12 },
+  { id: 'l13', nameEn: 'Arafat Islam (Boni)', nameBn: 'আরাফাত ইসলাম (বনি)', designationEn: 'Publicity Secretary', designationBn: 'প্রচার সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 13 },
+  { id: 'l14', nameEn: '', nameBn: '', designationEn: 'Asst. Publicity Secretary', designationBn: 'সহ-প্রচার সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 14 },
+  { id: 'l15', nameEn: 'Rafayat Malik (Rafi)', nameBn: 'রাফায়াত মালিক (রাফি)', designationEn: 'Sports Secretary', designationBn: 'ক্রীড়া সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 15 },
+  { id: 'l16', nameEn: 'Harun Ahmad', nameBn: 'হারুণ আহমদ', designationEn: 'Asst. Sports Secretary', designationBn: 'সহ-ক্রীড়া সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 16 },
+  { id: 'l17', nameEn: 'Nayeem Ahmad', nameBn: 'নাঈম আহমদ', designationEn: 'Religious Secretary', designationBn: 'ধর্ম সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 17 },
+  { id: 'l18', nameEn: '', nameBn: '', designationEn: 'Asst. Religious Secretary', designationBn: 'সহ-ধর্ম সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 18 },
+  { id: 'l19', nameEn: 'Shafayat Rasul (Alif)', nameBn: 'শাফায়াত রসুল (আলিফ)', designationEn: 'Education & Cultural Secretary', designationBn: 'শিক্ষা-সাহিত্য ও সাংস্কৃতিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 19 },
+  { id: 'l20', nameEn: 'Aminul Islam (Nabil)', nameBn: 'আমিনুল ইসলাম (নাবিল)', designationEn: 'Asst. Education & Cultural Secretary', designationBn: 'সহ-শিক্ষা-সাহিত্য ও সাংস্কৃতিক সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 20 },
+  { id: 'l21', nameEn: '', nameBn: '', designationEn: 'Women\'s Affairs Secretary', designationBn: 'মহিলা সম্পাদিকা', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 21 },
+  { id: 'l22', nameEn: '', nameBn: '', designationEn: 'Asst. Women\'s Affairs Secretary', designationBn: 'সহ-মহিলা সম্পাদিকা', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 22 },
+  { id: 'l23', nameEn: '', nameBn: '', designationEn: 'Office Secretary', designationBn: 'দপ্তর সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 23 },
+  { id: 'l24', nameEn: '', nameBn: '', designationEn: 'Asst. Office Secretary', designationBn: 'সহ-দপ্তর সম্পাদক', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 24 }
+];
+
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
@@ -126,7 +153,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isAdmin, setIsAdmin] = useState(false);
   const [donations, setDonations] = useState<Donation[]>([]);
-  const [leadership, setLeadership] = useState<Leadership[]>([]);
+  const [leadership, setLeadership] = useState<Leadership[]>(DEFAULT_LEADERSHIP);
   const [events, setEvents] = useState<Event[]>([]);
   const [financials, setFinancials] = useState<FinancialRecord[]>([]);
   const [settings, setSettings] = useState<OrganizationSettings>(DEFAULT_SETTINGS);
@@ -153,7 +180,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.lang) setLang(localData.lang);
         if (localData.theme) setTheme(localData.theme);
         if (localData.donations) setDonations(localData.donations);
-        if (localData.leadership) setLeadership(localData.leadership);
+        if (localData.leadership && localData.leadership.length > 0) setLeadership(localData.leadership);
         if (localData.events) setEvents(localData.events);
         if (localData.financials) setFinancials(localData.financials);
         if (localData.settings) setSettings({ ...DEFAULT_SETTINGS, ...localData.settings, logo: NEW_LOGO_URL });

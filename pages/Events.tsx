@@ -21,12 +21,9 @@ export const Events: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {events.map((event) => (
-          <div key={event.id} className="group bg-emerald-50/60 dark:bg-slate-900 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 overflow-hidden shadow-xl hover:shadow-emerald-200/50 dark:hover:shadow-2xl transition-all flex flex-col sm:flex-row">
+          <div key={event.id} className="group bg-emerald-50/60 dark:bg-slate-900 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 overflow-hidden shadow-xl hover:shadow-emerald-200/50 dark:hover:shadow-2xl transition-all flex flex-col sm:flex-row border-b-8 border-b-emerald-500/10">
             <div className="sm:w-2/5 relative h-48 sm:h-auto overflow-hidden bg-white dark:bg-slate-950">
               <img src={event.image} alt={lang === 'bn' ? event.titleBn : event.titleEn} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-              <div className="absolute top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                Upcoming
-              </div>
             </div>
             <div className="p-8 sm:w-3/5 space-y-4 flex flex-col justify-center">
               <div>
@@ -34,18 +31,18 @@ export const Events: React.FC = () => {
                   <Calendar size={14} />
                   {new Date(event.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight">
+                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight bengali">
                   {lang === 'bn' ? event.titleBn : event.titleEn}
                 </h3>
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-300 line-clamp-3 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-300 line-clamp-3 leading-relaxed bengali">
                 {lang === 'bn' ? event.descriptionBn : event.descriptionEn}
               </p>
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 pt-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 pt-2 bengali">
                 <MapPin size={14} />
                 {lang === 'bn' ? event.locationBn : event.locationEn}
               </div>
-              <button className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-sm pt-4 hover:gap-4 transition-all uppercase tracking-wider">
+              <button className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-sm pt-4 hover:gap-4 transition-all uppercase tracking-wider bengali">
                 {lang === 'bn' ? 'বিস্তারিত দেখুন' : 'Learn More'}
                 <ArrowRight size={16} />
               </button>
@@ -53,11 +50,11 @@ export const Events: React.FC = () => {
           </div>
         ))}
         {events.length === 0 && (
-          <div className="col-span-full py-20 text-center opacity-30">
-            <div className="w-16 h-16 bg-emerald-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar size={32} className="text-emerald-200 dark:text-slate-600" />
+          <div className="col-span-full py-24 text-center space-y-6 bg-emerald-50/30 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-emerald-200 dark:border-slate-800">
+            <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+              <Calendar size={40} className="text-emerald-200 dark:text-slate-600" />
             </div>
-            <p className="font-black uppercase tracking-widest text-xs text-emerald-300 dark:text-slate-600">No Events Found</p>
+            <p className="font-black uppercase tracking-[0.3em] text-xs text-emerald-400 dark:text-slate-600">No Events Found</p>
           </div>
         )}
       </div>
