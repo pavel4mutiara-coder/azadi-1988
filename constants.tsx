@@ -123,8 +123,8 @@ export const TRANSLATIONS = {
 export const NAV_ITEMS = [
   { label: 'home', path: '/', icon: <Home size={20} /> },
   { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
+  { label: 'donation', path: '/donation', icon: <Heart size={20} /> }, // Moved to center
   { label: 'events', path: '/events', icon: <Calendar size={20} /> },
-  { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
   { label: 'impact', path: '/impact', icon: <PieChart size={20} /> },
 ];
 

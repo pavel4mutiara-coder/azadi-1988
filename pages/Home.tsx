@@ -66,7 +66,7 @@ export const Home: React.FC = () => {
       {/* Feature Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
         {features.map((f, i) => (
-          <div key={i} className="bg-emerald-50/80 dark:bg-slate-900 p-8 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 flex flex-col items-center text-center gap-6 hover:shadow-2xl transition-all hover:-translate-y-2 group cursor-default shadow-lg">
+          <div key={i} className="bg-emerald-50/80 dark:bg-slate-900 p-8 rounded-[2.5rem] border border-emerald-200 dark:border-slate-800 flex flex-col items-center text-center gap-6 hover:shadow-2xl transition-all hover:-translate-y-2 group cursor-default shadow-lg">
             <div className="w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500 ring-1 ring-emerald-100 dark:ring-emerald-800">
               {React.cloneElement(FEATURE_ICONS[i] as React.ReactElement<any>, { size: 28, className: "md:w-10 md:h-10" })}
             </div>

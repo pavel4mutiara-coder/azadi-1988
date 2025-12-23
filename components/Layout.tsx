@@ -4,14 +4,13 @@ import { useApp } from '../AppContext';
 import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS } from '../constants';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Moon, Sun, Languages, LogOut, Heart, MapPin, Phone, Mail, 
-  Loader2, LayoutDashboard, Home, PieChart, Users, Calendar,
-  ShieldCheck, Facebook, Youtube, MessageCircle, Lock, ShieldAlert,
-  DownloadCloud, X, Share
+  Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
+  Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
+  ShieldAlert, DownloadCloud, X, Share, Code
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { lang, setLang, theme, setTheme, isAdmin, logout, settings, isLoaded } = useApp();
+  const { lang, setLang, theme, setTheme, isAdmin, settings, isLoaded } = useApp();
   const location = useLocation();
   const t = TRANSLATIONS[lang];
   const isPublicPage = !location.pathname.startsWith('/admin');
@@ -22,7 +21,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detect iOS
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     setIsIOS(ios);
 
@@ -34,7 +32,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       }
     });
 
-    // For iOS, check if it's already in standalone mode
     if (ios && !window.matchMedia('(display-mode: standalone)').matches) {
       setTimeout(() => setShowInstallBanner(true), 3000);
     }
@@ -65,9 +62,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
   );
 
-  /**
-   * Safe URL formatter to ensure links are absolute
-   */
   const getSafeUrl = (url: string) => {
     if (!url) return '';
     const trimmed = url.trim();
@@ -90,14 +84,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <div className={`flex flex-col min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'dark' : ''} bg-emerald-50/40 dark:bg-slate-950 text-slate-900 dark:text-slate-100`} lang={lang}>
       {/* Smart Install Banner */}
       {showInstallBanner && (
-        <div className="fixed bottom-24 left-4 right-4 z-[100] bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl border border-slate-800 animate-in slide-in-from-bottom-10 lg:hidden flex items-center justify-between">
+        <div className="fixed bottom-28 left-4 right-4 z-[100] bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl border border-slate-800 animate-in slide-in-from-bottom-10 lg:hidden flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shrink-0">
                <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App" />
             </div>
             <div>
-              <p className="font-black text-sm bengali">অ্যাপটি আপনার মোবাইলে রাখুন</p>
-              <p className="text-[10px] opacity-70 font-bold bengali">দ্রুত ও অফলাইন ব্যবহারের জন্য</p>
+              <p className="font-black text-sm bengali text-white">অ্যাপটি আপনার মোবাইলে রাখুন</p>
+              <p className="text-[10px] opacity-70 font-bold bengali text-emerald-400">দ্রুত ও অফলাইন ব্যবহারের জন্য</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -147,21 +141,63 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-20 pb-40 lg:pb-20">
         {children}
+        
+        {/* Mobile/Tablet/iPad Developer Credit - High Professionalism */}
+        <div className="lg:hidden text-center mt-16 mb-8 px-4 no-print animate-in fade-in slide-in-from-bottom-2 duration-1000">
+           <div className="inline-flex flex-col items-center gap-2 bg-emerald-100/50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/50 px-6 py-4 rounded-[2rem] shadow-xl backdrop-blur-md">
+             <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 mb-1">
+                <Code size={16} />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Developer Information</span>
+             </div>
+             <div className="flex flex-col items-center gap-1">
+               <span className="text-[12px] font-black text-slate-900 dark:text-white uppercase tracking-wider">Developed by Ahmed Hossain Pavel</span>
+               <div className="h-px w-20 bg-emerald-200 dark:bg-emerald-800 my-1"></div>
+               <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-500 bengali">ডেভেলপড বাই আহমেদ হোসেন পাভেল</span>
+             </div>
+           </div>
+        </div>
       </main>
 
-      {/* App-like Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-950/90 backdrop-blur-2xl border-t border-emerald-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between z-[90] shadow-2xl no-print">
-        {NAV_ITEMS.map((item) => (
-          <Link key={item.path} to={item.path} className={`flex flex-col items-center gap-1.5 ${location.pathname === item.path ? 'text-emerald-600' : 'text-slate-400'}`}>
-            <div className={`p-2 rounded-2xl transition-all ${location.pathname === item.path ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600' : ''}`}>
-              {React.cloneElement(item.icon as React.ReactElement<any>, { size: 24 })}
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest bengali">{t[item.label as keyof typeof t] as string}</span>
-          </Link>
-        ))}
+      {/* App-like Professional Bottom Nav */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[90] no-print">
+        {/* Blurred Background Layer */}
+        <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/90 backdrop-blur-2xl border-t border-emerald-100 dark:border-slate-800 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]"></div>
+        
+        <div className="relative container mx-auto px-6 py-3 pb-6 flex items-end justify-between">
+          {NAV_ITEMS.map((item, index) => {
+            const isActive = location.pathname === item.path;
+            const isCenter = index === 2; // Center item (Donation)
+
+            if (isCenter) {
+              return (
+                <Link key={item.path} to={item.path} className="relative -top-8 flex flex-col items-center group">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${isActive ? 'bg-emerald-600 scale-110' : 'bg-emerald-600 scale-100 hover:scale-105'}`}>
+                    <div className="absolute inset-0 rounded-full bg-emerald-400 animate-pulse opacity-20 group-hover:opacity-40"></div>
+                    {React.cloneElement(item.icon as React.ReactElement<any>, { size: 28, className: "text-white relative z-10", fill: isActive ? 'currentColor' : 'none' })}
+                  </div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest mt-2 transition-colors ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {t[item.label as keyof typeof t] as string}
+                  </span>
+                </Link>
+              );
+            }
+
+            return (
+              <Link key={item.path} to={item.path} className="flex flex-col items-center gap-1 group transition-all">
+                <div className={`relative p-2 rounded-2xl transition-all duration-300 ${isActive ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}>
+                  {React.cloneElement(item.icon as React.ReactElement<any>, { size: 24, fill: isActive ? 'currentColor' : 'none', strokeWidth: isActive ? 2.5 : 2 })}
+                  {isActive && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.8)] animate-in fade-in zoom-in"></div>}
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {t[item.label as keyof typeof t] as string}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
-      <footer className="hidden lg:block bg-emerald-50/80 dark:bg-slate-950 border-t border-emerald-100 dark:border-slate-800 pt-16 pb-12">
+      <footer className="hidden lg:block bg-emerald-50/80 dark:bg-slate-950 border-t border-emerald-100 dark:border-slate-800 pt-16 pb-12 no-print">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 pb-16">
             <div className="lg:col-span-5 space-y-8">
@@ -212,9 +248,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             </div>
           </div>
-          <div className="pt-10 border-t border-emerald-100 dark:border-slate-800 flex justify-between items-center">
-            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">© {new Date().getFullYear()} Azadi Social Welfare.</div>
-            <span className="text-[10px] font-black text-white bg-emerald-600 px-4 py-1.5 rounded-full">Architect: Ahmed Hossain Pavel</span>
+          <div className="pt-10 border-t border-emerald-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center md:text-left">© {new Date().getFullYear()} Azadi Social Welfare. All Rights Reserved.</div>
+            <div className="flex flex-col items-center md:items-end gap-1 group">
+               <div className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-full shadow-lg group-hover:bg-emerald-700 transition-all">
+                  <span className="text-[10px] font-black uppercase tracking-wider">Developed by Ahmed Hossain Pavel</span>
+               </div>
+               <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-500 bengali opacity-80 group-hover:opacity-100 transition-opacity">ডেভেলপড বাই আহমেদ হোসেন পাভেল</span>
+            </div>
           </div>
         </div>
       </footer>
