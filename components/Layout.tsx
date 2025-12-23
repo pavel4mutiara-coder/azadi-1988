@@ -6,7 +6,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
-  ShieldAlert, DownloadCloud, X, Share, Code
+  ShieldAlert, DownloadCloud, X, Share, Code, BellRing, Smartphone
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -24,15 +24,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     setIsIOS(ios);
 
+    // Only show if not already installed and not dismissed in this session
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      if (!window.matchMedia('(display-mode: standalone)').matches) {
-        setShowInstallBanner(true);
+      if (!isStandalone && !isDismissed) {
+        setTimeout(() => setShowInstallBanner(true), 2000);
       }
     });
 
-    if (ios && !window.matchMedia('(display-mode: standalone)').matches) {
+    if (ios && !isStandalone && !isDismissed) {
       setTimeout(() => setShowInstallBanner(true), 3000);
     }
   }, []);
@@ -49,6 +53,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       setDeferredPrompt(null);
       setShowInstallBanner(false);
     }
+  };
+
+  const handleDismiss = () => {
+    setShowInstallBanner(false);
+    sessionStorage.setItem('pwa_banner_dismissed', 'true');
   };
 
   const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
@@ -82,24 +91,34 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <div className={`flex flex-col min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'dark' : ''} bg-emerald-50/40 dark:bg-slate-950 text-slate-900 dark:text-slate-100`} lang={lang}>
-      {/* Smart Install Banner */}
+      
+      {/* Native-style PWA Install Notification */}
       {showInstallBanner && (
-        <div className="fixed bottom-28 left-4 right-4 z-[100] bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl border border-slate-800 animate-in slide-in-from-bottom-10 lg:hidden flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shrink-0">
-               <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App" />
-            </div>
-            <div>
-              <p className="font-black text-sm bengali text-white">অ্যাপটি আপনার মোবাইলে রাখুন</p>
-              <p className="text-[10px] opacity-70 font-bold bengali text-emerald-400">দ্রুত ও অফলাইন ব্যবহারের জন্য</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleInstallClick} className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-all">
-              {isIOS ? <Share size={16} /> : <DownloadCloud size={16} />} {isIOS ? 'কিভাবে?' : 'ইন্সটল'}
-            </button>
-            <button onClick={() => setShowInstallBanner(false)} className="p-2 text-white/40 hover:text-white"><X size={20} /></button>
-          </div>
+        <div className="fixed top-24 left-4 right-4 z-[200] lg:max-w-md lg:left-auto lg:right-6 animate-in slide-in-from-top-10 duration-500 no-print">
+           <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-emerald-100 dark:border-slate-800 flex items-center gap-4 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+                <BellRing size={40} className="text-emerald-500" />
+              </div>
+              
+              <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center p-2.5 shrink-0 border border-emerald-100 dark:border-emerald-800/50">
+                 <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App Icon" />
+              </div>
+              
+              <div className="flex-1 min-w-0 pr-6">
+                <h4 className="text-[13px] font-black text-slate-900 dark:text-white leading-tight bengali">ইন্সটল করে মোবাইলে রাখুন</h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1 bengali leading-tight">দ্রুত ও অফলাইন ব্যবহারের জন্য এটি সেরা মাধ্যম।</p>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={handleInstallClick} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all">
+                    {isIOS ? <Share size={12} /> : <DownloadCloud size={12} />} {isIOS ? 'কিভাবে?' : 'ইন্সটল করুন'}
+                  </button>
+                  <button onClick={handleDismiss} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-black text-[10px] uppercase px-2 py-2 bengali">পরে করব</button>
+                </div>
+              </div>
+
+              <button onClick={handleDismiss} className="absolute top-4 right-4 p-1 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <X size={16} />
+              </button>
+           </div>
         </div>
       )}
 

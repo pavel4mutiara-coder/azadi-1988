@@ -3,7 +3,7 @@
   "name": "আজাদী সমাজ কল্যাণ সংঘ",
   "short_name": "আজাদী",
   "description": "Azadi Social Welfare Organization Official Platform - Est. 1988",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#065f46",
