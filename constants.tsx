@@ -9,7 +9,7 @@ export const ISLAMIC_QUOTES = [
     bn: "মানুষের মধ্যে সেই সর্বোত্তম, যে মানুষের জন্য সবচেয়ে বেশি উপকারী।"
   },
   {
-    arabic: "إِنَّ اللَّهَ جَمِيلٌ يُحِبُّ الْجَمَالَ",
+    arabic: "إِنَّ اللَّهَ جَمِيلٌ يُحِبּُ الْجَمَالَ",
     en: "Indeed, Allah is Beautiful and He loves beauty.",
     bn: "নিশ্চয়ই আল্লাহ সুন্দর এবং তিনি সৌন্দর্যকে পছন্দ করেন।"
   },
@@ -133,8 +133,8 @@ export const TRANSLATIONS = {
 export const NAV_ITEMS = [
   { label: 'home', path: '/', icon: <Home size={20} /> },
   { label: 'about', path: '/about', icon: <Info size={20} /> },
-  { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
   { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
+  { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
   { label: 'history', path: '/donation-history', icon: <History size={20} /> },
 ];
 

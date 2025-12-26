@@ -3,11 +3,12 @@
   "name": "আজাদী সমাজ কল্যাণ সংঘ",
   "short_name": "আজাদী",
   "description": "Azadi Social Welfare Organization Official Platform - Est. 1988",
-  "start_url": "/?utm_source=pwa",
+  "start_url": "/?utm_source=pwa_app",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "background_color": "#020617",
   "theme_color": "#065f46",
-  "orientation": "portrait",
+  "orientation": "any",
   "scope": "/",
   "icons": [
     {
@@ -54,6 +55,13 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Home Screen of Azadi App"
+    },
+    {
+      "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Home Screen of Azadi App on Tablet"
     }
   ]
 }

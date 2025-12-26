@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'azadi-v5-fast';
+const CACHE_NAME = 'azadi-v7-instant-sync';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -34,15 +34,46 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Stale-While-Revalidate Strategy for maximum speed
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // CRITICAL: "Network First" for index.html / main paths
+  // This ensures that when someone opens a link (shared or old), 
+  // they fetch the latest version from the server immediately if online.
+  const isMainPage = url.origin === self.location.origin && 
+                    (url.pathname === '/' || url.pathname === '/index.html' || url.pathname.includes('/about') || url.pathname.includes('/donation'));
+
+  if (isMainPage) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          // If network is available, update cache and return response
+          const clonedResponse = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clonedResponse);
+          });
+          return networkResponse;
+        })
+        .catch(() => {
+          // If network fails (offline), return cached version
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // DEFAULT: "Stale-While-Revalidate" for other static assets (fonts, images, tailwind)
+  // This maintains speed while updating background assets for next visit.
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
+          const clonedResponse = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clonedResponse);
+          });
         }
         return networkResponse;
       });

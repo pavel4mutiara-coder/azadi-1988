@@ -19,22 +19,15 @@ import {
   Zap,
   ServerCrash,
   Loader2,
-  HelpCircle,
   Plus,
   Download,
   Users,
   Heart,
-  ExternalLink,
   CreditCard,
-  Settings2,
-  ShieldCheck,
-  Copy,
-  UserCheck,
-  Lock,
-  ShieldAlert,
-  ArrowRight,
   LayoutGrid,
-  Phone
+  Phone,
+  Lock,
+  ArrowRight
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -44,32 +37,10 @@ export const AdminDashboard: React.FC = () => {
   const [viewingReceipt, setViewingReceipt] = useState<Donation | null>(null);
   const [showCashForm, setShowCashForm] = useState(false);
   const [cashFormData, setCashFormData] = useState({ donorName: '', amount: '', purpose: t.categories[0] });
-  const [copiedId, setCopiedId] = useState(false);
-  const [copiedRules, setCopiedRules] = useState(false);
 
   const pendingDonations = donations.filter(d => d.status === DonationStatus.PENDING);
   const approvedDonations = donations.filter(d => d.status === DonationStatus.APPROVED);
   const totalApproved = approvedDonations.reduce((sum, d) => sum + d.amount, 0);
-
-  const handleCopyProjectId = () => {
-    navigator.clipboard.writeText(FIREBASE_PROJECT_ID);
-    setCopiedId(true);
-    setTimeout(() => setCopiedId(false), 2000);
-  };
-
-  const handleCopyRules = () => {
-    const rules = `rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /azadi_organization/state_v2 {
-      allow read, write: if true;
-    }
-  }
-}`;
-    navigator.clipboard.writeText(rules);
-    setCopiedRules(true);
-    setTimeout(() => setCopiedRules(false), 2000);
-  };
 
   const handleCashSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,164 +70,167 @@ service cloud.firestore {
   }
 
   return (
-    <div className="space-y-14 animate-in fade-in duration-500 pb-20">
-      {/* Cloud Connectivity Status Bar */}
-      <div className={`rounded-[3rem] p-1.5 border-2 transition-all duration-500 shadow-2xl ${cloudSynced ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30 shadow-lg'}`}>
-        <div className="bg-emerald-50/50 dark:bg-slate-900 rounded-[2.8rem] p-8 flex flex-col items-center justify-between gap-8">
-          <div className="flex flex-col lg:flex-row items-center gap-8 w-full">
-            <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all duration-500 shrink-0 ${cloudSynced ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white animate-pulse'}`}>
-              {cloudSynced ? <Cloud size={36} /> : (cloudErrorType === 'auth' ? <Lock size={36} /> : <ServerCrash size={36} />)}
+    <div className="space-y-8 md:space-y-14 animate-in fade-in duration-500 pb-20">
+      
+      {/* Cloud Connectivity Status Bar - Slimmer on mobile */}
+      <div className={`rounded-[2rem] md:rounded-[3rem] p-1 border-2 transition-all duration-500 shadow-2xl ${cloudSynced ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+        <div className="bg-emerald-50/50 dark:bg-slate-900 rounded-[1.8rem] md:rounded-[2.8rem] p-5 md:p-8 flex flex-col items-center lg:flex-row justify-between gap-6 md:gap-8">
+          <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-8 w-full">
+            <div className={`w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center shadow-2xl shrink-0 ${cloudSynced ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white animate-pulse'}`}>
+              {cloudSynced ? <Cloud size={28} className="md:w-9 md:h-9" /> : (cloudErrorType === 'auth' ? <Lock size={28} /> : <ServerCrash size={28} />)}
             </div>
-            <div className="flex-1 text-center lg:text-left">
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center justify-center lg:justify-start gap-3">
+            <div className="flex-1 text-center sm:text-left">
+              <h2 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center justify-center sm:justify-start gap-2">
                 {cloudSynced ? (lang === 'bn' ? 'ক্লাউড সিঙ্ক সক্রিয়' : 'Cloud Sync Active') : (lang === 'bn' ? 'ডাটাবেজ কানেকশন সমস্যা' : 'Cloud Access Restricted')}
-                {cloudSynced ? <CheckCircle2 className="text-emerald-500" size={24} /> : <AlertCircle className="text-red-500" size={24} />}
+                {cloudSynced ? <CheckCircle2 className="text-emerald-500" size={20} /> : <AlertCircle className="text-red-500" size={20} />}
               </h2>
-              <p className="text-slate-600 dark:text-slate-300 font-bold text-sm mt-2">
+              <p className="text-slate-600 dark:text-slate-300 font-bold text-xs md:text-sm mt-1">
                 {cloudSynced ? (lang === 'bn' ? 'সকল তথ্য নিরাপদে সংরক্ষিত আছে।' : 'Action required: Update security rules or project configuration.') : cloudErrorMessage}
               </p>
             </div>
             {!cloudSynced && (
-              <button onClick={retryCloudConnection} disabled={cloudSyncStatus === 'syncing'} className="bg-red-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 shadow-xl hover:bg-red-700 transition-all shrink-0">
-                {cloudSyncStatus === 'syncing' ? <Loader2 className="animate-spin" size={20} /> : <Zap size={20} fill="currentColor" />}
-                {cloudSyncStatus === 'syncing' ? (lang === 'bn' ? 'পরীক্ষা করা হচ্ছে...' : 'Verifying...') : (lang === 'bn' ? 'কানেকশন চেক করুন' : 'Retry Connection')}
+              <button onClick={retryCloudConnection} disabled={cloudSyncStatus === 'syncing'} className="bg-red-600 text-white px-6 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest flex items-center gap-2 md:gap-3 shadow-xl hover:bg-red-700 transition-all shrink-0">
+                {cloudSyncStatus === 'syncing' ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} fill="currentColor" />}
+                {cloudSyncStatus === 'syncing' ? (lang === 'bn' ? 'পরীক্ষা করা হচ্ছে...' : 'Verifying...') : (lang === 'bn' ? 'চেক করুন' : 'Retry')}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Stats Summary with High Visibility */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      {/* Stats Summary - Responsive Grid */}
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
         {[
-          { icon: <DollarSign size={28}/>, label: 'Total Collections', val: `৳${totalApproved.toLocaleString()}`, color: 'emerald' },
-          { icon: <Clock size={28}/>, label: 'Pending Approval', val: pendingDonations.length, color: 'amber' },
-          { icon: <Users size={28}/>, label: 'Total Contributors', val: new Set(approvedDonations.map(d => d.donorName)).size, color: 'blue' },
-          { icon: <Heart size={28}/>, label: 'Impact Points', val: (totalApproved/500).toFixed(0), color: 'rose' }
+          { icon: <DollarSign size={24}/>, label: 'Total Collections', val: `৳${totalApproved.toLocaleString()}`, color: 'emerald' },
+          { icon: <Clock size={24}/>, label: 'Pending Approval', val: pendingDonations.length, color: 'amber' },
+          { icon: <Users size={24}/>, label: 'Total Contributors', val: new Set(approvedDonations.map(d => d.donorName)).size, color: 'blue' },
+          { icon: <Heart size={24}/>, label: 'Impact Points', val: (totalApproved/500).toFixed(0), color: 'rose' }
         ].map((stat, i) => (
-          <div key={i} className="p-10 bg-emerald-50/80 dark:bg-slate-900 rounded-[3rem] border border-emerald-100 dark:border-slate-800 shadow-xl group hover:border-emerald-500 transition-all flex flex-col items-center text-center gap-4">
-            <div className={`w-16 h-16 rounded-[1.5rem] bg-${stat.color}-50 dark:bg-${stat.color}-900/40 flex items-center justify-center text-${stat.color}-600 dark:text-${stat.color}-400 mb-2 shadow-inner group-hover:scale-110 transition-transform`}>
+          <div key={i} className="p-6 md:p-10 bg-white dark:bg-slate-900 rounded-[2rem] md:rounded-[3rem] border border-emerald-100 dark:border-slate-800 shadow-xl group hover:border-emerald-500 transition-all flex flex-col items-center text-center gap-2 md:gap-4">
+            <div className={`w-12 h-12 md:w-16 md:h-16 rounded-[1rem] md:rounded-[1.5rem] bg-${stat.color}-50 dark:bg-${stat.color}-900/40 flex items-center justify-center text-${stat.color}-600 dark:text-${stat.color}-400 mb-1 shadow-inner group-hover:scale-110 transition-transform`}>
               {stat.icon}
             </div>
             <div>
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-1.5">{stat.label}</div>
-              <div className="text-4xl font-black text-slate-900 dark:text-white transition-colors">{stat.val}</div>
+              <div className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-0.5 md:mb-1.5">{stat.label}</div>
+              <div className="text-xl md:text-4xl font-black text-slate-900 dark:text-white transition-colors">{stat.val}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Module Title Section */}
-      <div className="flex items-center gap-4 mb-2">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center shadow-xl">
-          <LayoutGrid size={24} />
+      <div className="flex items-center gap-3 md:gap-4 mb-2">
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-emerald-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center shadow-xl">
+          <LayoutGrid size={20} className="md:w-6 md:h-6" />
         </div>
-        <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight bengali">
           {lang === 'bn' ? 'ম্যানেজমেন্ট মডিউল' : 'Management Modules'}
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
+      {/* Modules Grid - Dynamic Columns */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 ipad:grid-cols-6 gap-3 md:gap-5">
         {ADMIN_NAV_ITEMS.map((item) => {
           const label = t[item.label as keyof typeof t] as string;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className="group relative bg-emerald-50/80 dark:bg-slate-900 p-8 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 shadow-lg hover:shadow-3xl hover:border-emerald-500 dark:hover:border-emerald-500 transition-all duration-500 flex flex-col items-center text-center gap-5 overflow-hidden"
+              className="group relative bg-white dark:bg-slate-900 p-5 md:p-8 rounded-[1.8rem] md:rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-lg hover:shadow-3xl hover:border-emerald-500 transition-all duration-500 flex flex-col items-center text-center gap-3 md:gap-5 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 group-hover:bg-emerald-500/15 rounded-bl-[2.5rem] transition-colors"></div>
-              <div className="w-14 h-14 rounded-[1.25rem] bg-white dark:bg-slate-950 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-all shadow-inner border border-emerald-100 group-hover:border-emerald-500/20">
-                {React.cloneElement(item.icon as React.ReactElement<any>, { size: 28 })}
+              <div className="absolute top-0 right-0 w-12 h-12 md:w-20 md:h-20 bg-emerald-500/5 group-hover:bg-emerald-500/15 rounded-bl-[1.5rem] md:rounded-bl-[2.5rem] transition-colors"></div>
+              <div className="w-10 h-10 md:w-14 md:h-14 rounded-[0.8rem] md:rounded-[1.25rem] bg-emerald-50 dark:bg-slate-950 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-all shadow-inner border border-emerald-50 group-hover:border-emerald-500/20">
+                {React.cloneElement(item.icon as React.ReactElement<any>, { size: 22, className: "md:w-7 md:h-7" })}
               </div>
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 group-hover:text-emerald-600/60 transition-colors">{item.label}</div>
-                <div className="text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-widest leading-none">{label}</div>
+              <div className="space-y-1">
+                <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 group-hover:text-emerald-600/60 transition-colors">{item.label}</div>
+                <div className="text-[11px] md:text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-widest leading-none bengali">{label}</div>
               </div>
             </Link>
           );
         })}
       </div>
 
-      {/* Donation Management with Enhanced Contrast */}
-      <div className="bg-emerald-50/60 dark:bg-slate-900 rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl overflow-hidden">
-        <div className="p-10 border-b border-emerald-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex bg-white/50 dark:bg-slate-950 p-2 rounded-2xl border border-emerald-100 dark:border-slate-800/50">
-            <button onClick={() => setActiveTab('pending')} className={`px-8 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 ${activeTab === 'pending' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xl' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-              <Clock size={18} /> {lang === 'bn' ? 'অপেক্ষমান' : 'Pending'} ({pendingDonations.length})
+      {/* Donation Management Table - Responsive Wrap */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] md:rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl overflow-hidden">
+        <div className="p-5 md:p-10 border-b border-emerald-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-6">
+          <div className="flex bg-slate-50 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800/50 w-full sm:w-auto">
+            <button onClick={() => setActiveTab('pending')} className={`flex-1 sm:flex-none px-4 md:px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all flex items-center justify-center gap-2 ${activeTab === 'pending' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xl' : 'text-slate-500'}`}>
+              <Clock size={16} /> {lang === 'bn' ? 'অপেক্ষমান' : 'Pending'} ({pendingDonations.length})
             </button>
-            <button onClick={() => setActiveTab('approved')} className={`px-8 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 ${activeTab === 'approved' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-              <Check size={18} /> {lang === 'bn' ? 'অনুমোদিত' : 'Approved'}
+            <button onClick={() => setActiveTab('approved')} className={`flex-1 sm:flex-none px-4 md:px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all flex items-center justify-center gap-2 ${activeTab === 'approved' ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}>
+              <Check size={16} /> {lang === 'bn' ? 'অনুমোদিত' : 'Approved'}
             </button>
           </div>
-          <div className="flex gap-4">
-            <button onClick={() => setShowCashForm(!showCashForm)} className="bg-emerald-900 dark:bg-white dark:text-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:opacity-90 shadow-2xl transition-all">
-              <Plus size={18} /> {lang === 'bn' ? 'নগদ এন্ট্রি' : 'Add Cash'}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button onClick={() => setShowCashForm(!showCashForm)} className="flex-1 sm:flex-none bg-emerald-900 dark:bg-white dark:text-slate-900 text-white px-5 md:px-8 py-3.5 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-2xl transition-all">
+              <Plus size={16} /> {lang === 'bn' ? 'নগদ এন্ট্রি' : 'Add Cash'}
             </button>
-            <button onClick={() => window.print()} className="p-4 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 dark:border-slate-700 shadow-md">
-              <Download size={22} />
+            <button onClick={() => window.print()} className="p-3.5 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
+              <Download size={18} />
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-white/50 dark:bg-slate-950 text-[11px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400 border-b border-emerald-100 dark:border-slate-800">
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-left min-w-[600px]">
+            <thead className="bg-slate-50 dark:bg-slate-950 text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 border-b border-emerald-50 dark:border-slate-800">
               <tr>
-                <th className="p-8">Donor Info</th>
-                <th className="p-8">Method & TXID</th>
-                <th className="p-8">Purpose</th>
-                <th className="p-8">Amount</th>
-                <th className="p-8 text-right">Actions</th>
+                <th className="p-5 md:p-8">Donor Info</th>
+                <th className="p-5 md:p-8">Transaction</th>
+                <th className="p-5 md:p-8">Amount</th>
+                <th className="p-5 md:p-8 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-emerald-50 dark:divide-slate-800/60">
               {(activeTab === 'pending' ? pendingDonations : approvedDonations).map(d => (
-                <tr key={d.id} className="hover:bg-white/60 dark:hover:bg-slate-950/40 transition-all duration-300">
-                  <td className="p-8">
-                    <div className="font-black text-slate-900 dark:text-white text-base mb-1">{d.isAnonymous ? (lang === 'bn' ? 'নাম প্রকাশে অনিচ্ছুক' : 'Anonymous') : d.donorName}</div>
-                    <div className="text-[11px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                       <Phone size={12} className="text-emerald-500" /> {d.phone}
+                <tr key={d.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/40 transition-all duration-300">
+                  <td className="p-5 md:p-8">
+                    <div className="font-black text-slate-900 dark:text-white text-sm md:text-base mb-1 bengali leading-none">{d.isAnonymous ? (lang === 'bn' ? 'নাম প্রকাশে অনিচ্ছুক' : 'Anonymous') : d.donorName}</div>
+                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5">
+                       <Phone size={10} className="text-emerald-500" /> {d.phone}
                     </div>
                   </td>
-                  <td className="p-8">
-                    <div className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase mb-2 flex items-center gap-2">
-                      <CreditCard size={14} className="text-blue-500" /> {d.paymentMethod}
+                  <td className="p-5 md:p-8">
+                    <div className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1.5">
+                      <CreditCard size={12} className="text-blue-500" /> {d.paymentMethod}
                     </div>
-                    <div className="text-[10px] font-mono font-black text-slate-500 dark:text-emerald-400 bg-white/80 dark:bg-emerald-950/40 px-3 py-1 rounded-lg inline-block uppercase tracking-wider border border-emerald-50 dark:border-emerald-900/40">
+                    <div className="text-[9px] font-mono font-black text-slate-500 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/40 px-2 py-1 rounded-md inline-block uppercase tracking-wider border border-emerald-100 dark:border-emerald-900/40">
                       {d.transactionId}
                     </div>
                   </td>
-                  <td className="p-8">
-                    <span className="text-[10px] font-black uppercase tracking-widest px-4 py-1.5 bg-white dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-100 dark:border-emerald-800">
-                      {d.purpose}
-                    </span>
-                  </td>
-                  <td className="p-8 font-black text-2xl text-slate-900 dark:text-white font-mono tracking-tighter">
+                  <td className="p-5 md:p-8 font-black text-lg md:text-2xl text-slate-900 dark:text-white font-mono tracking-tighter">
                     ৳{d.amount.toLocaleString()}
                   </td>
-                  <td className="p-8 text-right space-x-3">
+                  <td className="p-5 md:p-8 text-right space-x-1.5 md:space-x-3 whitespace-nowrap">
                     {d.status === DonationStatus.PENDING && (
                       <>
-                        <button onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
-                          <Check size={20} />
+                        <button onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} className="p-2 md:p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-600 hover:text-white transition-all">
+                          <Check size={18} />
                         </button>
-                        <button onClick={() => updateDonation(d.id, DonationStatus.REJECTED)} className="p-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
-                          <X size={20} />
+                        <button onClick={() => updateDonation(d.id, DonationStatus.REJECTED)} className="p-2 md:p-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all">
+                          <X size={18} />
                         </button>
                       </>
                     )}
                     {d.status === DonationStatus.APPROVED && (
-                      <button onClick={() => setViewingReceipt(d)} className="p-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-emerald-900 dark:hover:bg-white dark:hover:text-slate-900 hover:text-white transition-all shadow-md">
-                        <FileText size={20} />
+                      <button onClick={() => setViewingReceipt(d)} className="p-2 md:p-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-emerald-900 dark:hover:bg-white dark:hover:text-slate-900 hover:text-white transition-all">
+                        <FileText size={18} />
                       </button>
                     )}
-                    <button onClick={() => deleteDonation(d.id)} className="p-3 text-slate-400 hover:text-red-500 transition-all">
-                      <Trash2 size={20} />
+                    <button onClick={() => deleteDonation(d.id)} className="p-2 md:p-3 text-slate-300 hover:text-red-500 transition-all">
+                      <Trash2 size={18} />
                     </button>
                   </td>
                 </tr>
               ))}
+              {(activeTab === 'pending' ? pendingDonations : approvedDonations).length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-20 text-center text-slate-400 font-bold italic opacity-50">
+                    No donations found here.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

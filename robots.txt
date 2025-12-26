@@ -1,0 +1,5 @@
+
+User-agent: *
+Allow: /
+
+Sitemap: https://azadi-1988.vercel.app/sitemap.xml
