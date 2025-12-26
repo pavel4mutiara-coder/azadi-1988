@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, 
 
 export const ISLAMIC_QUOTES = [
   {
-    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّاسِ",
+    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّাসِ",
     en: "The best of people are those who are most beneficial to people.",
     bn: "মানুষের মধ্যে সেই সর্বোত্তম, যে মানুষের জন্য সবচেয়ে বেশি উপকারী।"
   },
@@ -75,7 +75,8 @@ export const TRANSLATIONS = {
     foundingTitle: "Founding Story",
     missionTitle: "Our Mission",
     visionTitle: "Our Vision",
-    milestonesTitle: "Major Milestones"
+    milestonesTitle: "Major Milestones",
+    devCredit: "Architected and Developed by Ahmed Hossain Pavel"
   },
   bn: {
     home: "মূল পাতা",
@@ -126,7 +127,8 @@ export const TRANSLATIONS = {
     foundingTitle: "প্রতিষ্ঠার প্রেক্ষাপট",
     missionTitle: "আমাদের লক্ষ্য",
     visionTitle: "আমাদের উদ্দেশ্য",
-    milestonesTitle: "উল্লেখযোগ্য মাইলফলক"
+    milestonesTitle: "উল্লেখযোগ্য মাইলফলক",
+    devCredit: "সফটওয়্যার আর্কিটেকচার ও বাস্তবায়নে: আহমেদ হোসেন পাভেল"
   }
 };
 

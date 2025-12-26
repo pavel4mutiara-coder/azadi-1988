@@ -20,14 +20,7 @@
     <meta property="og:description" content="শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত সিলেটের একটি ঐতিহ্যবাহী সামাজিক সংগঠন। প্রতিষ্ঠিত: ১০ জুন ১৯৮৮।">
     <meta property="og:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://azadi-1988.vercel.app/">
-    <meta property="twitter:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare">
-    <meta property="twitter:description" content="শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত সিলেটের একটি ঐতিহ্যবাহী সামাজিক সংগঠন।">
-    <meta property="twitter:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
-
-    <!-- JSON-LD Structured Data for Organization (SEO Booster) -->
+    <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -49,20 +42,16 @@
         "telephone": "+8801711975488",
         "contactType": "Customer Service",
         "email": "azadisocialwelfareorganization@gmail.com"
-      },
-      "sameAs": [
-        "https://www.facebook.com/profile.php?id=61585193438030",
-        "https://youtube.com/@azadisocialwelfareorganization"
-      ]
+      }
     }
     </script>
     
-    <!-- Instant Update Strategy -->
+    <!-- Cache Control -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <!-- PWA / Mobile App Native Experience Meta -->
+    <!-- PWA Meta -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -72,15 +61,13 @@
     <meta name="theme-color" content="#065f46">
     
     <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
-    
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
-    <!-- Resource Preloading -->
-    <link rel="preconnect" href="https://esm.sh">
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700;900&family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -100,7 +87,6 @@
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 
     <style>
@@ -117,15 +103,25 @@
             scrollbar-color: rgba(5, 150, 105, 0.2) transparent;
         }
 
-        input, select, textarea {
-            font-size: 16px !important;
+        /* 
+           CRITICAL BENGALI FIX: 
+           Separated characters happen because of letter-spacing. 
+           Bengali MUST have letter-spacing: normal to maintain ligatures.
+        */
+        [lang="bn"], [lang="bn"] *, .bengali, .bengali * {
+            font-family: var(--font-bengali) !important;
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
+            font-feature-settings: "liga" on, "clig" on, "kern" on;
+            font-variant-ligatures: common-ligatures;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
 
         body {
             font-family: var(--font-english), var(--font-bengali);
             user-select: none;
             -webkit-user-select: none;
-            -webkit-touch-callout: none;
             overflow-x: hidden;
             width: 100%;
             background-color: #f8fafc;
@@ -138,12 +134,13 @@
 
         .dark body { background-color: #020617; }
 
-        [lang="bn"], .bengali { font-family: var(--font-bengali) !important; }
+        input, select, textarea {
+            font-size: 16px !important;
+        }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(5, 150, 105, 0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(5, 150, 105, 0.3); }
 
         .app-container {
             max-width: 2000px;
@@ -153,10 +150,6 @@
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; }
-        }
-
-        header {
-            padding-top: env(safe-area-inset-top);
         }
     </style>
 
