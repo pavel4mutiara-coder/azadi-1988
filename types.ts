@@ -13,6 +13,7 @@ export interface Donation {
   isAnonymous: boolean;
   amount: number;
   phone: string;
+  email?: string; // Optional email field
   transactionId: string;
   purpose: string;
   status: DonationStatus;

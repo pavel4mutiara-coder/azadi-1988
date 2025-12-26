@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, History, Info } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
@@ -30,8 +30,9 @@ export const TRANSLATIONS = {
     home: "Home",
     leadership: "Leadership",
     events: "Events",
-    about: "About Us",
+    about: "Our Journey",
     donation: "Donation",
+    history: "Records",
     impact: "Impact",
     admin: "Admin Panel",
     slogan: "Education · Unity · Service · Peace · Sports",
@@ -70,14 +71,19 @@ export const TRANSLATIONS = {
     financials: "Financials",
     letterhead: "Letterhead",
     categories: ["Education", "Health", "Mosque/Madrasa", "Sports", "General Welfare"],
-    inspiration: "Daily Inspiration"
+    inspiration: "Daily Inspiration",
+    foundingTitle: "Founding Story",
+    missionTitle: "Our Mission",
+    visionTitle: "Our Vision",
+    milestonesTitle: "Major Milestones"
   },
   bn: {
     home: "মূল পাতা",
     leadership: "নেতৃবৃন্দ",
     events: "ইভেন্টস",
-    about: "আমাদের সম্পর্কে",
+    about: "আমাদের পথচলা",
     donation: "অনুদান",
+    history: "ইতিহাস",
     impact: "প্রভাব",
     admin: "এডমিন প্যানেল",
     slogan: "শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া",
@@ -116,16 +122,20 @@ export const TRANSLATIONS = {
     financials: "আর্থিক হিসাব",
     letterhead: "লেটারহেড",
     categories: ["শিক্ষা", "চিকিৎসা", "মসজিদ/মাদরাসা", "ক্রীড়া", "সাধারণ কল্যাণ"],
-    inspiration: "প্রতিদিনের প্রেরণা"
+    inspiration: "প্রতিদিনের প্রেরণা",
+    foundingTitle: "প্রতিষ্ঠার প্রেক্ষাপট",
+    missionTitle: "আমাদের লক্ষ্য",
+    visionTitle: "আমাদের উদ্দেশ্য",
+    milestonesTitle: "উল্লেখযোগ্য মাইলফলক"
   }
 };
 
 export const NAV_ITEMS = [
   { label: 'home', path: '/', icon: <Home size={20} /> },
+  { label: 'about', path: '/about', icon: <Info size={20} /> },
   { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
-  { label: 'donation', path: '/donation', icon: <Heart size={20} /> }, // Moved to center
-  { label: 'events', path: '/events', icon: <Calendar size={20} /> },
-  { label: 'impact', path: '/impact', icon: <PieChart size={20} /> },
+  { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
+  { label: 'history', path: '/donation-history', icon: <History size={20} /> },
 ];
 
 export const ADMIN_NAV_ITEMS = [

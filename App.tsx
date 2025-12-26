@@ -5,6 +5,8 @@ import { AppProvider, useApp } from './AppContext';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Donation } from './pages/Donation';
+import { DonationHistory } from './pages/DonationHistory';
+import { HistoryPage } from './pages/History';
 import { Leadership } from './pages/Leadership';
 import { Events } from './pages/Events';
 import { Impact } from './pages/Impact';
@@ -62,7 +64,9 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/about" element={<HistoryPage />} />
       <Route path="/donation" element={<Donation />} />
+      <Route path="/donation-history" element={<DonationHistory />} />
       <Route path="/leadership" element={<Leadership />} />
       <Route path="/events" element={<Events />} />
       <Route path="/impact" element={<Impact />} />

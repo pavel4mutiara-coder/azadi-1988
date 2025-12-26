@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Donation, OrganizationSettings } from '../types';
-import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye } from 'lucide-react';
+import { Donation, OrganizationSettings, DonationStatus } from '../types';
+import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock } from 'lucide-react';
 
 declare var html2pdf: any;
 
@@ -42,7 +42,6 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
     if (!receiptRef.current) return;
     setIsGenerating(true);
 
-    // Detect if device is iOS (iPhone/iPad)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     const opt = {
@@ -62,12 +61,10 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
       const worker = html2pdf().set(opt).from(receiptRef.current);
       
       if (isIOS) {
-        // Special logic for iOS: Open in new window for saving
         const pdfBlob = await worker.output('blob');
         const url = URL.createObjectURL(pdfBlob);
         window.open(url, '_blank');
       } else {
-        // Standard logic for Android/PC
         await worker.save();
       }
     } catch (err) {
@@ -79,7 +76,7 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
   };
 
   const handleWhatsAppShare = () => {
-    const text = `আসসালামু আলাইকুম,\nআমি আজাদী সমাজ কল্যাণ সংঘে একটি অনুদান প্রদান করেছি।\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n\nধন্যবাদ।`;
+    const text = `আসসালামু আলাইকুম,\nআমি আজাদী সমাজ কল্যাণ সংঘে একটি অনুদান প্রদান করেছি।\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n*অবস্থা:* ${donation.status === DonationStatus.APPROVED ? 'অনুমোদিত' : 'অপেক্ষমান'}\n\nধন্যবাদ।`;
     const url = `https://wa.me/${settings.adminWhatsApp}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -136,8 +133,16 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
           </div>
 
           <div className="relative z-10 space-y-8">
-            <div className="text-center">
+            <div className="flex flex-col items-center gap-4">
               <span className="bg-emerald-900 text-white px-8 py-2 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-lg">অনুদান রশিদ / Donation Receipt</span>
+              <div className={`flex items-center gap-2 px-6 py-2 rounded-2xl border-2 font-black text-xs uppercase tracking-widest ${
+                donation.status === DonationStatus.APPROVED 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>
+                {donation.status === DonationStatus.APPROVED ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                {donation.status === DonationStatus.APPROVED ? (isPublic ? 'অনুমোদিত / Approved' : 'Approved') : (isPublic ? 'অপেক্ষমান / Pending' : 'Pending')}
+              </div>
             </div>
 
             <div className="bg-emerald-50/20 border border-emerald-100 rounded-3xl p-8 space-y-6">
@@ -161,6 +166,12 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
                   <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">উদ্দেশ্য / Purpose:</div>
                   <div className="font-bold text-slate-800 text-base">{donation.purpose}</div>
                 </div>
+                {donation.email && (
+                  <div className="flex justify-between items-end border-b border-slate-100 pb-4">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">ইমেইল / Email:</div>
+                    <div className="font-bold text-slate-800 text-base">{donation.email}</div>
+                  </div>
+                )}
                 <div className="flex justify-between items-end border-b border-slate-100 pb-4">
                   <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">পেমেন্ট মেথড ও আইডি:</div>
                   <div className="font-mono font-bold text-slate-900 uppercase tracking-widest text-[10px]">{donation.paymentMethod} • {donation.transactionId}</div>

@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
 import { TRANSLATIONS } from '../constants';
 import { DonationStatus, Donation as DonationType } from '../types';
-import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle } from 'lucide-react';
+import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle, Mail } from 'lucide-react';
 import { ReceiptView } from '../admin/ReceiptView';
 
 export const Donation: React.FC = () => {
@@ -15,6 +15,7 @@ export const Donation: React.FC = () => {
     isAnonymous: false, 
     amount: '', 
     phone: '', 
+    email: '', // Added email
     transactionId: '', 
     purpose: t.categories[0],
     paymentMethod: 'Bkash'
@@ -80,6 +81,7 @@ export const Donation: React.FC = () => {
       isAnonymous: formData.isAnonymous,
       amount: Number(formData.amount),
       phone: formData.phone,
+      email: formData.email,
       transactionId: formData.transactionId,
       purpose: formData.purpose,
       paymentMethod: formData.paymentMethod,
@@ -90,7 +92,7 @@ export const Donation: React.FC = () => {
 
     addDonation(newDonation);
     setSubmittedDonation(newDonation);
-    setFormData({ donorName: '', isAnonymous: false, amount: '', phone: '', transactionId: '', purpose: t.categories[0], paymentMethod: 'Bkash' });
+    setFormData({ donorName: '', isAnonymous: false, amount: '', phone: '', email: '', transactionId: '', purpose: t.categories[0], paymentMethod: 'Bkash' });
     setTouched({});
   };
 
@@ -235,19 +237,36 @@ export const Donation: React.FC = () => {
                 {touched.phone && errors.phone && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.phone}</p>}
               </div>
             </div>
-            <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.txid}</label>
-              <input 
-                required 
-                type="text" 
-                onBlur={() => handleBlur('transactionId')}
-                className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider placeholder-emerald-800/30`} 
-                placeholder="TRX12345..." 
-                value={formData.transactionId} 
-                onChange={e => setFormData({...formData, transactionId: e.target.value})} 
-              />
-              {touched.transactionId && errors.transactionId && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.transactionId}</p>}
+
+            <div className="grid sm:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{lang === 'bn' ? 'ইমেইল (ঐচ্ছিক)' : 'Email (Optional)'}</label>
+                <div className="relative">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-600/50" size={20} />
+                  <input 
+                    type="email" 
+                    className="w-full bg-emerald-50/60 dark:bg-slate-950 border border-emerald-200/50 dark:border-slate-800 p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-emerald-800/30" 
+                    placeholder="example@mail.com" 
+                    value={formData.email} 
+                    onChange={e => setFormData({...formData, email: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.txid}</label>
+                <input 
+                  required 
+                  type="text" 
+                  onBlur={() => handleBlur('transactionId')}
+                  className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider placeholder-emerald-800/30`} 
+                  placeholder="TRX12345..." 
+                  value={formData.transactionId} 
+                  onChange={e => setFormData({...formData, transactionId: e.target.value})} 
+                />
+                {touched.transactionId && errors.transactionId && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.transactionId}</p>}
+              </div>
             </div>
+
             <div className="space-y-3">
               <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.purpose}</label>
               <select className="w-full bg-emerald-50/60 dark:bg-slate-950 border border-emerald-200/50 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-emerald-950 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>

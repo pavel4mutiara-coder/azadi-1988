@@ -171,10 +171,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cloudApiError, setCloudApiError] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
 
-  // Critical Logic: Show App Immediately using Local Storage
   useEffect(() => {
     const startApp = async () => {
-      // 1. First, load from local storage to show UI immediately
       const localData = await dbLoad();
       if (localData) {
         if (localData.lang) setLang(localData.lang);
@@ -186,11 +184,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.settings) setSettings({ ...DEFAULT_SETTINGS, ...localData.settings, logo: NEW_LOGO_URL });
         if (localData.letterhead) setLetterhead(localData.letterhead);
       }
-      
-      // 2. Mark as loaded so UI appears instantly
       setIsLoaded(true);
 
-      // 3. Background: Sync from Cloud without blocking the user
       try {
         const { data: cloudData, type, error } = await loadFromCloud();
         if (type) {
@@ -216,14 +211,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isLoaded) {
       const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
       dbSave(state);
-      
-      // Background auto-save to cloud
       const timer = setTimeout(async () => {
         if (!cloudApiError) {
           const result = await saveToCloud(state);
           setCloudSynced(result.success);
         }
-      }, 10000); // Wait 10s after changes to sync (debounced)
+      }, 10000);
       return () => clearTimeout(timer);
     }
   }, [lang, theme, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudApiError]);
@@ -238,7 +231,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError, cloudErrorType, cloudErrorMessage, cloudSyncStatus,
       setLang, setTheme, login, logout: () => setIsAdmin(false),
       addDonation: (d) => {
-        const newD = { ...d, id: Date.now().toString(), status: isAdmin ? DonationStatus.APPROVED : DonationStatus.PENDING, date: new Date().toISOString() };
+        const newD = { 
+          ...d, 
+          id: Date.now().toString(), 
+          status: isAdmin ? DonationStatus.APPROVED : DonationStatus.PENDING, 
+          date: new Date().toISOString() 
+        };
         setDonations([newD, ...donations]);
       },
       updateDonation: (id, status) => setDonations(donations.map(d => d.id === id ? { ...d, status } : d)),
