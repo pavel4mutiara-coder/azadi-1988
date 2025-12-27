@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Donation, OrganizationSettings, DonationStatus } from '../types';
-import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock } from 'lucide-react';
+import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2 } from 'lucide-react';
+import { ISLAMIC_QUOTES } from '../constants';
 
 declare var html2pdf: any;
 
@@ -16,6 +17,11 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
   const [isGenerating, setIsGenerating] = useState(false);
   const [base64Logo, setBase64Logo] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  // Select a random quote for this receipt instance
+  const selectedQuote = useMemo(() => {
+    return ISLAMIC_QUOTES[parseInt(donation.id.slice(-2), 16) % ISLAMIC_QUOTES.length] || ISLAMIC_QUOTES[0];
+  }, [donation.id]);
 
   const logoId = "1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
   const logoUrl = `https://lh3.googleusercontent.com/d/${logoId}`;
@@ -38,34 +44,40 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
     convertToBase64().then(res => setBase64Logo(res));
   }, [logoUrl]);
 
-  const handleDownload = async () => {
-    if (!receiptRef.current) return;
-    setIsGenerating(true);
-
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
+  const generatePdfBlob = async (): Promise<Blob | null> => {
+    if (!receiptRef.current) return null;
     const opt = {
       margin: 0,
       filename: `Azadi_Receipt_${donation.transactionId}.pdf`,
       image: { type: 'jpeg', quality: 1.0 },
       html2canvas: { 
-        scale: 2.5, 
+        scale: 2, 
         useCORS: true, 
         letterRendering: true,
         backgroundColor: '#ffffff'
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
+    return await html2pdf().set(opt).from(receiptRef.current).output('blob');
+  };
 
+  const handleDownload = async () => {
+    if (!receiptRef.current) return;
+    setIsGenerating(true);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
     try {
-      const worker = html2pdf().set(opt).from(receiptRef.current);
+      const blob = await generatePdfBlob();
+      if (!blob) return;
       
       if (isIOS) {
-        const pdfBlob = await worker.output('blob');
-        const url = URL.createObjectURL(pdfBlob);
+        const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
       } else {
-        await worker.save();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Azadi_Receipt_${donation.transactionId}.pdf`;
+        link.click();
       }
     } catch (err) {
       console.error(err);
@@ -75,8 +87,36 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
     }
   };
 
+  const handleShareFile = async () => {
+    if (!receiptRef.current) return;
+    setIsGenerating(true);
+    try {
+      const blob = await generatePdfBlob();
+      if (blob && navigator.share) {
+        const file = new File([blob], `Azadi_Receipt_${donation.transactionId}.pdf`, { type: 'application/pdf' });
+        await navigator.share({
+          files: [file],
+          title: 'Donation Receipt',
+          text: `Donation Receipt from Azadi Social Welfare Organization. Transaction ID: ${donation.transactionId}`,
+        });
+      } else {
+        handleWhatsAppShare();
+      }
+    } catch (err) {
+      console.error('Sharing failed', err);
+      handleWhatsAppShare();
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
-    const text = `আসসালামু আলাইকুম,\nআমি আজাদী সমাজ কল্যাণ সংঘে একটি অনুদান প্রদান করেছি।\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n*অবস্থা:* ${donation.status === DonationStatus.APPROVED ? 'অনুমোদিত' : 'অপেক্ষমান'}\n\nধন্যবাদ।`;
+    const intro = isPublic ? "আসসালামু আলাইকুম," : "Azadi Social Welfare Organization - Official Receipt";
+    const quoteTxt = `\n\n"${selectedQuote.bn}"\n— ${selectedQuote.arabic}`;
+    const details = `\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*উদ্দেশ্য:* ${donation.purpose}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n*অবস্থা:* ${donation.status === DonationStatus.APPROVED ? 'অনুমোদিত (Approved)' : 'অপেক্ষমান (Pending)'}`;
+    const footer = `\n\nধন্যবাদান্তে,\nআজাদী সমাজ কল্যাণ সংঘ, সিলেট।`;
+    
+    const text = `${intro}${details}${quoteTxt}${footer}`;
     const url = `https://wa.me/${settings.adminWhatsApp}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -88,17 +128,22 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
           <button onClick={onBack} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 font-black transition-colors uppercase text-[10px] tracking-widest">
             <ArrowLeft size={16} /> {isPublic ? 'পিছনে' : 'ড্যাশবোর্ড'}
           </button>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={handleWhatsAppShare} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase">
               <MessageCircle size={16} /> WhatsApp
             </button>
+            {navigator.share && (
+               <button onClick={handleShareFile} disabled={isGenerating} className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-indigo-700 transition-all uppercase">
+                 <Share2 size={16} /> {isGenerating ? 'প্রসেসিং...' : 'শেয়ার করুন'}
+               </button>
+            )}
             <button 
               onClick={handleDownload} 
               disabled={isGenerating || !base64Logo} 
               className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-blue-700 transition-all uppercase disabled:opacity-50"
             >
               {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-              {isGenerating ? 'প্রসেসিং...' : 'ডাউনলোড (PDF)'}
+              {isGenerating ? 'প্রসেসিং...' : 'ডাউনলোড'}
             </button>
             <button onClick={() => window.print()} className="bg-slate-800 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-black transition-all uppercase">
               <Printer size={16} /> প্রিন্ট
@@ -202,7 +247,11 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
             </div>
             
             <div className="mt-8 border-t border-slate-100 pt-8 text-center space-y-6">
-              <div className="text-2xl text-emerald-900 font-serif italic bengali drop-shadow-sm select-none">وَمَا تُنفِقُوا مِنْ خَيْرٍ فَإِنَّ اللَّهَ بِهِ عَلِيمٌ</div>
+              <div className="space-y-4 px-6 py-8 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
+                 <div className="text-2xl text-emerald-900 font-serif italic bengali select-none">{selectedQuote.arabic}</div>
+                 <div className="text-[13px] font-bold text-slate-700 bengali leading-relaxed">{selectedQuote.bn}</div>
+                 <div className="text-[10px] font-medium text-emerald-600/60 uppercase tracking-widest italic">{selectedQuote.en}</div>
+              </div>
               <div className="inline-flex items-center justify-center gap-3 text-emerald-900 font-black text-[10px] uppercase tracking-widest bg-emerald-50 px-8 py-3 rounded-full shadow-sm">
                 <Heart size={14} className="text-rose-500" fill="currentColor" />
                 আপনার সহযোগিতার জন্য অশেষ কৃতজ্ঞতা

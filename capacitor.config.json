@@ -5,12 +5,31 @@
   "webDir": ".",
   "bundledWebRuntime": false,
   "server": {
-    "allowNavigation": ["lh3.googleusercontent.com", "drive.google.com"],
-    "cleartext": true
+    "allowNavigation": [
+      "lh3.googleusercontent.com", 
+      "drive.google.com", 
+      "firebasestorage.googleapis.com", 
+      "www.gstatic.com"
+    ],
+    "cleartext": true,
+    "androidScheme": "https"
   },
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": true,
+    "buildOptions": {
+      "releaseType": "APK"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "backgroundColor": "#065f46",
+      "showSpinner": true,
+      "androidSpinnerStyle": "large",
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#ffffff"
+    }
   }
 }
