@@ -2,14 +2,16 @@
 {
   "name": "azadi-social-welfare",
   "version": "1.0.0",
-  "description": "Azadi Social Welfare Organization Android App",
+  "type": "module",
+  "description": "Official Android App for Azadi Social Welfare Organization",
   "main": "index.tsx",
   "scripts": {
-    "build": "echo 'Building assets...'",
-    "android:add": "npx cap add android",
-    "android:open": "npx cap open android",
-    "android:sync": "npx cap sync android",
-    "sync": "npx cap sync"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:copy": "npx cap copy android"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
@@ -19,6 +21,17 @@
     "@capacitor/filesystem": "^6.0.0",
     "@capacitor/share": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
-    "@capacitor/splash-screen": "^6.0.0"
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/keyboard": "^6.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1",
+    "lucide-react": "^0.471.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
   }
 }
