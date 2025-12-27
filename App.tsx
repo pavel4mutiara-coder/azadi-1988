@@ -49,7 +49,6 @@ const AdminLogin: React.FC = () => {
           {t.login}
         </button>
       </form>
-      <p className="text-xs opacity-50 italic font-medium">Default password: azadi1988</p>
     </div>
   );
 };
