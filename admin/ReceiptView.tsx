@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Donation, OrganizationSettings, DonationStatus } from '../types';
-import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2 } from 'lucide-react';
+import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText } from 'lucide-react';
 import { ISLAMIC_QUOTES } from '../constants';
 
 declare var html2pdf: any;
@@ -18,18 +18,14 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
   const [base64Logo, setBase64Logo] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  // Select a random quote for this receipt instance
   const selectedQuote = useMemo(() => {
     return ISLAMIC_QUOTES[parseInt(donation.id.slice(-2), 16) % ISLAMIC_QUOTES.length] || ISLAMIC_QUOTES[0];
   }, [donation.id]);
 
-  const logoId = "1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
-  const logoUrl = `https://lh3.googleusercontent.com/d/${logoId}`;
-
   useEffect(() => {
     const convertToBase64 = async () => {
       try {
-        const response = await fetch(logoUrl);
+        const response = await fetch(settings.logo);
         const blob = await response.blob();
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -38,11 +34,11 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
           reader.readAsDataURL(blob);
         });
       } catch (err) {
-        return logoUrl;
+        return settings.logo;
       }
     };
     convertToBase64().then(res => setBase64Logo(res));
-  }, [logoUrl]);
+  }, [settings.logo]);
 
   const generatePdfBlob = async (): Promise<Blob | null> => {
     if (!receiptRef.current) return null;
@@ -51,211 +47,206 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
       filename: `Azadi_Receipt_${donation.transactionId}.pdf`,
       image: { type: 'jpeg', quality: 1.0 },
       html2canvas: { 
-        scale: 2, 
+        scale: 4, 
         useCORS: true, 
         letterRendering: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        logging: false,
+        y: 0,
+        scrollY: 0,
+        windowWidth: 794, // 210mm at 96dpi
+        windowHeight: 1123 // 297mm at 96dpi
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'avoid-all' }
     };
-    return await html2pdf().set(opt).from(receiptRef.current).output('blob');
+    try {
+      return await html2pdf().set(opt).from(receiptRef.current).output('blob');
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      return null;
+    }
   };
 
   const handleDownload = async () => {
     if (!receiptRef.current) return;
     setIsGenerating(true);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
     try {
       const blob = await generatePdfBlob();
-      if (!blob) return;
-      
-      if (isIOS) {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      } else {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `Azadi_Receipt_${donation.transactionId}.pdf`;
-        link.click();
-      }
+      if (!blob) throw new Error("Could not generate blob");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Azadi_Receipt_${donation.transactionId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) {
       console.error(err);
-      alert('PDF তৈরিতে সমস্যা হয়েছে। প্রিন্ট অপশনটি ব্যবহার করুন।');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleShareFile = async () => {
-    if (!receiptRef.current) return;
-    setIsGenerating(true);
-    try {
-      const blob = await generatePdfBlob();
-      if (blob && navigator.share) {
-        const file = new File([blob], `Azadi_Receipt_${donation.transactionId}.pdf`, { type: 'application/pdf' });
-        await navigator.share({
-          files: [file],
-          title: 'Donation Receipt',
-          text: `Donation Receipt from Azadi Social Welfare Organization. Transaction ID: ${donation.transactionId}`,
-        });
-      } else {
-        handleWhatsAppShare();
-      }
-    } catch (err) {
-      console.error('Sharing failed', err);
-      handleWhatsAppShare();
+      alert('PDF তৈরিতে সমস্যা হয়েছে।');
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleWhatsAppShare = () => {
-    const intro = isPublic ? "আসসালামু আলাইকুম," : "Azadi Social Welfare Organization - Official Receipt";
-    const quoteTxt = `\n\n"${selectedQuote.bn}"\n— ${selectedQuote.arabic}`;
-    const details = `\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*উদ্দেশ্য:* ${donation.purpose}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n*অবস্থা:* ${donation.status === DonationStatus.APPROVED ? 'অনুমোদিত (Approved)' : 'অপেক্ষমান (Pending)'}`;
-    const footer = `\n\nধন্যবাদান্তে,\nআজাদী সমাজ কল্যাণ সংঘ, সিলেট।`;
-    
-    const text = `${intro}${details}${quoteTxt}${footer}`;
+    const text = `আসসালামু আলাইকুম,\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n\nধন্যবাদান্তে,\nআজাদী সমাজ কল্যাণ সংঘ।`;
     const url = `https://wa.me/${settings.adminWhatsApp}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 md:p-8 animate-in fade-in duration-500 pb-20">
-      <div className="max-w-3xl mx-auto space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 no-print bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-800">
-          <button onClick={onBack} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 font-black transition-colors uppercase text-[10px] tracking-widest">
-            <ArrowLeft size={16} /> {isPublic ? 'পিছনে' : 'ড্যাশবোর্ড'}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 md:p-8 pb-24 bengali">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        {/* Action Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 no-print bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] shadow-lg border border-emerald-100 dark:border-slate-800">
+          <button onClick={onBack} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 font-black transition-colors uppercase text-[10px] tracking-widest px-4 py-2 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-xl">
+            <ArrowLeft size={16} /> ফিরে যান
           </button>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleWhatsAppShare} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase">
-              <MessageCircle size={16} /> WhatsApp
-            </button>
-            {navigator.share && (
-               <button onClick={handleShareFile} disabled={isGenerating} className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-indigo-700 transition-all uppercase">
-                 <Share2 size={16} /> {isGenerating ? 'প্রসেসিং...' : 'শেয়ার করুন'}
-               </button>
-            )}
+          <div className="flex gap-2">
             <button 
               onClick={handleDownload} 
               disabled={isGenerating || !base64Logo} 
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-blue-700 transition-all uppercase disabled:opacity-50"
+              className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase disabled:opacity-50"
             >
-              {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-              {isGenerating ? 'প্রসেসিং...' : 'ডাউনলোড'}
+              {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
+              PDF ডাউনলোড
             </button>
-            <button onClick={() => window.print()} className="bg-slate-800 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-md hover:bg-black transition-all uppercase">
-              <Printer size={16} /> প্রিন্ট
+            <button onClick={() => window.print()} className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-black transition-all uppercase">
+              <Printer size={14} /> প্রিন্ট
             </button>
           </div>
         </div>
 
-        <div 
-          ref={receiptRef} 
-          className="bg-white p-6 md:p-14 shadow-2xl relative border-t-[12px] border-emerald-900 text-slate-900 rounded-b-3xl bengali overflow-hidden mx-auto" 
-          style={{ width: '100%', maxWidth: '794px', minHeight: '1050px', fontFamily: '"Noto Sans Bengali", sans-serif' }}
-        >
-          <div className="flex flex-col items-center text-center border-b border-emerald-100 pb-8 mb-8 relative">
-            <div className="w-24 h-24 mb-4 relative z-10 p-1 bg-white rounded-full shadow-sm">
-              {base64Logo && <img src={base64Logo} className="w-full h-full object-contain" alt="Logo" />}
-            </div>
-            <div className="space-y-1 relative z-10">
-              <h1 className="text-3xl font-black text-emerald-900 leading-none">{settings.nameBn}</h1>
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mt-2 opacity-80">{settings.nameEn}</h2>
-              <div className="mt-4 space-y-1 text-slate-600">
-                <p className="text-[11px] font-bold flex items-center justify-center gap-2"><MapPin size={12} className="text-emerald-800" /> {settings.addressBn}</p>
-                <div className="flex items-center justify-center gap-5 text-[11px] font-bold">
-                  <span className="flex items-center gap-1"><Phone size={12} className="text-emerald-800" /> {settings.phone}</span>
-                  <span className="flex items-center gap-1"><Mail size={12} className="text-emerald-800" /> {settings.email}</span>
+        {/* The Receipt Document - Strictly A4 and Fully Responsive */}
+        <div className="overflow-x-auto rounded-[1.5rem] shadow-2xl flex justify-center bg-slate-300 p-2 md:p-6 no-scrollbar">
+          <div 
+            ref={receiptRef} 
+            className="bg-white relative text-slate-900 bengali flex flex-col justify-between overflow-hidden" 
+            style={{ 
+              width: '210mm', 
+              height: '297mm', 
+              minHeight: '297mm', 
+              maxHeight: '297mm', 
+              fontFamily: '"Noto Sans Bengali", sans-serif', 
+              boxSizing: 'border-box',
+              padding: '10mm 12mm' // Slightly reduced horizontal padding
+            }}
+          >
+            {/* Top Border Accent */}
+            <div className="absolute top-0 left-0 right-0 h-4 bg-emerald-900"></div>
+
+            {/* Header Section */}
+            <div className="flex flex-col items-center text-center space-y-3 pt-2">
+              <div className="w-20 h-20 p-1.5 bg-white rounded-full border border-emerald-50 shadow-sm">
+                {base64Logo && <img src={base64Logo} className="w-full h-full object-contain" alt="Logo" />}
+              </div>
+              <div className="space-y-0.5">
+                <h1 className="text-3xl font-black text-emerald-950 tracking-tight leading-none">{settings.nameBn}</h1>
+                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">{settings.nameEn}</h2>
+              </div>
+              <div className="flex flex-col items-center gap-0.5 text-slate-600 font-bold text-[10px] pt-1">
+                <p className="flex items-center gap-2"><MapPin size={10} className="text-emerald-800" /> {settings.addressBn}</p>
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1"><Phone size={10} className="text-emerald-800" /> {settings.phone}</span>
+                  <span className="flex items-center gap-1"><Mail size={10} className="text-emerald-800" /> {settings.email}</span>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
-            {base64Logo && <img src={base64Logo} className="w-[400px] h-[400px] object-contain" alt="Watermark" />}
-          </div>
-
-          <div className="relative z-10 space-y-8">
-            <div className="flex flex-col items-center gap-4">
-              <span className="bg-emerald-900 text-white px-8 py-2 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-lg">অনুদান রশিদ / Donation Receipt</span>
-              <div className={`flex items-center gap-2 px-6 py-2 rounded-2xl border-2 font-black text-xs uppercase tracking-widest ${
-                donation.status === DonationStatus.APPROVED 
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}>
-                {donation.status === DonationStatus.APPROVED ? <CheckCircle2 size={16} /> : <Clock size={16} />}
-                {donation.status === DonationStatus.APPROVED ? (isPublic ? 'অনুমোদিত / Approved' : 'Approved') : (isPublic ? 'অপেক্ষমান / Pending' : 'Pending')}
-              </div>
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-emerald-100 to-transparent mt-2"></div>
             </div>
 
-            <div className="bg-emerald-50/20 border border-emerald-100 rounded-3xl p-8 space-y-6">
-              <div className="flex justify-between items-center border-b border-emerald-100 pb-4">
-                <div className="space-y-1">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">রশিদ নম্বর / ID</div>
-                  <div className="font-mono font-bold text-slate-900 text-xs uppercase">REC-{donation.id.slice(-8)}</div>
-                </div>
-                <div className="text-right space-y-1">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">তারিখ / Date</div>
-                  <div className="font-bold text-slate-900 text-xs">{new Date(donation.date).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+            {/* Body Section */}
+            <div className="flex-1 flex flex-col justify-center space-y-8 py-4">
+              
+              <div className="flex flex-col items-center gap-3">
+                <div className="bg-emerald-900 text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-[0.35em] shadow-lg">অনুদান রশিদ / Donation Receipt</div>
+                <div className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl border-2 font-black text-[9px] uppercase tracking-widest ${
+                  donation.status === DonationStatus.APPROVED 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}>
+                  {donation.status === DonationStatus.APPROVED ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                  {donation.status === DonationStatus.APPROVED ? 'Approved' : 'Pending Verification'}
                 </div>
               </div>
 
-              <div className="space-y-6 pt-2">
-                <div className="flex justify-between items-end border-b border-slate-100 pb-4">
-                  <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">দাতার নাম / Donor:</div>
-                  <div className="text-xl font-black text-emerald-950">{donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}</div>
-                </div>
-                <div className="flex justify-between items-end border-b border-slate-100 pb-4">
-                  <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">উদ্দেশ্য / Purpose:</div>
-                  <div className="font-bold text-slate-800 text-base">{donation.purpose}</div>
-                </div>
-                {donation.email && (
-                  <div className="flex justify-between items-end border-b border-slate-100 pb-4">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">ইমেইল / Email:</div>
-                    <div className="font-bold text-slate-800 text-base">{donation.email}</div>
+              {/* Information Grid - Slightly more compact */}
+              <div className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full"></div>
+                
+                <div className="flex justify-between items-center border-b border-emerald-100 pb-4">
+                  <div className="space-y-0.5">
+                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-400">রশিদ নম্বর / ID</div>
+                    <div className="font-mono font-black text-emerald-950 text-sm uppercase">REC-{donation.id.slice(-8)}</div>
                   </div>
-                )}
-                <div className="flex justify-between items-end border-b border-slate-100 pb-4">
-                  <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest">পেমেন্ট মেথড ও আইডি:</div>
-                  <div className="font-mono font-bold text-slate-900 uppercase tracking-widest text-[10px]">{donation.paymentMethod} • {donation.transactionId}</div>
+                  <div className="text-right space-y-0.5">
+                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-400">তারিখ / Date</div>
+                    <div className="font-black text-slate-900 text-sm">{new Date(donation.date).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  <div className="flex justify-between items-end border-b border-white pb-3">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-widest">দাতার নাম / Donor:</div>
+                    <div className="text-xl font-black text-emerald-950">{donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}</div>
+                  </div>
+                  <div className="flex justify-between items-end border-b border-white pb-3">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-widest">উদ্দেশ্য / Purpose:</div>
+                    <div className="font-black text-slate-800 text-base">{donation.purpose}</div>
+                  </div>
+                  <div className="flex justify-between items-end border-b border-white pb-3">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-widest">ট্রানজেকশন আইডি:</div>
+                    <div className="font-mono font-black text-slate-900 uppercase tracking-widest text-[11px]">{donation.paymentMethod} • {donation.transactionId}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Card - Reduced padding to allow more footer space */}
+              <div className="flex justify-center">
+                <div className="bg-emerald-900 text-white px-16 py-8 rounded-[2.5rem] text-center shadow-xl relative overflow-hidden ring-[8px] ring-emerald-50">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full"></div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-60 mb-2">মোট অনুদান পরিমাণ / Amount</div>
+                  <div className="text-5xl font-black font-mono tracking-tighter">৳{donation.amount.toLocaleString()}</div>
+                  <div className="mt-3 text-[9px] font-black uppercase opacity-50 border-t border-white/10 pt-3 tracking-[0.15em]">{donation.amount} Taka Only</div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-center py-4">
-              <div className="bg-emerald-900 text-white px-14 py-8 rounded-[2.5rem] text-center shadow-xl relative overflow-hidden ring-4 ring-emerald-50">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full"></div>
-                <div className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2">মোট অনুদান পরিমাণ / Amount</div>
-                <div className="text-5xl font-black font-mono tracking-tighter">৳{donation.amount.toLocaleString()}</div>
-                <div className="mt-3 text-[9px] font-black uppercase opacity-60 border-t border-white/20 pt-3 tracking-widest">{donation.amount} Taka Only</div>
+            {/* Bottom Section - Tightly optimized for visibility */}
+            <div className="space-y-8 pb-4">
+              {/* Islamic Quote Card - Ensure this is fully visible */}
+              <div className="text-center">
+                <div className="space-y-2 px-8 py-5 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/40 relative">
+                   <Heart className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-rose-500 bg-white p-1 rounded-full shadow-sm" size={20} fill="currentColor" />
+                   <div className="text-2xl text-emerald-900 font-serif italic bengali leading-tight">{selectedQuote.arabic}</div>
+                   <div className="text-[11px] font-black text-slate-700 bengali leading-snug">{selectedQuote.bn}</div>
+                </div>
+              </div>
+
+              {/* Signature Row */}
+              <div className="flex justify-between items-end px-4">
+                <div className="relative">
+                  <div className="w-20 h-20 border border-emerald-900/10 rounded-full flex flex-col items-center justify-center text-[6px] font-black transform -rotate-12 opacity-30 bg-white shadow-inner">
+                     <ShieldCheck size={18} className="mb-0.5 text-emerald-900" />
+                     <span className="uppercase text-center leading-tight">Azadi Social Welfare<br/>Official Seal</span>
+                  </div>
+                </div>
+                <div className="text-center w-56 space-y-1.5">
+                  <div className="h-0.5 bg-slate-950 w-full mb-1"></div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-950">Authorized Signature</div>
+                </div>
+              </div>
+
+              {/* Footer Tagline */}
+              <div className="text-center opacity-25">
+                 <p className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-400">Education · Unity · Service · Peace · Progress</p>
               </div>
             </div>
 
-            <div className="flex justify-between items-end pt-8 pb-4">
-              <div className="relative">
-                <div className="w-28 h-28 border-4 border-double border-emerald-900/20 rounded-full flex flex-col items-center justify-center text-[7px] font-black transform -rotate-12 opacity-40 bg-white shadow-sm">
-                   <ShieldCheck size={20} className="mb-1 text-emerald-900" />
-                   <span className="uppercase text-center leading-tight">Azadi Social Welfare<br/>Official Stamp</span>
-                </div>
-              </div>
-              <div className="text-center w-52 space-y-2">
-                <div className="h-px bg-slate-900 w-full mb-1"></div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-emerald-950">Authorized Signature</div>
-              </div>
-            </div>
-            
-            <div className="mt-8 border-t border-slate-100 pt-8 text-center space-y-6">
-              <div className="space-y-4 px-6 py-8 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
-                 <div className="text-2xl text-emerald-900 font-serif italic bengali select-none">{selectedQuote.arabic}</div>
-                 <div className="text-[13px] font-bold text-slate-700 bengali leading-relaxed">{selectedQuote.bn}</div>
-                 <div className="text-[10px] font-medium text-emerald-600/60 uppercase tracking-widest italic">{selectedQuote.en}</div>
-              </div>
-              <div className="inline-flex items-center justify-center gap-3 text-emerald-900 font-black text-[10px] uppercase tracking-widest bg-emerald-50 px-8 py-3 rounded-full shadow-sm">
-                <Heart size={14} className="text-rose-500" fill="currentColor" />
-                আপনার সহযোগিতার জন্য অশেষ কৃতজ্ঞতা
-              </div>
+            {/* Watermark Logo */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.012] pointer-events-none select-none">
+              {base64Logo && <img src={base64Logo} className="w-[400px] h-[400px] object-contain rotate-[-15deg]" alt="Watermark" />}
             </div>
           </div>
         </div>

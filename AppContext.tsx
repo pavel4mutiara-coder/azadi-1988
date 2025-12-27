@@ -41,6 +41,8 @@ const STORE_NAME = 'permanent_storage';
 
 const LOGO_ID = "1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
 const NEW_LOGO_URL = `https://lh3.googleusercontent.com/d/${LOGO_ID}`;
+// Direct link for the user provided flag: https://drive.google.com/file/d/1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q
+const FLAG_URL = "https://lh3.googleusercontent.com/d/1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q";
 
 const DEFAULT_SETTINGS: OrganizationSettings = {
   nameBn: "আজাদী সমাজ কল্যাণ সংঘ",
@@ -54,7 +56,7 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   establishedBn: "১০ জুন ১৯৮৮ (২৭ শে জৈষ্ঠ ১৩৯৫)",
   establishedEn: "Established: 10 June 1988",
   logo: NEW_LOGO_URL,
-  flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Flag_of_Bangladesh.svg/200px-Flag_of_Bangladesh.svg.png",
+  flag: FLAG_URL,
   adminWhatsApp: "8801711975488",
   bkash: "01711975488",
   nagad: "01711975488",
@@ -181,7 +183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.leadership && localData.leadership.length > 0) setLeadership(localData.leadership);
         if (localData.events) setEvents(localData.events);
         if (localData.financials) setFinancials(localData.financials);
-        if (localData.settings) setSettings({ ...DEFAULT_SETTINGS, ...localData.settings, logo: NEW_LOGO_URL });
+        if (localData.settings) setSettings({ ...DEFAULT_SETTINGS, ...localData.settings });
         if (localData.letterhead) setLetterhead(localData.letterhead);
       }
       setIsLoaded(true);
@@ -193,7 +195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCloudErrorType(type as any);
           if (error) setCloudErrorMessage(error);
         } else if (cloudData) {
-          if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings, logo: NEW_LOGO_URL });
+          if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
           if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
           if (cloudData.donations) setDonations(cloudData.donations);
           if (cloudData.events) setEvents(cloudData.events);

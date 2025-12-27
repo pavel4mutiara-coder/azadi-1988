@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
 import { TRANSLATIONS } from '../constants';
 import { DonationStatus, Donation as DonationType } from '../types';
-import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle, Mail } from 'lucide-react';
+import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send } from 'lucide-react';
 import { ReceiptView } from '../admin/ReceiptView';
 
 export const Donation: React.FC = () => {
@@ -96,6 +96,44 @@ export const Donation: React.FC = () => {
     setTouched({});
   };
 
+  const donationSteps = [
+    {
+      icon: <Copy size={20} />,
+      titleBn: "নম্বর কপি করুন",
+      titleEn: "Copy Number",
+      descBn: "নিচে দেওয়া নম্বরগুলো থেকে আপনার পছন্দের মাধ্যমটি বেছে নিয়ে নম্বরটি কপি করুন।",
+      descEn: "Choose your preferred method from the numbers below and copy the number."
+    },
+    {
+      icon: <Smartphone size={20} />,
+      titleBn: "টাকা পাঠান",
+      titleEn: "Send Money",
+      descBn: "আপনার মোবাইল ব্যাংকিং অ্যাপ বা ইউএসএসডি (যেমন *২৪৭#) এর মাধ্যমে টাকা পাঠান।",
+      descEn: "Send money using your mobile banking app or USSD (e.g., *247#)."
+    },
+    {
+      icon: <Info size={20} />,
+      titleBn: "আইডি সংগ্রহ করুন",
+      titleEn: "Collect TrxID",
+      descBn: "পেমেন্ট শেষে প্রাপ্ত ট্রানজেকশন আইডিটি (Transaction ID) সংগ্রহ করুন বা লিখে রাখুন।",
+      descEn: "Collect the Transaction ID from the confirmation message after payment."
+    },
+    {
+      icon: <MousePointerClick size={20} />,
+      titleBn: "ফরম পূরণ করুন",
+      titleEn: "Fill Form",
+      descBn: "নিচের ফরমে আপনার তথ্য এবং ট্রানজেকশন আইডিটি দিয়ে 'জমা দিন' বাটনে ক্লিক করুন।",
+      descEn: "Fill out the form below with your info and TrxID, then click 'Submit'."
+    },
+    {
+      icon: <FileCheck size={20} />,
+      titleBn: "রশিদ সংগ্রহ",
+      titleEn: "Get Receipt",
+      descBn: "সফলভাবে জমা দেওয়ার পর সরাসরি আপনার অফিসিয়াল অনুদান রশিদটি ডাউনলোড করে নিন।",
+      descEn: "After successful submission, download your official donation receipt instantly."
+    }
+  ];
+
   if (submittedDonation) {
     return (
       <ReceiptView 
@@ -165,6 +203,46 @@ export const Donation: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Donation Guide Section */}
+      <section className="bg-white dark:bg-slate-900/50 rounded-[3rem] p-8 md:p-12 border border-emerald-100 dark:border-slate-800 shadow-xl space-y-10 relative overflow-hidden group">
+         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:rotate-12 transition-transform">
+           <Send size={120} className="text-emerald-500" />
+         </div>
+         
+         <div className="flex items-center gap-4 relative z-10">
+           <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
+             <Info size={24} />
+           </div>
+           <div className="space-y-1">
+             <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white leading-tight">
+               {lang === 'bn' ? 'কিভাবে অনুদান দিবেন?' : 'How to Donate?'}
+             </h2>
+             <p className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest">৫টি সহজ ধাপে আপনার অনুদানটি সম্পন্ন করুন</p>
+           </div>
+         </div>
+
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
+            {donationSteps.map((step, index) => (
+              <div key={index} className="space-y-4 group/step">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center font-black border border-emerald-100 dark:border-emerald-800 group-hover/step:bg-emerald-600 group-hover/step:text-white transition-all">
+                    {index + 1}
+                  </div>
+                  <div className="h-0.5 flex-1 bg-emerald-100 dark:bg-slate-800 hidden lg:block last:hidden"></div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">
+                    {lang === 'bn' ? step.titleBn : step.titleEn}
+                  </h4>
+                  <p className="text-slate-500 dark:text-slate-400 font-bold text-[11px] leading-relaxed">
+                    {lang === 'bn' ? step.descBn : step.descEn}
+                  </p>
+                </div>
+              </div>
+            ))}
+         </div>
+      </section>
 
       <div className="grid md:grid-cols-12 gap-10 items-start">
         <form onSubmit={handleSubmit} className="md:col-span-7 bg-emerald-100/40 dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-emerald-200 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">

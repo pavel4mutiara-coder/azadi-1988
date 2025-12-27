@@ -39,26 +39,41 @@ export const AboutUs: React.FC = () => {
     }
   ];
 
+  const coreValues = [
+    { icon: <Heart size={20}/>, label: lang === 'bn' ? 'মানবতা' : 'Humanity' },
+    { icon: <ShieldCheck size={20}/>, label: lang === 'bn' ? 'স্বচ্ছতা' : 'Transparency' },
+    { icon: <Users size={20}/>, label: lang === 'bn' ? 'ঐক্য' : 'Unity' },
+    { icon: <Award size={20}/>, label: lang === 'bn' ? 'সততা' : 'Integrity' },
+  ];
+
   return (
     <div className="max-w-5xl mx-auto space-y-24 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 bengali">
       {/* Hero Section */}
-      <div className="text-center space-y-6 pt-10">
-        <div className="inline-flex items-center gap-3 text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-[0.2em] text-[10px] px-6 py-2.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full border border-emerald-200 dark:border-emerald-700 shadow-sm">
-           <Users size={14} />
-           {lang === 'bn' ? 'আমাদের সম্পর্কে জানুন' : 'Learn About Us'}
+      <div className="text-center space-y-8 pt-10 px-4">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-24 h-14 md:w-32 md:h-20 bg-white rounded-xl shadow-2xl border-4 border-emerald-900/10 overflow-hidden transform hover:scale-110 transition-transform duration-500">
+             <img src={settings.flag} className="w-full h-full object-cover" alt="Organization Flag" />
+          </div>
+          <div className="inline-flex items-center gap-3 text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-[0.2em] text-[10px] px-6 py-2.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full border border-emerald-200 dark:border-emerald-700 shadow-sm">
+             <Users size={14} />
+             {lang === 'bn' ? 'আমাদের সম্পর্কে জানুন' : 'Learn About Us'}
+          </div>
         </div>
-        <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tight">
-          {t.about}
-        </h1>
-        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 font-bold max-w-2xl mx-auto leading-relaxed">
-          {lang === 'bn' 
-            ? 'তিন দশকেরও বেশি সময় ধরে শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত এক গৌরবময় ইতিহাস।' 
-            : 'A glorious history dedicated to education, unity, and human service for over three decades.'}
-        </p>
+        
+        <div className="space-y-4">
+          <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tight">
+            {t.about}
+          </h1>
+          <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 font-bold max-w-2xl mx-auto leading-relaxed">
+            {lang === 'bn' 
+              ? 'তিন দশকেরও বেশি সময় ধরে শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত এক গৌরবময় ইতিহাস।' 
+              : 'A glorious history dedicated to education, unity, and human service for over three decades.'}
+          </p>
+        </div>
       </div>
 
-      {/* Intro Section */}
-      <section className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-14 border border-emerald-50 dark:border-slate-800 shadow-2xl relative overflow-hidden group">
+      {/* Intro Section - Founding Story */}
+      <section className="bg-white dark:bg-slate-900 rounded-[3.5rem] p-8 md:p-14 border border-emerald-50 dark:border-slate-800 shadow-2xl relative overflow-hidden group mx-4">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full group-hover:scale-125 transition-transform duration-1000"></div>
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
@@ -86,45 +101,60 @@ export const AboutUs: React.FC = () => {
         </div>
       </section>
 
-      {/* Mission & Vision */}
-      <div className="grid md:grid-cols-2 gap-8">
-        <section className="bg-emerald-900 dark:bg-emerald-950 text-white p-12 rounded-[3.5rem] shadow-xl relative overflow-hidden group">
+      {/* Mission & Vision - Styled as requested from HistoryPage */}
+      <div className="grid md:grid-cols-2 gap-8 px-4">
+        <section className="bg-emerald-900 dark:bg-emerald-950 text-white p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden group border border-emerald-800">
           <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
-            <Target size={200} />
+            <Target size={220} />
           </div>
-          <div className="relative z-10 space-y-5">
-            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center">
+          <div className="relative z-10 space-y-6">
+            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
               <Target className="text-emerald-400" size={32} />
             </div>
             <h3 className="text-3xl font-black">{t.missionTitle}</h3>
-            <p className="text-emerald-100/80 font-bold leading-relaxed text-lg">
+            <p className="text-emerald-100/90 font-bold leading-relaxed text-lg">
               {lang === 'bn' 
-                ? 'আমাদের লক্ষ্য হলো শিক্ষার আলো ছড়িয়ে দেয়া এবং সামাজিক বৈষম্য দূর করে একটি সমৃদ্ধশালী সমাজ গঠন করা।'
-                : 'Our mission is to spread the light of education and build a prosperous society by removing social inequalities.'}
+                ? 'আমাদের লক্ষ্য হলো শিক্ষার আলো ছড়িয়ে দেয়া, যুব শক্তিকে গঠনমূলক কাজে অনুপ্রাণিত করা এবং সামাজিক বৈষম্য দূর করে একটি সমৃদ্ধশালী সমাজ গঠন করা।'
+                : 'Our mission is to spread the light of education, inspire youth in constructive activities, and build a prosperous society by removing social inequalities.'}
             </p>
           </div>
         </section>
 
-        <section className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-xl relative overflow-hidden group">
+        <section className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl relative overflow-hidden group">
           <div className="absolute -right-10 -bottom-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
-            <Eye size={200} />
+            <Eye size={220} />
           </div>
-          <div className="relative z-10 space-y-5">
-            <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center">
+          <div className="relative z-10 space-y-6">
+            <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
               <Eye className="text-emerald-600" size={32} />
             </div>
             <h3 className="text-3xl font-black text-slate-900 dark:text-white">{t.visionTitle}</h3>
             <p className="text-slate-500 dark:text-slate-400 font-bold leading-relaxed text-lg">
               {lang === 'bn' 
-                ? 'একটি আদর্শ ও কল্যানমুখী সমাজ বিনির্মাণ যেখানে প্রতিটি নাগরিকের শিক্ষা ও নিরাপত্তা নিশ্চিত হবে।'
-                : 'To build an ideal and welfare-oriented society where education and security are ensured for all.'}
+                ? 'একটি আদর্শ ও কল্যানমুখী সমাজ বিনির্মাণ যেখানে প্রতিটি নাগরিকের শিক্ষা, শান্তি এবং নিরাপত্তা নিশ্চিত হবে।'
+                : 'To build an ideal and welfare-oriented society where the education, peace, and security of every citizen will be ensured.'}
             </p>
           </div>
         </section>
       </div>
 
+      {/* Core Values Section */}
+      <section className="bg-emerald-50/50 dark:bg-slate-900/50 p-10 md:p-16 rounded-[4rem] border border-emerald-100 dark:border-slate-800 text-center space-y-10 mx-4">
+         <div className="space-y-4">
+           <h2 className="text-3xl font-black text-slate-900 dark:text-white">{lang === 'bn' ? 'আমাদের মূল আদর্শ' : 'Our Core Values'}</h2>
+           <div className="flex flex-wrap justify-center gap-6">
+             {coreValues.map((v, i) => (
+               <div key={i} className="flex items-center gap-3 bg-white dark:bg-slate-900 px-8 py-4 rounded-full border border-emerald-50 dark:border-emerald-900 shadow-lg hover:-translate-y-1 transition-transform cursor-default">
+                 <span className="text-emerald-500">{v.icon}</span>
+                 <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">{v.label}</span>
+               </div>
+             ))}
+           </div>
+         </div>
+      </section>
+
       {/* Timeline Section */}
-      <section className="space-y-16">
+      <section className="space-y-16 px-4">
         <div className="text-center space-y-3">
           <div className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em]">{lang === 'bn' ? 'অতীত থেকে বর্তমান' : 'Our Timeline'}</div>
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">{t.milestonesTitle}</h2>
@@ -150,15 +180,15 @@ export const AboutUs: React.FC = () => {
         </div>
       </section>
 
-      {/* Contact Section - The replacement for the request of Contact page */}
-      <section className="space-y-16 pt-10">
+      {/* Contact Section */}
+      <section className="space-y-16 pt-10 px-4">
         <div className="text-center space-y-3">
           <div className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em]">{lang === 'bn' ? 'যোগাযোগ করুন' : 'Get In Touch'}</div>
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">{lang === 'bn' ? 'আমাদের সাথে যোগাযোগ' : 'Contact Us'}</h2>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          <a href={`tel:${settings.phone}`} className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
+          <a href={`tel:${settings.phone}`} className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
             <div className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
               <Phone size={36} />
             </div>
@@ -168,7 +198,7 @@ export const AboutUs: React.FC = () => {
             </div>
           </a>
 
-          <a href={`mailto:${settings.email}`} className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
+          <a href={`mailto:${settings.email}`} className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
             <div className="w-20 h-20 rounded-3xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
               <Mail size={36} />
             </div>
@@ -178,7 +208,7 @@ export const AboutUs: React.FC = () => {
             </div>
           </a>
 
-          <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
+          <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
             <div className="w-20 h-20 rounded-3xl bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
               <MapPin size={36} />
             </div>
@@ -190,7 +220,7 @@ export const AboutUs: React.FC = () => {
         </div>
 
         {/* WhatsApp CTA */}
-        <div className="bg-emerald-900 dark:bg-emerald-950 rounded-[4rem] p-12 text-center text-white space-y-8 shadow-2xl relative overflow-hidden group">
+        <div className="bg-emerald-900 dark:bg-emerald-950 rounded-[4rem] p-12 text-center text-white space-y-8 shadow-2xl relative overflow-hidden group border border-emerald-800">
           <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/black-linen-2.png')]"></div>
           <div className="relative z-10 space-y-4">
             <MessageCircle size={64} className="mx-auto text-emerald-400 group-hover:scale-110 transition-transform" />

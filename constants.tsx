@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, History, Info, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
@@ -9,7 +9,7 @@ export const ISLAMIC_QUOTES = [
     bn: "মানুষের মধ্যে সেই সর্বোত্তম, যে মানুষের জন্য সবচেয়ে বেশি উপকারী।"
   },
   {
-    arabic: "إِنَّ اللَّهَ جَمِيلٌ يُحِبּُ الْجَمَالَ",
+    arabic: "إِنَّ اللَّهَ جَمِيلٌ يُحِبُّ الْجَمَالَ",
     en: "Indeed, Allah is Beautiful and He loves beauty.",
     bn: "নিশ্চয়ই আল্লাহ সুন্দর এবং তিনি সৌন্দর্যকে পছন্দ করেন।"
   },
@@ -30,7 +30,7 @@ export const TRANSLATIONS = {
     home: "Home",
     leadership: "Leadership",
     events: "Events",
-    about: "About Us",
+    about: "About",
     donation: "Donation",
     history: "Records",
     impact: "Impact",
@@ -79,10 +79,10 @@ export const TRANSLATIONS = {
     devCredit: "Architected and Developed by Ahmed Hossain Pavel"
   },
   bn: {
-    home: "মূল পাতা",
+    home: "হোম",
     leadership: "নেতৃবৃন্দ",
     events: "ইভেন্টস",
-    about: "আমাদের সম্পর্কে",
+    about: "আমাদের কথা",
     donation: "অনুদান",
     history: "ইতিহাস",
     impact: "প্রভাব",
@@ -126,18 +126,18 @@ export const TRANSLATIONS = {
     inspiration: "প্রতিদিনের প্রেরণা",
     foundingTitle: "প্রতিষ্ঠার প্রেক্ষাপট",
     missionTitle: "আমাদের লক্ষ্য",
-    visionTitle: "আমাদের উদ্দেশ্য",
+    visionTitle: "Our Vision",
     milestonesTitle: "উল্লেখযোগ্য মাইলফলক",
     devCredit: "সফটওয়্যার আর্কিটেকচার ও বাস্তবায়নে: আহমেদ হোসেন পাভেল"
   }
 };
 
 export const NAV_ITEMS = [
-  { label: 'home', path: '/', icon: <Home size={20} /> },
-  { label: 'about', path: '/about', icon: <Info size={20} /> },
-  { label: 'events', path: '/events', icon: <Calendar size={20} /> },
-  { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
-  { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
+  { label: 'home', path: '/', icon: <Home size={22} /> },
+  { label: 'impact', path: '/impact', icon: <PieChart size={22} /> },
+  { label: 'donation', path: '/donation', icon: <Heart size={30} /> },
+  { label: 'events', path: '/events', icon: <Sparkles size={24} /> },
+  { label: 'about', path: '/about', icon: <Info size={22} /> },
 ];
 
 export const ADMIN_NAV_ITEMS = [

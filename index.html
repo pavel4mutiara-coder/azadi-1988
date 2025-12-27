@@ -6,30 +6,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     
-    <!-- SEO Meta Tags -->
+    <!-- Standard SEO Meta Tags -->
     <title>আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare Organization, Sylhet</title>
     <meta name="description" content="১৯৮৮ সাল থেকে আজাদী সমাজ কল্যাণ সংঘ সিলেটে শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত একটি অলাভজনক সামাজিক সংস্থা। Azadi Social Welfare Organization, established 1988.">
     <meta name="keywords" content="আজাদী সমাজ কল্যাণ সংঘ, আজাদী সংঘ সিলেট, Azadi Social Welfare Organization, Azadi Society Sylhet, Social Welfare Sylhet, Non-profit organization Bangladesh, Mirboxtula Sylhet NGO">
     <meta name="author" content="Azadi Social Welfare Organization">
     <link rel="canonical" href="https://azadi-1988.vercel.app/" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook Meta Tags -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://azadi-1988.vercel.app/">
+    <meta property="og:site_name" content="আজাদী সমাজ কল্যাণ সংঘ">
     <meta property="og:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare Organization">
     <meta property="og:description" content="শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত সিলেটের একটি ঐতিহ্যবাহী সামাজিক সংগঠন। প্রতিষ্ঠিত: ১০ জুন ১৯৮৮।">
     <meta property="og:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
+    <meta property="og:locale" content="bn_BD">
+    <meta property="og:locale:alternate" content="en_US">
 
-    <!-- JSON-LD Structured Data -->
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://azadi-1988.vercel.app/">
+    <meta name="twitter:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare Organization">
+    <meta name="twitter:description" content="১৯৮৮ সাল থেকে মানবতার সেবায় নিবেদিত সিলেটের একটি অলাভজনক সামাজিক সংস্থা।">
+    <meta name="twitter:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
+
+    <!-- JSON-LD Structured Data for Organization -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "NGO",
       "name": "আজাদী সমাজ কল্যাণ সংঘ",
       "alternateName": "Azadi Social Welfare Organization",
+      "description": "Established in 1988, Azadi Social Welfare Organization works for education, unity, and social service in Sylhet, Bangladesh.",
       "url": "https://azadi-1988.vercel.app/",
       "logo": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
       "foundingDate": "1988-06-10",
+      "foundingLocation": "Sylhet, Bangladesh",
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "Road No. 01, Mirbox Tula",
@@ -41,17 +53,23 @@
         "@type": "ContactPoint",
         "telephone": "+8801711975488",
         "contactType": "Customer Service",
-        "email": "azadisocialwelfareorganization@gmail.com"
-      }
+        "email": "azadisocialwelfareorganization@gmail.com",
+        "availableLanguage": ["Bengali", "English"]
+      },
+      "sameAs": [
+        "https://www.facebook.com/profile.php?id=61585193438030",
+        "https://youtube.com/@azadisocialwelfareorganization?si=gD7Akj6EdMYjHuFe",
+        "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
+      ]
     }
     </script>
     
-    <!-- Cache Control -->
+    <!-- Cache Control & Security -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <!-- PWA Meta -->
+    <!-- PWA & Mobile Optimization -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -64,11 +82,12 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
-    <!-- Fonts -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700;900&family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
 
+    <!-- UI Framework -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -103,11 +122,7 @@
             scrollbar-color: rgba(5, 150, 105, 0.2) transparent;
         }
 
-        /* 
-           CRITICAL BENGALI FIX: 
-           Separated characters happen because of letter-spacing. 
-           Bengali MUST have letter-spacing: normal to maintain ligatures.
-        */
+        /* Bengali Typography Fixes */
         [lang="bn"], [lang="bn"] *, .bengali, .bengali * {
             font-family: var(--font-bengali) !important;
             letter-spacing: normal !important;
@@ -154,20 +169,20 @@
     </style>
 
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react/": "https://esm.sh/react@19.0.0/",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@7.1.1?deps=react@19.0.0,react-dom@19.0.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.471.0?deps=react@19.0.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.0"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19.0.0",
+        "react/": "https://esm.sh/react@19.0.0/",
+        "react-dom": "https://esm.sh/react-dom@19.0.0",
+        "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+        "react-router-dom": "https://esm.sh/react-router-dom@7.1.1?deps=react@19.0.0,react-dom@19.0.0",
+        "lucide-react": "https://esm.sh/lucide-react@0.471.0?deps=react@19.0.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+        "vite": "https://esm.sh/vite@^7.3.0"
+      }
+    }
+    </script>
 </head>
 <body>
     <div id="root" class="app-container"></div>

@@ -7,7 +7,7 @@ import {
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
   ShieldAlert, DownloadCloud, X, Share, BellRing, ChevronRight,
-  PlusSquare, ArrowUp
+  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -187,7 +187,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <main className="flex-1 container mx-auto px-4 py-8 md:py-20 pb-40 lg:pb-20">
         {children}
         
-        {/* Simplified Signature - Removed tracking classes */}
+        {/* Simplified Signature */}
         <div className="lg:hidden text-center mt-12 mb-6 no-print opacity-50">
            <span className="text-[10px] font-bold uppercase bengali text-slate-500 dark:text-emerald-400/70">
              {t.devCredit}
@@ -195,21 +195,26 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
       </main>
 
-      {/* App Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[90] no-print">
-        <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/90 backdrop-blur-2xl border-t border-emerald-100 dark:border-slate-800"></div>
-        <div className="relative container mx-auto px-6 py-3 pb-6 flex items-end justify-between">
+      {/* Modern App Bottom Nav */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] no-print px-4 pb-4">
+        <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-3xl border border-emerald-100 dark:border-slate-800 rounded-[2.8rem] shadow-[0_25px_60px_rgba(0,0,0,0.3)] flex items-center justify-between p-2 relative">
           {NAV_ITEMS.map((item, index) => {
             const isActive = location.pathname === item.path;
-            const isCenter = index === 2;
+            const isCenter = index === 2; // Middle item is index 2 (Donation)
+            const isImpact = item.label === 'impact';
+            const isHome = item.label === 'home';
 
             if (isCenter) {
               return (
-                <Link key={item.path} to={item.path} className="relative -top-8 flex flex-col items-center group">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${isActive ? 'bg-emerald-600 scale-110' : 'bg-emerald-600 scale-100 hover:scale-105'}`}>
-                    {React.cloneElement(item.icon as React.ReactElement<any>, { size: 28, className: "text-white relative z-10", fill: isActive ? 'currentColor' : 'none' })}
+                <Link key={item.path} to={item.path} className="relative -top-10 flex flex-col items-center group flex-1">
+                  <div className={`w-18 h-18 rounded-[2.2rem] flex items-center justify-center shadow-[0_15px_30px_rgba(225,29,72,0.4)] transition-all duration-500 ${isActive ? 'bg-rose-600 scale-110 rotate-6 shadow-rose-600/60' : 'bg-rose-600 scale-100 hover:scale-110 active:scale-95 shadow-rose-600/30'}`}>
+                    {React.cloneElement(item.icon as React.ReactElement<any>, { 
+                      size: 32, 
+                      className: "text-white relative z-10", 
+                      fill: isActive ? 'currentColor' : 'none' 
+                    })}
                   </div>
-                  <span className={`text-[10px] font-bold mt-2 transition-colors bengali ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  <span className={`text-[9px] font-black mt-3 transition-colors uppercase tracking-widest bengali ${isActive ? 'text-rose-600' : 'text-slate-400'}`}>
                     {t[item.label as keyof typeof t] as string}
                   </span>
                 </Link>
@@ -217,11 +222,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             }
 
             return (
-              <Link key={item.path} to={item.path} className="flex flex-col items-center gap-1 group transition-all">
-                <div className={`relative p-2 rounded-2xl transition-all duration-300 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  {React.cloneElement(item.icon as React.ReactElement<any>, { size: 24, fill: isActive ? 'currentColor' : 'none' })}
+              <Link key={item.path} to={item.path} className={`flex flex-col items-center gap-1.5 flex-1 transition-all duration-300 ${isActive ? 'scale-105' : 'scale-100 hover:scale-105 active:scale-95'}`}>
+                <div className={`relative p-3 rounded-2xl transition-all duration-300 ${
+                  isActive 
+                  ? (isImpact ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600')
+                  : 'text-slate-400 dark:text-slate-500 hover:text-emerald-500'
+                }`}>
+                  {React.cloneElement(item.icon as React.ReactElement<any>, { 
+                    size: 22, 
+                    className: isActive ? 'animate-pulse' : '',
+                    fill: isActive ? 'currentColor' : 'none' 
+                  })}
+                  {isActive && (
+                    <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${isImpact ? 'bg-blue-500' : 'bg-emerald-500'}`}></div>
+                  )}
                 </div>
-                <span className={`text-[10px] font-bold transition-colors bengali ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <span className={`text-[9px] font-black transition-colors uppercase tracking-tight bengali ${isActive ? (isImpact ? 'text-blue-600' : 'text-emerald-600') : 'text-slate-400'}`}>
                   {t[item.label as keyof typeof t] as string}
                 </span>
               </Link>
