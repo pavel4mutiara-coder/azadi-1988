@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, History, Info } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, History, Info, Mail } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
-    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّাসِ",
+    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّاسِ",
     en: "The best of people are those who are most beneficial to people.",
     bn: "মানুষের মধ্যে সেই সর্বোত্তম, যে মানুষের জন্য সবচেয়ে বেশি উপকারী।"
   },
@@ -30,7 +30,7 @@ export const TRANSLATIONS = {
     home: "Home",
     leadership: "Leadership",
     events: "Events",
-    about: "Our Journey",
+    about: "About Us",
     donation: "Donation",
     history: "Records",
     impact: "Impact",
@@ -82,7 +82,7 @@ export const TRANSLATIONS = {
     home: "মূল পাতা",
     leadership: "নেতৃবৃন্দ",
     events: "ইভেন্টস",
-    about: "আমাদের পথচলা",
+    about: "আমাদের সম্পর্কে",
     donation: "অনুদান",
     history: "ইতিহাস",
     impact: "প্রভাব",
@@ -135,9 +135,9 @@ export const TRANSLATIONS = {
 export const NAV_ITEMS = [
   { label: 'home', path: '/', icon: <Home size={20} /> },
   { label: 'about', path: '/about', icon: <Info size={20} /> },
-  { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
+  { label: 'events', path: '/events', icon: <Calendar size={20} /> },
   { label: 'leadership', path: '/leadership', icon: <Users size={20} /> },
-  { label: 'history', path: '/donation-history', icon: <History size={20} /> },
+  { label: 'donation', path: '/donation', icon: <Heart size={20} /> },
 ];
 
 export const ADMIN_NAV_ITEMS = [

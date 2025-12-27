@@ -6,7 +6,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
-  ShieldAlert, DownloadCloud, X, Share, BellRing
+  ShieldAlert, DownloadCloud, X, Share, BellRing, ChevronRight,
+  PlusSquare, ArrowUp
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -18,6 +19,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // PWA logic
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const handleInstallClick = async () => {
     if (isIOS) {
-      alert(lang === 'bn' ? 'অ্যাপটি ইন্সটল করতে Safari ব্রাউজারের নিচে "Share" বাটনে ক্লিক করে "Add to Home Screen" নির্বাচন করুন।' : 'To install, tap the "Share" button in Safari and select "Add to Home Screen".');
+      setShowIOSInstructions(true);
       return;
     }
     if (!deferredPrompt) return;
@@ -56,6 +58,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const handleDismiss = () => {
     setShowInstallBanner(false);
+    setShowIOSInstructions(false);
     sessionStorage.setItem('pwa_banner_dismissed', 'true');
   };
 
@@ -92,26 +95,54 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <div className={`flex flex-col min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'dark' : ''} bg-emerald-50/40 dark:bg-slate-950 text-slate-900 dark:text-slate-100`} lang={lang}>
       
       {showInstallBanner && (
-        <div className="fixed top-24 left-4 right-4 z-[200] lg:max-w-md lg:left-auto lg:right-6 animate-in slide-in-from-top-10 duration-500 no-print">
-           <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-emerald-100 dark:border-slate-800 flex items-center gap-4 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
-                <BellRing size={40} className="text-emerald-500" />
+        <div className="fixed bottom-28 md:bottom-auto md:top-24 left-4 right-4 z-[200] lg:max-w-md lg:left-auto lg:right-6 animate-in slide-in-from-bottom-10 md:slide-in-from-top-10 duration-500 no-print">
+           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.4)] border border-emerald-100 dark:border-slate-800 flex flex-col gap-4 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                <DownloadCloud size={120} className="text-emerald-500" />
               </div>
-              <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center p-2.5 shrink-0 border border-emerald-100 dark:border-emerald-800/50">
-                 <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App Icon" />
-              </div>
-              <div className="flex-1 min-w-0 pr-6">
-                <h4 className="text-[13px] font-black text-slate-900 dark:text-white leading-tight bengali">ইন্সটল করে মোবাইলে রাখুন</h4>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1 bengali leading-tight">দ্রুত ও অফলাইন ব্যবহারের জন্য এটি সেরা মাধ্যম।</p>
-                <div className="flex gap-2 mt-3">
-                  <button onClick={handleInstallClick} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all">
-                    {isIOS ? <Share size={12} /> : <DownloadCloud size={12} />} {isIOS ? 'কিভাবে?' : 'ইন্সটল করুন'}
-                  </button>
-                  <button onClick={handleDismiss} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-black text-[10px] uppercase px-2 py-2 bengali">পরে করব</button>
+              
+              {!showIOSInstructions ? (
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center p-2.5 shrink-0 border border-emerald-100 dark:border-emerald-800/50 shadow-inner">
+                    <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App Icon" />
+                  </div>
+                  <div className="flex-1 min-w-0 pr-6">
+                    <h4 className="text-[15px] font-black text-slate-900 dark:text-white leading-tight bengali">অ্যাপ হিসেবে ব্যবহার করুন</h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1 bengali leading-tight">দ্রুত ও অফলাইনে ব্যবহারের জন্য আজাদী অ্যাপটি মোবাইলে ইন্সটল করুন।</p>
+                  </div>
                 </div>
-              </div>
-              <button onClick={handleDismiss} className="absolute top-4 right-4 p-1 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                <X size={16} />
+              ) : (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-xs uppercase tracking-widest bengali">
+                    <ArrowUp size={16} className="animate-bounce" /> {lang === 'bn' ? 'কিভাবে ইন্সটল করবেন?' : 'How to Install?'}
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-xs shrink-0">১</div>
+                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bengali">সাফারি ব্রাউজারের নিচের <span className="inline-flex items-center text-emerald-600"><Share size={14} className="mx-1" /> শেয়ার</span> বাটনে ক্লিক করুন।</p>
+                    </div>
+                    <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-xs shrink-0">২</div>
+                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bengali">তালিকা থেকে <span className="inline-flex items-center text-emerald-600"><PlusSquare size={14} className="mx-1" /> Add to Home Screen</span> অপশনটি বেছে নিন।</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!showIOSInstructions ? (
+                <div className="flex gap-2 relative z-10">
+                  <button onClick={handleInstallClick} className="flex-1 bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black text-[11px] uppercase flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 hover:bg-emerald-700 transition-all hover:scale-[1.02] active:scale-95">
+                    {isIOS ? <Share size={14} /> : <DownloadCloud size={14} />} 
+                    {isIOS ? 'পদ্ধতি দেখুন' : 'ইন্সটল করুন'}
+                  </button>
+                  <button onClick={handleDismiss} className="px-5 py-3 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-black text-[11px] uppercase bengali transition-colors">পরে করব</button>
+                </div>
+              ) : (
+                <button onClick={() => setShowIOSInstructions(false)} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-3 rounded-2xl font-black text-[11px] uppercase bengali shadow-xl transition-all hover:opacity-90 active:scale-95">ঠিক আছে</button>
+              )}
+
+              <button onClick={handleDismiss} className="absolute top-4 right-4 p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <X size={20} />
               </button>
            </div>
         </div>

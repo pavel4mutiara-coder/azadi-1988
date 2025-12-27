@@ -6,10 +6,10 @@ import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Donation } from './pages/Donation';
 import { DonationHistory } from './pages/DonationHistory';
-import { HistoryPage } from './pages/History';
 import { Leadership } from './pages/Leadership';
 import { Events } from './pages/Events';
 import { Impact } from './pages/Impact';
+import { AboutUs } from './pages/AboutUs';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { LetterheadManager } from './admin/LetterheadManager';
 import { FinancialsManager } from './admin/FinancialsManager';
@@ -64,11 +64,11 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/about" element={<HistoryPage />} />
+      <Route path="/about" element={<AboutUs />} />
+      <Route path="/events" element={<Events />} />
+      <Route path="/leadership" element={<Leadership />} />
       <Route path="/donation" element={<Donation />} />
       <Route path="/donation-history" element={<DonationHistory />} />
-      <Route path="/leadership" element={<Leadership />} />
-      <Route path="/events" element={<Events />} />
       <Route path="/impact" element={<Impact />} />
       
       {/* Admin Panel */}
