@@ -1,6 +1,6 @@
 
 // AppContext.tsx: Manages global state including bilingual settings and cloud synchronization.
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Language, Donation, Leadership, Event, FinancialRecord, OrganizationSettings, LetterheadConfig, DonationStatus } from './types';
 import { saveToCloud, loadFromCloud, reEnableCloudNetwork } from './firebase';
 
@@ -67,7 +67,7 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
 };
 
 const DEFAULT_LEADERSHIP: Leadership[] = [
-  { id: 'l1', nameEn: 'Md. Abdus Sabir (Tutul)', nameBn: 'মোঃ আব্দুছ ছাবির (টুটুল)', designationEn: 'President', designationBn: 'সভাপতি', messageEn: '', messageBn: '', phone: '01711975488', image: NEW_LOGO_URL, order: 1 },
+  { id: 'l1', nameEn: 'Md. Abdus Sabir (Tutul)', nameBn: 'মোঃ আব্দuছ ছাবির (টুটুল)', designationEn: 'President', designationBn: 'সভাপতি', messageEn: '', messageBn: '', phone: '01711975488', image: NEW_LOGO_URL, order: 1 },
   { id: 'l2', nameEn: 'Adv. Shahanur', nameBn: 'এস এস নুরুল হুদা চৌঃ (এডঃ শাহানুর)', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 2 },
   { id: 'l3', nameEn: 'Aminur Rahman (Shamim)', nameBn: 'আমিনুর রহমান (শামীম)', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 3 },
   { id: 'l4', nameEn: 'Jubed Ahmad', nameBn: 'জুবেদ আহমদ', designationEn: 'Vice President', designationBn: 'সহ-সভাপতি', messageEn: '', messageBn: '', phone: '', image: NEW_LOGO_URL, order: 4 },
@@ -174,6 +174,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cloudApiError, setCloudApiError] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
 
+  // Using a ref for cloud syncing to prevent overlapping syncs and ensure latest state is used
+  // FIX: Replaced NodeJS.Timeout with ReturnType<typeof setTimeout> to fix "Cannot find namespace 'NodeJS'" error.
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const startApp = async () => {
       const localData = await dbLoad();
@@ -202,7 +206,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCloudErrorType(type as any);
           if (error) setCloudErrorMessage(error);
         } else if (cloudData) {
-          // Newest Wins Strategy: Only apply cloud data if it is newer than local data
           const cloudTime = cloudData.lastUpdated || 0;
           if (cloudTime > currentLastUpdated) {
             if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
@@ -221,22 +224,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startApp();
   }, []);
 
-  // Save to Local and Sync to Cloud periodically
+  /**
+   * Internal function to perform an immediate save to IndexedDB and trigger a Cloud sync.
+   * This is used for critical admin actions to ensure data persistence even if the browser is closed shortly after.
+   */
+  const triggerImmediateSync = async (overrides: Partial<AppState>) => {
+    if (!isLoaded) return;
+    
+    const now = Date.now();
+    // Prepare the full state with overrides
+    const currentState = {
+      lang: overrides.lang || lang,
+      theme: overrides.theme || theme,
+      donations: overrides.donations || donations,
+      leadership: overrides.leadership || leadership,
+      events: overrides.events || events,
+      financials: overrides.financials || financials,
+      settings: overrides.settings || settings,
+      letterhead: overrides.letterhead || letterhead,
+      lastUpdated: now
+    };
+
+    // 1. Immediate save to IndexedDB (Safest local storage)
+    await dbSave(currentState);
+    setLastUpdated(now);
+
+    // 2. Clear any pending debounced sync
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+
+    // 3. Initiate Cloud Sync immediately for Admin actions
+    if (!cloudApiError) {
+      setCloudSyncStatus('syncing');
+      const result = await saveToCloud(currentState);
+      setCloudSyncStatus(result.success ? 'success' : 'error');
+      setCloudSynced(result.success);
+    }
+  };
+
+  // Regular debounced sync for UI-only changes (theme, lang)
   useEffect(() => {
     if (isLoaded) {
       const state = { lang, theme, donations, leadership, events, financials, settings, letterhead, lastUpdated };
       dbSave(state);
       
-      // Reduce sync delay to 2 seconds for faster persistence
-      const timer = setTimeout(async () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      
+      syncTimeoutRef.current = setTimeout(async () => {
         if (!cloudApiError) {
           const result = await saveToCloud(state);
           setCloudSynced(result.success);
         }
       }, 2000);
-      return () => clearTimeout(timer);
+      return () => {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      };
     }
-  }, [lang, theme, donations, leadership, events, financials, settings, letterhead, lastUpdated, isLoaded, cloudApiError]);
+  }, [lang, theme, donations, isLoaded, cloudApiError]);
 
   const login = (password: string) => {
     if (password === 'azadi1988') { setIsAdmin(true); return true; }
@@ -258,26 +301,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           status: isAdmin ? DonationStatus.APPROVED : DonationStatus.PENDING, 
           date: new Date().toISOString() 
         };
-        setDonations([newD, ...donations]);
-        markUpdated();
+        const newList = [newD, ...donations];
+        setDonations(newList);
+        triggerImmediateSync({ donations: newList });
       },
       updateDonation: (id, status) => {
-        setDonations(donations.map(d => d.id === id ? { ...d, status } : d));
-        markUpdated();
+        const newList = donations.map(d => d.id === id ? { ...d, status } : d);
+        setDonations(newList);
+        triggerImmediateSync({ donations: newList });
       },
       deleteDonation: (id) => {
-        setDonations(donations.filter(d => d.id !== id));
-        markUpdated();
+        const newList = donations.filter(d => d.id !== id);
+        setDonations(newList);
+        triggerImmediateSync({ donations: newList });
       },
-      saveSettings: (s) => { setSettings(s); markUpdated(); },
-      saveLetterhead: (c) => { setLetterhead(c); markUpdated(); },
+      saveSettings: (s) => { 
+        setSettings(s); 
+        triggerImmediateSync({ settings: s });
+      },
+      saveLetterhead: (c) => { 
+        setLetterhead(c); 
+        triggerImmediateSync({ letterhead: c });
+      },
       addFinancialRecord: (r) => {
         const newR = { ...r, id: Date.now().toString(), date: new Date().toISOString().split('T')[0] };
-        setFinancials([newR, ...financials]);
-        markUpdated();
+        const newList = [newR, ...financials];
+        setFinancials(newList);
+        triggerImmediateSync({ financials: newList });
       },
-      updateLeadership: (l) => { setLeadership(l); markUpdated(); },
-      updateEvents: (ev) => { setEvents(ev); markUpdated(); },
+      updateLeadership: (l) => { 
+        setLeadership(l); 
+        triggerImmediateSync({ leadership: l });
+      },
+      updateEvents: (ev) => { 
+        setEvents(ev); 
+        triggerImmediateSync({ events: ev });
+      },
       syncDatabase: async () => {
         setCloudSyncStatus('syncing');
         const { data: cloudData, error, type } = await loadFromCloud();
@@ -289,6 +348,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.lastUpdated) setLastUpdated(cloudData.lastUpdated);
           setCloudSyncStatus('success');
           setCloudSynced(true);
+          // Update local DB after manual pull
+          dbSave({ ...cloudData, lang, theme, letterhead });
         } else {
           setCloudSyncStatus('error');
           if (error) setCloudErrorMessage(error);
