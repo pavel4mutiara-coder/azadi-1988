@@ -2,7 +2,7 @@
 // AppContext.tsx: Manages global state including bilingual settings and cloud synchronization.
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Language, Donation, Leadership, Event, FinancialRecord, OrganizationSettings, LetterheadConfig, DonationStatus } from './types';
-import { saveToCloud, loadFromCloud, reEnableCloudNetwork } from './firebase';
+import { saveToCloud, loadFromCloud, reEnableCloudNetwork, subscribeToCloudState } from './firebase';
 
 interface AppState {
   lang: Language;
@@ -174,9 +174,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cloudApiError, setCloudApiError] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
 
-  // Using a ref for cloud syncing to prevent overlapping syncs and ensure latest state is used
-  // FIX: Replaced NodeJS.Timeout with ReturnType<typeof setTimeout> to fix "Cannot find namespace 'NodeJS'" error.
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref to track if the current change was triggered locally to avoid sync loops
+  const lastUpdatedRef = useRef<number>(0);
 
   useEffect(() => {
     const startApp = async () => {
@@ -195,31 +195,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.lastUpdated) {
           currentLastUpdated = localData.lastUpdated;
           setLastUpdated(localData.lastUpdated);
+          lastUpdatedRef.current = localData.lastUpdated;
         }
       }
       setIsLoaded(true);
 
-      try {
-        const { data: cloudData, type, error } = await loadFromCloud();
-        if (type) {
-          setCloudApiError(true);
-          setCloudErrorType(type as any);
-          if (error) setCloudErrorMessage(error);
-        } else if (cloudData) {
-          const cloudTime = cloudData.lastUpdated || 0;
-          if (cloudTime > currentLastUpdated) {
-            if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
-            if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
-            if (cloudData.donations) setDonations(cloudData.donations);
-            if (cloudData.events) setEvents(cloudData.events);
-            if (cloudData.financials) setFinancials(cloudData.financials);
-            if (cloudData.lastUpdated) setLastUpdated(cloudData.lastUpdated);
-            setCloudSynced(true);
+      // Start Cloud Listener for Real-time Cross-Platform Sync
+      const unsubscribe = subscribeToCloudState((cloudData) => {
+        if (cloudData && cloudData.lastUpdated > lastUpdatedRef.current) {
+          console.log("Remote cloud update received. Applying changes...");
+          if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
+          if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
+          if (cloudData.donations) setDonations(cloudData.donations);
+          if (cloudData.events) setEvents(cloudData.events);
+          if (cloudData.financials) setFinancials(cloudData.financials);
+          if (cloudData.lastUpdated) {
+            setLastUpdated(cloudData.lastUpdated);
+            lastUpdatedRef.current = cloudData.lastUpdated;
           }
+          setCloudSynced(true);
+          setCloudSyncStatus('success');
+          // Persist the remote change to local DB too
+          dbSave({ ...cloudData, lang: localData?.lang || 'bn', theme: localData?.theme || 'dark' });
         }
-      } catch (err) {
-        console.warn("Background cloud sync failed, continuing with local data.");
-      }
+      });
+
+      return () => unsubscribe();
     };
     startApp();
   }, []);
@@ -232,6 +233,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isLoaded) return;
     
     const now = Date.now();
+    lastUpdatedRef.current = now;
+    
     // Prepare the full state with overrides
     const currentState = {
       lang: overrides.lang || lang,
@@ -279,14 +282,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
       };
     }
-  }, [lang, theme, donations, isLoaded, cloudApiError]);
+  }, [lang, theme, isLoaded, cloudApiError]);
 
   const login = (password: string) => {
     if (password === 'azadi1988') { setIsAdmin(true); return true; }
     return false;
   };
 
-  const markUpdated = () => setLastUpdated(Date.now());
+  const markUpdated = () => {
+    const now = Date.now();
+    setLastUpdated(now);
+    lastUpdatedRef.current = now;
+  };
 
   return (
     <AppContext.Provider value={{
@@ -345,7 +352,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
           if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
           if (cloudData.events) setEvents(cloudData.events);
-          if (cloudData.lastUpdated) setLastUpdated(cloudData.lastUpdated);
+          if (cloudData.lastUpdated) {
+            setLastUpdated(cloudData.lastUpdated);
+            lastUpdatedRef.current = cloudData.lastUpdated;
+          }
           setCloudSyncStatus('success');
           setCloudSynced(true);
           // Update local DB after manual pull
