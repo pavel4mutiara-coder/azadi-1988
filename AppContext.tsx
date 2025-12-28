@@ -20,6 +20,7 @@ interface AppState {
   cloudErrorType: 'api-disabled' | 'not-found' | 'billing-required' | 'auth' | 'none';
   cloudErrorMessage: string;
   cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
+  lastUpdated: number;
   setLang: (lang: Language) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   login: (password: string) => boolean;
@@ -41,7 +42,6 @@ const STORE_NAME = 'permanent_storage';
 
 const LOGO_ID = "1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
 const NEW_LOGO_URL = `https://lh3.googleusercontent.com/d/${LOGO_ID}`;
-// Direct link for the user provided flag: https://drive.google.com/file/d/1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q
 const FLAG_URL = "https://lh3.googleusercontent.com/d/1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q";
 
 const DEFAULT_SETTINGS: OrganizationSettings = {
@@ -166,6 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     stampText: "আজাদী সমাজ কল্যাণ সংঘ, সিলেট",
     bodyText: ""
   });
+  const [lastUpdated, setLastUpdated] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [cloudSynced, setCloudSynced] = useState(false);
   const [cloudErrorType, setCloudErrorType] = useState<'api-disabled' | 'not-found' | 'billing-required' | 'auth' | 'none'>('none');
@@ -176,6 +177,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const startApp = async () => {
       const localData = await dbLoad();
+      let currentLastUpdated = 0;
+      
       if (localData) {
         if (localData.lang) setLang(localData.lang);
         if (localData.theme) setTheme(localData.theme);
@@ -185,6 +188,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (localData.financials) setFinancials(localData.financials);
         if (localData.settings) setSettings({ ...DEFAULT_SETTINGS, ...localData.settings });
         if (localData.letterhead) setLetterhead(localData.letterhead);
+        if (localData.lastUpdated) {
+          currentLastUpdated = localData.lastUpdated;
+          setLastUpdated(localData.lastUpdated);
+        }
       }
       setIsLoaded(true);
 
@@ -195,12 +202,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCloudErrorType(type as any);
           if (error) setCloudErrorMessage(error);
         } else if (cloudData) {
-          if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
-          if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
-          if (cloudData.donations) setDonations(cloudData.donations);
-          if (cloudData.events) setEvents(cloudData.events);
-          if (cloudData.financials) setFinancials(cloudData.financials);
-          setCloudSynced(true);
+          // Newest Wins Strategy: Only apply cloud data if it is newer than local data
+          const cloudTime = cloudData.lastUpdated || 0;
+          if (cloudTime > currentLastUpdated) {
+            if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
+            if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
+            if (cloudData.donations) setDonations(cloudData.donations);
+            if (cloudData.events) setEvents(cloudData.events);
+            if (cloudData.financials) setFinancials(cloudData.financials);
+            if (cloudData.lastUpdated) setLastUpdated(cloudData.lastUpdated);
+            setCloudSynced(true);
+          }
         }
       } catch (err) {
         console.warn("Background cloud sync failed, continuing with local data.");
@@ -209,29 +221,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startApp();
   }, []);
 
+  // Save to Local and Sync to Cloud periodically
   useEffect(() => {
     if (isLoaded) {
-      const state = { lang, theme, donations, leadership, events, financials, settings, letterhead };
+      const state = { lang, theme, donations, leadership, events, financials, settings, letterhead, lastUpdated };
       dbSave(state);
+      
+      // Reduce sync delay to 2 seconds for faster persistence
       const timer = setTimeout(async () => {
         if (!cloudApiError) {
           const result = await saveToCloud(state);
           setCloudSynced(result.success);
         }
-      }, 10000);
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [lang, theme, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudApiError]);
+  }, [lang, theme, donations, leadership, events, financials, settings, letterhead, lastUpdated, isLoaded, cloudApiError]);
 
   const login = (password: string) => {
     if (password === 'azadi1988') { setIsAdmin(true); return true; }
     return false;
   };
 
+  const markUpdated = () => setLastUpdated(Date.now());
+
   return (
     <AppContext.Provider value={{
-      lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError, cloudErrorType, cloudErrorMessage, cloudSyncStatus,
-      setLang, setTheme, login, logout: () => setIsAdmin(false),
+      lang, theme, isAdmin, donations, leadership, events, financials, settings, letterhead, isLoaded, cloudSynced, cloudApiError, cloudErrorType, cloudErrorMessage, cloudSyncStatus, lastUpdated,
+      setLang: (l) => { setLang(l); markUpdated(); },
+      setTheme: (t) => { setTheme(t); markUpdated(); },
+      login, logout: () => setIsAdmin(false),
       addDonation: (d) => {
         const newD = { 
           ...d, 
@@ -240,17 +259,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           date: new Date().toISOString() 
         };
         setDonations([newD, ...donations]);
+        markUpdated();
       },
-      updateDonation: (id, status) => setDonations(donations.map(d => d.id === id ? { ...d, status } : d)),
-      deleteDonation: (id) => setDonations(donations.filter(d => d.id !== id)),
-      saveSettings: (s) => setSettings(s),
-      saveLetterhead: (c) => setLetterhead(c),
+      updateDonation: (id, status) => {
+        setDonations(donations.map(d => d.id === id ? { ...d, status } : d));
+        markUpdated();
+      },
+      deleteDonation: (id) => {
+        setDonations(donations.filter(d => d.id !== id));
+        markUpdated();
+      },
+      saveSettings: (s) => { setSettings(s); markUpdated(); },
+      saveLetterhead: (c) => { setLetterhead(c); markUpdated(); },
       addFinancialRecord: (r) => {
         const newR = { ...r, id: Date.now().toString(), date: new Date().toISOString().split('T')[0] };
         setFinancials([newR, ...financials]);
+        markUpdated();
       },
-      updateLeadership: (l) => setLeadership(l),
-      updateEvents: (ev) => setEvents(ev),
+      updateLeadership: (l) => { setLeadership(l); markUpdated(); },
+      updateEvents: (ev) => { setEvents(ev); markUpdated(); },
       syncDatabase: async () => {
         setCloudSyncStatus('syncing');
         const { data: cloudData, error, type } = await loadFromCloud();
@@ -259,6 +286,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.settings) setSettings({ ...DEFAULT_SETTINGS, ...cloudData.settings });
           if (cloudData.leadership?.length) setLeadership(cloudData.leadership);
           if (cloudData.events) setEvents(cloudData.events);
+          if (cloudData.lastUpdated) setLastUpdated(cloudData.lastUpdated);
           setCloudSyncStatus('success');
           setCloudSynced(true);
         } else {
