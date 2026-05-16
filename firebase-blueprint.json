@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "Donation": {
+      "title": "Donation",
+      "description": "Records of donations made by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "donorName": { "type": "string" },
+        "amount": { "type": "number" },
+        "phone": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "purpose": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "date": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "Leadership": {
+      "title": "Leadership",
+      "description": "Staff or committee members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nameBn": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "designationBn": { "type": "string" },
+        "designationEn": { "type": "string" },
+        "image": { "type": "string" },
+        "order": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Organization events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "date": { "type": "string" },
+        "image": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Official notices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "date": { "type": "string" },
+        "isUrgent": { "type": "boolean" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "News": {
+      "title": "News",
+      "description": "Organization news updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "date": { "type": "string" },
+        "image": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Organization configuration",
+      "type": "object",
+      "properties": {
+        "nameBn": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "sloganBn": { "type": "string" },
+        "sloganEn": { "type": "string" },
+        "addressBn": { "type": "string" },
+        "addressEn": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "establishedBn": { "type": "string" },
+        "establishedEn": { "type": "string" },
+        "logo": { "type": "string" },
+        "flag": { "type": "string" },
+        "adminWhatsApp": { "type": "string" },
+        "bkash": { "type": "string" },
+        "nagad": { "type": "string" },
+        "roket": { "type": "string" },
+        "facebook": { "type": "string" },
+        "youtube": { "type": "string" },
+        "whatsappChannel": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "donations": { "schema": "Donation", "description": "Collection of all donations" },
+    "leadership": { "schema": "Leadership", "description": "Collection of leadership team members" },
+    "events": { "schema": "Event", "description": "Collection of organization events" },
+    "notices": { "schema": "Notice", "description": "Collection of official notices" },
+    "news": { "schema": "News", "description": "Collection of news updates" },
+    "config/settings": { "schema": "Settings", "description": "Global organization settings" },
+    "config/letterhead": { "schema": "object", "description": "Letterhead configuration" }
+  }
+}

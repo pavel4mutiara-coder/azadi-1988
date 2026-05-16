@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Primary admin email
+      return isEmailVerified() && request.auth.token.email == 'pavel4mutiara@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY VALIDATIONS ---
+
+    function isValidDonation(data) {
+      return data.keys().hasAll(['donorName', 'amount', 'date']) &&
+             data.donorName is string && data.donorName.size() <= 200 &&
+             data.amount is number && data.amount >= 0 &&
+             data.date is string && data.date.size() <= 20;
+    }
+
+    function isValidLeadership(data) {
+      return data.keys().hasAll(['nameEn', 'nameBn', 'designationEn', 'designationBn']) &&
+             data.nameBn is string && data.nameBn.size() <= 200 &&
+             data.designationBn is string && data.designationBn.size() <= 200;
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['titleEn', 'titleBn', 'date']) &&
+             data.titleBn is string && data.titleBn.size() <= 500 &&
+             data.date is string;
+    }
+
+    function isValidNotice(data) {
+       return data.keys().hasAll(['titleEn', 'titleBn', 'date']) &&
+              data.titleBn is string && data.titleBn.size() <= 500;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // 1. PUBLIC COLLECTIONS (Read-anyone, Write-admin)
+    match /leadership/{id} {
+      allow read: if isValidId(id);
+      allow create: if isAdmin() && isValidLeadership(incoming()) && isValidId(id);
+      allow update: if isAdmin() && isValidLeadership(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /events/{id} {
+       allow read: if isValidId(id);
+       allow create: if isAdmin() && isValidEvent(incoming()) && isValidId(id);
+       allow update: if isAdmin() && isValidEvent(incoming());
+       allow delete: if isAdmin();
+    }
+
+    match /notices/{id} {
+       allow read: if isValidId(id);
+       allow create: if isAdmin() && isValidNotice(incoming()) && isValidId(id);
+       allow update: if isAdmin() && isValidNotice(incoming());
+       allow delete: if isAdmin();
+    }
+
+    match /news/{id} {
+       allow read: if isValidId(id);
+       allow create: if isAdmin() && isValidId(id);
+       allow update: if isAdmin();
+       allow delete: if isAdmin();
+    }
+
+    match /config/settings {
+       allow read: if true;
+       allow write: if isAdmin();
+    }
+
+    match /config/letterhead {
+       allow read: if true;
+       allow write: if isAdmin();
+    }
+
+    // 2. DONATIONS (Public can create, Admin can read/manage)
+    match /donations/{id} {
+      allow create: if isValidDonation(incoming()) && isValidId(id);
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

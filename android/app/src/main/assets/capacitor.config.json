@@ -1,0 +1,37 @@
+{
+	"appId": "com.azadi.society",
+	"appName": "Azadi Social Welfare",
+	"webDir": "dist",
+	"bundledWebRuntime": false,
+	"server": {
+		"allowNavigation": [
+			"lh3.googleusercontent.com",
+			"drive.google.com",
+			"firebasestorage.googleapis.com",
+			"www.gstatic.com",
+			"cdnjs.cloudflare.com",
+			"fonts.googleapis.com",
+			"fonts.gstatic.com"
+		],
+		"cleartext": true,
+		"androidScheme": "https"
+	},
+	"android": {
+		"allowMixedContent": true,
+		"captureInput": true,
+		"webContentsDebuggingEnabled": true
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 3000,
+			"backgroundColor": "#065f46",
+			"showSpinner": true,
+			"androidSpinnerStyle": "large",
+			"spinnerColor": "#ffffff"
+		},
+		"StatusBar": {
+			"style": "DARK",
+			"backgroundColor": "#065f46"
+		}
+	}
+}
