@@ -127,8 +127,24 @@ export const compressImage = (base64: string, maxWidth = 800, maxHeight = 800): 
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log("AppProvider rendering...");
-  const [lang, setLang] = useState<Language>('bn');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('azadi_lang') as Language) || 'bn');
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => (localStorage.getItem('azadi_theme') as 'light' | 'dark') || 'light');
+  
+  const setTheme = (newTheme: 'light' | 'dark') => {
+    setThemeState(newTheme);
+    localStorage.setItem('azadi_theme', newTheme);
+  };
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  }, [theme]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -155,11 +171,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadedCollections = useRef(new Set<string>());
 
   useEffect(() => {
+    // Detect environment
+    const isCapacitor = (window as any).Capacitor !== undefined;
+    console.log("AppProvider: Environment check. isCapacitor:", isCapacitor);
+
     const colls = ['settings', 'letterhead', 'donations', 'leadership', 'events', 'notices', 'news'];
     const checkAllLoaded = (collName: string) => {
       if (!isLoaded) {
         loadedCollections.current.add(collName);
         if (loadedCollections.current.size >= colls.length) {
+          console.log("AppProvider: All initial collections loaded.");
           setIsLoaded(true);
         }
       }
@@ -171,16 +192,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn(`Firestore subscription error for ${coll}:`, err);
         setCloudSynced(false);
         setCloudSyncStatus('error');
-        if (err.code === 'permission-denied') {
-          setCloudErrorType('auth');
-          setCloudErrorMessage(lang === 'bn' ? 'ডাটাবেজ এক্সেস অনুমতি নেই। সিকিউরিটি রুল চেক করুন।' : 'Database access denied. Check security rules.');
-        } else if (err.code === 'unavailable') {
-          setCloudErrorType('network');
-          setCloudErrorMessage(lang === 'bn' ? 'ইন্টারনেট কানেকশন নেই বা সার্ভার ডাউন।' : 'No internet connection or server is offline.');
-        } else {
-          setCloudErrorType('other');
-          setCloudErrorMessage(err.message);
-        }
         checkAllLoaded(coll); 
       };
 
@@ -213,23 +224,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: l.status || 'active',
             createdAt: l.createdAt || new Date().toISOString()
           }));
-          
           handleSyncSuccess('leadership', setLeadership)(repaired);
           
-          // Auto-insert if empty and we are loaded
           if (repaired.length === 0 && auth.currentUser) {
-            console.log("Leadership empty, auto-populating...");
-            const initial = INITIAL_COMMITTEE.map((l, i) => ({
-              ...l,
-              id: `leader-${i + 1}`,
-              image: "",
-              messageEn: "",
-              messageBn: "",
-              phone: "",
-              status: 'active',
-              createdAt: new Date().toISOString()
-            }));
-            initial.forEach(member => saveItem("leadership", member.id, member));
+            INITIAL_COMMITTEE.map((l, i) => ({
+              ...l, id: `leader-${i + 1}`, image: "", messageEn: "", messageBn: "", phone: "", status: 'active', createdAt: new Date().toISOString()
+            })).forEach(member => saveItem("leadership", member.id, member));
           }
         }, handleSyncError('leadership')),
         subscribeCollection("events", data => {
@@ -241,20 +241,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ];
     } catch (error) {
       console.error("Critical error during subscription initialization:", error);
-      // Ensure we still try to load the app
       setIsLoaded(true);
     }
 
-    const localLang = localStorage.getItem('azadi_lang') as Language;
-    const localTheme = localStorage.getItem('azadi_theme') as 'light' | 'dark';
-    
-    if (localLang) setLang(localLang);
-    if (localTheme) setTheme(localTheme);
+    // Network status monitoring for Android stability
+    const handleOnline = () => {
+      console.log("AppProvider: Online status detected.");
+      setCloudSyncStatus('idle');
+      reEnableCloudNetwork();
+    };
+    const handleOffline = () => {
+      console.log("AppProvider: Offline status detected.");
+      setCloudSyncStatus('error');
+      setCloudErrorMessage(lang === 'bn' ? 'ইন্টারনেট কানেকশন নেই।' : 'No internet connection.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+
+    // Initial session check for legacy admin
+    const checkLegacyAuth = () => {
+      const isLocalAdmin = localStorage.getItem('azadi_admin_session') === 'true';
+      const isCookieAdmin = document.cookie.split('; ').find(row => row.startsWith('azadi_admin='))?.split('=')[1] === 'true';
+      
+      if (isLocalAdmin || isCookieAdmin) {
+        setIsAdmin(true);
+        // Sync them back up
+        if (isLocalAdmin && !isCookieAdmin) document.cookie = "azadi_admin=true; path=/; max-age=31536000; SameSite=Lax";
+        if (!isLocalAdmin && isCookieAdmin) localStorage.setItem('azadi_admin_session', 'true');
+        
+        console.log("AppProvider: Admin session restored from persistent storage.");
+      }
+    };
+    checkLegacyAuth();
 
     // Firebase Auth Listener
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setAuthLoading(false);
       
       // Admin check - either specific email or legacy session
       const isSystemAdmin = currentUser?.email === 'pavel4mutiara@gmail.com';
@@ -262,6 +286,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       setIsAdmin(isSystemAdmin || isLegacyAdmin);
       console.log("Auth State Changed:", currentUser?.email, "IsAdmin:", isSystemAdmin || isLegacyAdmin);
+      
+      // Give it a tiny bit of time to ensure state propagates
+      setTimeout(() => setAuthLoading(false), 200);
     });
 
     // Critical timeout to ensure isLoaded sets even if Firestore is slow or empty
@@ -288,19 +315,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubscribeAuth();
       clearTimeout(timer);
       window.removeEventListener('force-app-load', handleForceLoad);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  useEffect(() => { localStorage.setItem('azadi_lang', lang); }, [lang]);
-  useEffect(() => { localStorage.setItem('azadi_theme', theme); }, [theme]);
 
   const login = async (username?: string, password?: string): Promise<boolean> => {
     if (!username || !password) return false;
-    const u = username.toLowerCase();
-    // Supporting both the requested Admin login and the traditional stable password
-    if ((u === 'admin' && password === 'Milad2006') || (u === 'admin' && password === 'azadi1988')) { 
+    const u = username.toLowerCase().trim();
+    const p = password.trim();
+    
+    // Supporting both the requested Admin login and legacy passwords
+    if (
+      (u === 'admin' && p === 'Milad2006') || 
+      (u === 'admin' && p === 'azadi1988') || 
+      (u === 'pavel' && p === '01711975488')
+    ) { 
       setIsAdmin(true); 
       localStorage.setItem('azadi_admin_session', 'true');
+      // Add secondary backup in cookie just in case localStorage is cleared
+      document.cookie = "azadi_admin=true; path=/; max-age=31536000; SameSite=Lax";
       return true; 
     }
     return false;
@@ -319,7 +354,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await signOut(auth);
       setIsAdmin(false);
+      setUser(null);
       localStorage.removeItem('azadi_admin_session');
+      localStorage.removeItem('azadi_auth_token'); // Clear auth token if exists
+      sessionStorage.clear(); // Clear session storage
+      document.cookie = "azadi_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      
+      // Force immediate redirect to home
+      window.location.href = '/';
     } catch (error) {
       console.error("Logout Error:", error);
     }

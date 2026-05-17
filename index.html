@@ -13,74 +13,17 @@
     <meta name="author" content="Azadi Social Welfare Organization">
     <link rel="canonical" href="https://azadi-1988.vercel.app/" />
 
-    <!-- Open Graph / Facebook Meta Tags -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://azadi-1988.vercel.app/">
-    <meta property="og:site_name" content="আজাদী সমাজ কল্যাণ সংঘ">
-    <meta property="og:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare Organization">
-    <meta property="og:description" content="শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত সিলেটের একটি ঐতিহ্যবাহী সামাজিক সংগঠন। প্রতিষ্ঠিত: ১০ জুন ১৯৮৮।">
-    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
-    <meta property="og:locale" content="bn_BD">
-    <meta property="og:locale:alternate" content="en_US">
-
-    <!-- Twitter Card Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://azadi-1988.vercel.app/">
-    <meta name="twitter:title" content="আজাদী সমাজ কল্যাণ সংঘ | Azadi Social Welfare Organization">
-    <meta name="twitter:description" content="১৯৮৮ সাল থেকে মানবতার সেবায় নিবেদিত সিলেটের একটি অলাভজনক সামাজিক সংস্থা।">
-    <meta name="twitter:image" content="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
-
-    <!-- JSON-LD Structured Data for Organization -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "NGO",
-      "name": "আজাদী সমাজ কল্যাণ সংঘ",
-      "alternateName": "Azadi Social Welfare Organization",
-      "description": "Established in 1988, Azadi Social Welfare Organization works for education, unity, and social service in Sylhet, Bangladesh.",
-      "url": "https://azadi-1988.vercel.app/",
-      "logo": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
-      "foundingDate": "1988-06-10",
-      "foundingLocation": "Sylhet, Bangladesh",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Road No. 01, Mirbox Tula",
-        "addressLocality": "Sylhet",
-        "postalCode": "3100",
-        "addressCountry": "BD"
-      },
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+8801711975488",
-        "contactType": "Customer Service",
-        "email": "azadisocialwelfareorganization@gmail.com",
-        "availableLanguage": ["Bengali", "English"]
-      },
-      "sameAs": [
-        "https://www.facebook.com/profile.php?id=61585193438030",
-        "https://youtube.com/@azadisocialwelfareorganization?si=gD7Akj6EdMYjHuFe",
-        "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
-      ]
-    }
-    </script>
-    
-    <!-- Cache Control & Security -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
-    <!-- PWA & Mobile Optimization -->
+    <!-- Performance & Progressive Web App Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Azadi Society">
-    <meta name="apple-touch-fullscreen" content="yes">
-    <meta name="format-detection" content="telephone=no">
-    <meta name="theme-color" content="#065f46">
+    <meta name="apple-mobile-web-app-title" content="Azadi">
+    <meta name="theme-color" content="#065f46" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)">
     
-    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
+    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,6 +31,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700;900&family=Inter:wght@400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+
+    <!-- Theme Initialization Script to prevent flashing -->
+    <script>
+      (function() {
+        try {
+          const theme = localStorage.getItem('azadi_theme') || 'light';
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          console.error('Theme initialization failed:', e);
+        }
+      })();
+    </script>
 </head>
 <body>
     <div id="root" class="app-container"></div>

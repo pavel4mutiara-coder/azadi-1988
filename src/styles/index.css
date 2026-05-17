@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", "Inter", "Noto Sans Bengali", sans-serif;
@@ -12,76 +14,72 @@
 
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -2px rgba(0, 0, 0, 0.04);
   --shadow-heavy: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+  
+  --color-app-bg: var(--app-bg);
+  --color-app-text: var(--app-text);
+  --color-surface: var(--app-surface);
+  --color-on-surface: var(--app-on-surface);
+  --color-app-border: var(--app-border);
 }
 
 :root {
   --font-bengali: 'Noto Sans Bengali', sans-serif;
   --font-english: 'Inter', sans-serif;
+  --app-bg: #f8fafc;
+  --app-text: #0f172a;
+  --app-surface: #ffffff;
+  --app-on-surface: #1e293b;
+  --app-border: #e2e8f0;
+  color-scheme: light;
+}
+
+.dark {
+  --app-bg: #020617;
+  --app-text: #f1f5f9;
+  --app-surface: #0f172a;
+  --app-on-surface: #f1f5f9;
+  --app-border: #1e293b;
+  color-scheme: dark;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
   outline: none !important;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(5, 150, 105, 0.2) transparent;
 }
 
-html, body {
+/* Theme Transition Control */
+html {
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100%;
-  margin: 0;
-  padding: 0;
 }
 
 body {
-  font-family: "Inter", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   user-select: none;
   -webkit-user-select: none;
   overflow-x: hidden;
   width: 100%;
-  background-color: #f8fafc; /* slate-50 */
-  color: #0f172a; /* slate-900 */
+  min-height: 100%;
+  background-color: var(--app-bg);
+  color: var(--app-text);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-#root {
-  height: 100%;
-  width: 100%;
+/* Base Link Colors */
+a {
+  @apply transition-colors duration-200;
 }
 
-.app-container {
-  min-height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Ensure the layout wrapper also handles the theme correctly */
-.dark body {
-  background-color: #020617; /* slate-950 */
-  color: #f8fafc; /* slate-50 */
-}
-
-/* Bengali Typography */
-.bengali, [lang="bn"], [lang="bn"] * {
-  font-family: var(--font-bengali);
-}
-
-h1, h2, h3, .font-display {
-  font-family: var(--font-display);
-}
-
-input, select, textarea {
-  font-size: 16px !important;
-}
-
+/* Scrollbar Professional Styling */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -89,17 +87,54 @@ input, select, textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(5, 150, 105, 0.1);
-  border-radius: 10px;
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full hover:bg-emerald-500/50 transition-colors;
+}
+
+/* Form Elements Theme Fixes */
+input, select, textarea {
+  @apply bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600;
+  font-size: 16px !important;
+}
+
+/* Card & Surface Improvements */
+.surface-card {
+  @apply bg-surface text-on-surface border border-app-border rounded-3xl transition-all;
+}
+
+.surface-elevated {
+  @apply bg-surface text-on-surface shadow-soft dark:shadow-none border border-app-border;
+}
+
+/* Bengali Typography */
+.bengali, [lang="bn"], [lang="bn"] * {
+  font-family: var(--font-bengali);
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+@keyframes grow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.grow-animation {
+  animation: grow 2s ease-in-out infinite;
+}
+
+.animate-hover {
+  animation: float 3s ease-in-out infinite;
+}
+
 @media print {
   .no-print { display: none !important; }
-  body { background: white !important; }
+  body { background: white !important; color: black !important; }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {

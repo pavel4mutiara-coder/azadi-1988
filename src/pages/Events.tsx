@@ -1,15 +1,32 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
-import { Calendar, MapPin, ArrowRight, X, Clock, Info, Image as ImageIcon, Share2, MessageCircle, Copy, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, X, Clock, Info, Image as ImageIcon, Share2, MessageCircle, Copy, CheckCircle, Smartphone } from 'lucide-react';
 import { Event } from '../types';
 
 export const Events: React.FC = () => {
   const { lang, events, settings } = useApp();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const t = TRANSLATIONS[lang];
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+
+  // Handle direct links to events
+  useEffect(() => {
+    const eventId = searchParams.get('id');
+    if (eventId && events.length > 0) {
+      const event = events.find(e => e.id === eventId);
+      if (event) {
+        setSelectedEvent(event);
+        setTimeout(() => {
+          document.getElementById('event-details-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+      }
+    }
+  }, [searchParams, events]);
 
   // Sorting with fallback to prevent crashes if date is missing or invalid
   const sortedEvents = useMemo(() => {
@@ -37,28 +54,44 @@ export const Events: React.FC = () => {
 
   const handleShare = async (event: Event) => {
     const shareTitle = lang === 'bn' ? event.titleBn : event.titleEn;
-    const shareText = `${shareTitle}\n📅 ${formatDate(event.date)}\n📍 ${lang === 'bn' ? event.locationBn : event.locationEn}\n\n${lang === 'bn' ? event.descriptionBn : event.descriptionEn}\n\n— ${lang === 'bn' ? settings.nameBn : settings.nameEn}`;
-    const shareUrl = `${window.location.origin}${window.location.pathname}#/events`;
+    const shareText = `${shareTitle}\n📅 ${formatDate(event.date)}\n📍 ${lang === 'bn' ? event.locationBn : event.locationEn}`;
+    const shareUrl = `${window.location.origin}/#/events?id=${event.id}`;
+    const fullMessage = `${shareText}\n\n${lang === 'bn' ? event.descriptionBn?.slice(0, 100) : event.descriptionEn?.slice(0, 100)}...\n\nRead more: ${shareUrl}\n— ${lang === 'bn' ? settings.nameBn : settings.nameEn}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
           title: shareTitle,
-          text: shareText,
+          text: fullMessage,
           url: shareUrl,
         });
+        return;
       } catch (err) {
-        console.error('Share failed:', err);
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Share failed:', err);
+        } else {
+          return; // User cancelled
+        }
       }
-    } else {
-      try {
-        await navigator.clipboard.writeText(`${shareText}\n\nLink: ${shareUrl}`);
-        setCopyStatus(event.id);
-        setTimeout(() => setCopyStatus(null), 2000);
-      } catch (err) {
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`;
+    }
+
+    // Fallback: Copy to clipboard and offer social links
+    try {
+      await navigator.clipboard.writeText(fullMessage);
+      setCopyStatus(event.id);
+      setTimeout(() => setCopyStatus(null), 3000);
+      
+      // Also open a quick choice menu or just default to WhatsApp if mobile
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(fullMessage)}`;
         window.open(waUrl, '_blank');
+      } else {
+        // For desktop fallback, we could show a toast or just rely on the clipboard copy
+        // which we already did above with setCopyStatus
       }
+    } catch (err) {
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(fullMessage)}`;
+      window.open(waUrl, '_blank');
     }
   };
 
@@ -136,22 +169,23 @@ export const Events: React.FC = () => {
                   <button 
                     onClick={() => {
                       setSelectedEvent(event);
+                      window.history.replaceState(null, '', `/#/events?id=${event.id}`);
                       setTimeout(() => {
                         document.getElementById('event-details-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }, 100);
                     }}
                     className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-sm md:text-base hover:gap-6 transition-all uppercase tracking-[0.1em] group/btn bengali"
                   >
-                    {lang === 'bn' ? 'বিস্তারিত দেখি' : 'Explore Details'}
+                    {lang === 'bn' ? ' বিস্তারিত দেখি' : 'Explore Details'}
                     <ArrowRight size={20} className="group-hover/btn:translate-x-1 transition-transform" />
                   </button>
 
                   <button 
-                    onClick={() => handleShare(event)}
+                    onClick={(e) => { e.stopPropagation(); handleShare(event); }}
                     className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-emerald-600 transition-colors font-black text-[12px] uppercase tracking-widest bengali group/share"
                   >
-                    <Share2 size={16} className="group-hover/share:scale-125 transition-transform" />
-                    {lang === 'bn' ? 'শেয়ার' : 'Share'}
+                    {copyStatus === event.id ? <CheckCircle size={16} className="text-emerald-500" /> : <Share2 size={16} className="group-hover/share:scale-125 transition-transform" />}
+                    {copyStatus === event.id ? (lang === 'bn' ? 'কপি হয়েছে' : 'Copied') : (lang === 'bn' ? 'শেয়ার' : 'Share')}
                   </button>
                 </div>
               </div>
@@ -211,12 +245,16 @@ export const Events: React.FC = () => {
                  <div className="flex flex-wrap gap-4 md:gap-6 pt-6">
                     <button 
                        onClick={() => handleShare(selectedEvent)}
-                       className="bg-emerald-600 text-white px-8 md:px-12 py-4 md:py-5 rounded-[2rem] font-black text-xs md:text-sm uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-3 shadow-xl active:scale-95 shadow-emerald-500/10"
+                       className={`${copyStatus === selectedEvent.id ? 'bg-emerald-500' : 'bg-emerald-600 hover:bg-emerald-700'} text-white px-8 md:px-12 py-4 md:py-5 rounded-[2rem] font-black text-xs md:text-sm uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95 shadow-emerald-500/10`}
                     >
-                       <Share2 size={20} /> {lang === 'bn' ? 'শেয়ার স্টোরি' : 'Spread the Mission'}
+                       {copyStatus === selectedEvent.id ? <CheckCircle size={20} /> : <Share2 size={20} />}
+                       {copyStatus === selectedEvent.id ? (lang === 'bn' ? 'লিঙ্ক কপি করা হয়েছে' : 'Link Copied') : (lang === 'bn' ? 'শেয়ার স্টোরি' : 'Spread the Mission')}
                     </button>
                     <button 
-                       onClick={() => setSelectedEvent(null)}
+                       onClick={() => {
+                         setSelectedEvent(null);
+                         window.history.replaceState(null, '', `/#/events`);
+                       }}
                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-8 py-4 rounded-[2rem] font-black text-xs md:text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2 active:scale-95"
                     >
                        <X size={20} /> {lang === 'bn' ? 'বন্ধ করুন' : 'Clear View'}

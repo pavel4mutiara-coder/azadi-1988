@@ -25,12 +25,13 @@ import {
   LayoutGrid,
   Phone,
   Lock,
+  LogOut,
   BellRing,
   Newspaper,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { lang, donations, settings, updateDonation, deleteDonation, addDonation, cloudSynced, cloudSyncStatus, cloudErrorMessage, cloudErrorType, retryCloudConnection, restoreFromLegacy } = useApp();
+  const { lang, donations, settings, updateDonation, deleteDonation, addDonation, cloudSynced, cloudSyncStatus, cloudErrorMessage, cloudErrorType, retryCloudConnection, restoreFromLegacy, logout } = useApp();
   const t = TRANSLATIONS[lang];
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
   const [viewingReceipt, setViewingReceipt] = useState<Donation | null>(null);
@@ -74,6 +75,16 @@ export const AdminDashboard: React.FC = () => {
     alert(lang === 'bn' ? 'নগদ অনুদান যুক্ত হয়েছে!' : 'Cash donation added!');
   };
 
+  const getStatColors = (color: string) => {
+    switch(color) {
+      case 'emerald': return 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 group-hover:ring-emerald-500/5';
+      case 'blue': return 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 group-hover:ring-blue-500/5';
+      case 'amber': return 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 group-hover:ring-amber-500/5';
+      case 'rose': return 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 group-hover:ring-rose-500/5';
+      default: return 'bg-slate-50 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 group-hover:ring-slate-500/5';
+    }
+  };
+
   if (viewingReceipt) {
     return (
       <ReceiptView 
@@ -89,7 +100,7 @@ export const AdminDashboard: React.FC = () => {
       
       {/* Cloud Connectivity Status Bar */}
       <div className={`rounded-4xl md:rounded-4xl p-0.5 border-2 transition-all duration-700 shadow-heavy ${cloudSynced ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-        <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-md rounded-4xl p-5 md:p-10">
+        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-4xl p-5 md:p-10">
           <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
             <div className={`w-16 h-16 md:w-24 md:h-24 rounded-3xl flex items-center justify-center shadow-soft shrink-0 group ${cloudSynced ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white animate-pulse'}`}>
               {cloudSynced ? <Cloud size={32} className="md:w-12 md:h-12 group-hover:scale-110 transition-transform" /> : (cloudErrorType === 'auth' ? <Lock size={32} /> : <ServerCrash size={32} />)}
@@ -128,7 +139,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
         {stats.map((stat, i) => (
           <div key={i} className="p-6 md:p-12 bg-white dark:bg-slate-900 rounded-4xl border border-emerald-50 dark:border-slate-800 shadow-soft flex flex-col items-center text-center gap-4 md:gap-6 group hover:shadow-heavy hover:-translate-y-2 transition-all">
-            <div className={`w-14 h-14 md:w-20 md:h-20 rounded-3xl bg-${stat.color}-50 dark:bg-${stat.color}-950/40 flex items-center justify-center text-${stat.color}-600 dark:text-${stat.color}-400 shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all ring-8 ring-transparent group-hover:ring-${stat.color}-500/5`}>
+            <div className={`w-14 h-14 md:w-20 md:h-20 rounded-3xl flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all ring-8 ring-transparent ${getStatColors(stat.color)}`}>
               {stat.icon}
             </div>
             <div className="min-w-0 w-full space-y-1">
@@ -159,7 +170,7 @@ export const AdminDashboard: React.FC = () => {
                 to={item.path}
                 className="group relative bg-white dark:bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-md hover:border-emerald-500 transition-all flex flex-col items-center text-center gap-2 md:gap-5"
               >
-                <div className="w-10 h-10 md:w-14 md:h-14 rounded-[0.8rem] md:rounded-[1.25rem] bg-emerald-50 dark:bg-slate-950 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center justify-center transition-all border border-emerald-50">
+                <div className="w-10 h-10 md:w-14 md:h-14 rounded-[0.8rem] md:rounded-[1.25rem] bg-emerald-50 dark:bg-slate-950 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center justify-center transition-all border border-emerald-50 dark:border-emerald-900/30">
                   {React.cloneElement(item.icon as React.ReactElement<any>, { size: 20, className: "md:w-7 md:h-7" })}
                 </div>
                 <div className="min-w-0 w-full">
@@ -169,6 +180,26 @@ export const AdminDashboard: React.FC = () => {
               </Link>
             );
           })}
+
+          {/* Logout Action Card */}
+          <button
+            onClick={() => {
+              if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to logout?')) {
+                logout();
+              }
+            }}
+            className="group relative bg-white dark:bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-orange-100 dark:border-orange-950/30 shadow-md hover:border-orange-500 transition-all flex flex-col items-center text-center gap-2 md:gap-5"
+          >
+            <div className="w-10 h-10 md:w-14 md:h-14 rounded-[0.8rem] md:rounded-[1.25rem] bg-orange-50 dark:bg-orange-900/20 text-orange-400 group-hover:text-orange-600 flex items-center justify-center transition-all border border-orange-50 shadow-inner">
+              <LogOut size={20} className="md:w-7 md:h-7" />
+            </div>
+            <div className="min-w-0 w-full">
+              <div className="text-[7px] md:text-[10px] font-black uppercase tracking-wider text-slate-400 truncate">{lang === 'bn' ? 'Logout' : 'Sign Out'}</div>
+              <div className="text-[10px] md:text-sm font-black text-slate-900 dark:text-white truncate bengali">{t.logout}</div>
+            </div>
+            {/* Hover indication */}
+            <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-orange-500 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          </button>
         </div>
       </div>
 

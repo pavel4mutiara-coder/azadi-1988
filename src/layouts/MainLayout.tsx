@@ -7,11 +7,11 @@ import {
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
   ShieldAlert, DownloadCloud, X, Share, BellRing, ChevronRight,
-  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles
+  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles, Lock, LogOut
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { lang, setLang, theme, setTheme, isAdmin, settings, isLoaded } = useApp();
+  const { lang, setLang, theme, setTheme, isAdmin, settings, isLoaded, logout } = useApp();
   const location = useLocation();
   const t = TRANSLATIONS[lang];
   const isPublicPage = !location.pathname.startsWith('/admin');
@@ -82,14 +82,6 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
   console.log(`Layout: Rendering. isLoaded=${isLoaded}, theme=${theme}, lang=${lang}`);
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
-
   if (!isLoaded) {
     console.log("Layout: Showing loading screen");
     return (
@@ -128,7 +120,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   return (
     <div 
       id="app-layout-root"
-      className={`flex flex-col min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'dark' : ''} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100`} 
+      className={`flex flex-col min-h-screen transition-all duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-500/30`} 
       lang={lang}
     >
       
@@ -186,18 +178,18 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       )}
 
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-b border-emerald-100 dark:border-slate-800 no-print shadow-soft transition-all duration-300">
-        <div className="container mx-auto px-4 h-14 sm:h-16 md:h-20 flex items-center justify-between gap-2">
-          <Link to="/" className="flex items-center gap-2 group min-w-0 flex-1 lg:flex-initial">
-             <div className="relative group/logo">
-                <OrganizationSeal className="w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14" />
-                <div className="absolute -inset-1 bg-emerald-500/20 rounded-full blur opacity-0 group-hover/logo:opacity-100 transition-opacity"></div>
+      <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl border-b border-emerald-100/50 dark:border-slate-800/50 no-print shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] transition-all duration-300">
+        <div className="container mx-auto px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center gap-3 group min-w-0 flex-1 lg:flex-initial transition-transform active:scale-[0.98]">
+             <div className="relative">
+                <OrganizationSeal className="w-9 h-9 sm:w-11 sm:h-11" />
+                <div className="absolute -inset-1 bg-emerald-500/20 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
              </div>
             <div className="flex flex-col justify-center min-w-0">
-               <h1 className="text-[11px] sm:text-[15px] md:text-lg lg:text-xl font-black uppercase leading-tight text-emerald-900 dark:text-white truncate bengali tracking-tighter">
+               <h1 className="text-[12px] sm:text-[14px] md:text-lg lg:text-xl font-black uppercase leading-tight text-slate-900 dark:text-white truncate bengali tracking-tighter">
                 {lang === 'bn' ? settings?.nameBn : settings?.nameEn}
               </h1>
-              <p className="hidden xs:block text-[7px] sm:text-[9px] md:text-[10px] opacity-80 text-emerald-700 dark:text-emerald-500 font-bold mt-0.5 sm:mt-1 uppercase truncate bengali tracking-[0.1em]">
+              <p className="hidden xs:block text-[7px] sm:text-[8px] md:text-[9px] opacity-70 text-emerald-600 dark:text-emerald-400 font-black mt-0.5 uppercase truncate bengali tracking-[0.15em]">
                 {lang === 'bn' ? settings?.sloganBn : settings?.sloganEn}
               </p>
             </div>
@@ -235,8 +227,9 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               }`}
               title="Admin Panel"
             >
-              <ShieldAlert size={18} />
+              <Lock size={18} />
             </Link>
+
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block"></div>
             <button 
               onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')} 
@@ -256,41 +249,50 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 md:py-16 pb-32 md:pb-32 lg:pb-20">
+      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 md:py-16 pb-24 md:pb-32 lg:pb-20">
         {children}
-        
-        {/* Simplified Signature */}
-        <div className="lg:hidden text-center mt-12 mb-6 no-print opacity-40">
-           <span className="text-[9px] font-bold uppercase bengali text-slate-400 dark:text-emerald-400/50">
-             {t.devCredit}
-           </span>
-        </div>
       </main>
 
-      {/* Responsive App-Style Bottom Nav Enhancement */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] no-print px-6 pb-6 pointer-events-none">
+      {/* Responsive App-Style Bottom Nav Enhancement - Super Premium Edition */}
+      <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-[100] no-print pointer-events-none">
         <div className="max-w-md mx-auto pointer-events-auto">
-          <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-800/40 rounded-[2.5rem] shadow-[0_15px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between px-1.5 py-1 relative">
-            {NAV_ITEMS.map((item, index) => {
+          <div className="relative bg-surface/95 dark:bg-slate-900/98 backdrop-blur-2xl border border-app-border dark:border-slate-800/80 rounded-full shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] flex items-center justify-around px-2 py-1.5 overflow-visible group/nav transition-all duration-500 hover:shadow-emerald-500/10">
+            {/* Animated Dynamic Accent Backlight */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-rose-500/20 rounded-[2.5rem] blur-2xl opacity-40 transition-opacity"></div>
+            
+            {NAV_ITEMS.map((item) => {
               const isActive = location.pathname === item.path;
               const isDonation = item.label === 'donation';
               const isImpact = item.label === 'impact';
+              const isHome = item.label === 'home';
+              const isEvents = item.label === 'events';
+              const isAbout = item.label === 'about';
 
               if (isDonation) {
                 return (
-                  <Link key={item.path} to={item.path} className="relative flex flex-col items-center flex-1 group -mt-10 mb-1">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ring-4 ${
+                  <Link 
+                    key={item.path} 
+                    to={item.path} 
+                    className="relative flex flex-col items-center group/btn -mt-10 transition-all duration-500"
+                  >
+                    <div className={`w-14 h-14 rounded-[1.8rem] flex items-center justify-center transition-all duration-500 ring-4 ${
                       isActive 
-                      ? 'bg-rose-500 ring-rose-500/20 scale-105 shadow-lg shadow-rose-500/40' 
-                      : 'bg-rose-500 ring-transparent scale-100 hover:scale-105 active:scale-95 shadow-md shadow-rose-500/20'
+                      ? 'bg-gradient-to-br from-rose-500 to-rose-600 ring-rose-500/30 grow-animation scale-110 shadow-[0_15px_30px_-5px_rgba(244,63,94,0.6)]' 
+                      : 'bg-gradient-to-br from-rose-400 to-rose-500 ring-rose-300/10 scale-100 shadow-[0_10px_20px_-5px_rgba(244,63,94,0.3)] hover:scale-110'
                     }`}>
-                      {React.cloneElement(item.icon as React.ReactElement<any>, { 
-                        size: 26, 
-                        className: "text-white", 
-                        fill: isActive ? 'currentColor' : 'none' 
-                      })}
+                      <div className="absolute inset-0 bg-white/20 rounded-[1.6rem] opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+                      <div className="relative z-10 animate-hover">
+                        {React.cloneElement(item.icon as React.ReactElement<any>, { 
+                          size: 28, 
+                          className: "text-white drop-shadow-md", 
+                          fill: isActive ? 'currentColor' : 'none',
+                          strokeWidth: 2.5
+                        })}
+                      </div>
                     </div>
-                    <span className={`text-[8px] font-black mt-2 transition-all uppercase tracking-tight bengali ${isActive ? 'text-rose-500' : 'text-slate-500'}`}>
+                    <span className={`text-[9px] font-black mt-1 transition-all duration-300 uppercase tracking-tight bengali drop-shadow-sm ${
+                      isActive ? 'text-rose-500 translate-y-0 opacity-100' : 'text-slate-400 dark:text-slate-300 translate-y-1 opacity-0 group-hover/btn:opacity-100 group-hover/btn:translate-y-0'
+                    }`}>
                       {t[item.label as keyof typeof t] as string}
                     </span>
                   </Link>
@@ -298,26 +300,42 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               }
 
               return (
-                <Link key={item.path} to={item.path} className="flex flex-col items-center justify-center flex-1 py-1.5 gap-0.5 transition-all duration-300 group">
-                  <div className={`relative p-2.5 rounded-2xl transition-all duration-500 ${
+                <Link 
+                  key={item.path} 
+                  to={item.path} 
+                  className="relative flex flex-col items-center justify-center flex-1 py-0.5 group/item outline-none transition-transform active:scale-90"
+                >
+                  <div className={`relative p-2.5 rounded-[1.2rem] transition-all duration-500 ${
                     isActive 
-                    ? (isImpact ? 'bg-blue-500/15 text-blue-600' : 'bg-emerald-500/15 text-emerald-600')
-                    : 'text-slate-500/60 dark:text-slate-400/60 group-hover:text-emerald-500/80 group-hover:bg-slate-100/50 dark:group-hover:bg-slate-800/50'
+                    ? (isImpact ? 'text-blue-600' : isHome ? 'text-emerald-600' : isEvents ? 'text-amber-500' : 'text-indigo-500')
+                    : 'text-slate-400 dark:text-slate-300 group-hover/item:text-slate-900 dark:group-hover/item:text-white'
                   }`}>
-                    {React.cloneElement(item.icon as React.ReactElement<any>, { 
-                      size: 22, 
-                      className: `transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`,
-                      strokeWidth: isActive ? 2.5 : 2
-                    })}
+                    {/* Active Background Pill with specialized colors */}
+                    {isActive && (
+                      <div className={`absolute inset-0 rounded-[1.2rem] animate-in fade-in zoom-in duration-500 shadow-inner ${
+                        isImpact ? 'bg-blue-500/10' : isHome ? 'bg-emerald-500/10' : isEvents ? 'bg-amber-500/10' : 'bg-indigo-500/10'
+                      }`}></div>
+                    )}
+
+                    <div className="relative z-10 transition-transform duration-300 group-hover/item:scale-110">
+                      {React.cloneElement(item.icon as React.ReactElement<any>, { 
+                        size: isActive ? 24 : 22, 
+                        className: "transition-all duration-300",
+                        strokeWidth: isActive ? 3 : 2
+                      })}
+                    </div>
                     
                     {isActive && (
-                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isImpact ? 'bg-blue-500' : 'bg-emerald-500'} ring-1 ring-white/50 dark:ring-slate-900/50`}></div>
+                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full animate-pulse blur-[1px] ${
+                        isImpact ? 'bg-blue-500' : isHome ? 'bg-emerald-500' : isEvents ? 'bg-amber-500' : 'bg-indigo-500'
+                      }`}></div>
                     )}
                   </div>
-                  <span className={`text-[8px] font-bold transition-all uppercase tracking-tight bengali leading-none ${
+                  
+                  <span className={`text-[8px] font-black transition-all duration-300 uppercase tracking-tight bengali leading-none mt-1 ${
                     isActive 
-                    ? (isImpact ? 'text-blue-600' : 'text-emerald-600') 
-                    : 'text-slate-500/70'
+                    ? (isImpact ? 'text-blue-600 scale-105' : isHome ? 'text-emerald-600 scale-105' : isEvents ? 'text-amber-600 scale-105' : 'text-indigo-600 scale-105') 
+                    : 'text-slate-400 opacity-60 group-hover/item:opacity-100'
                   }`}>
                     {t[item.label as keyof typeof t] as string}
                   </span>
@@ -328,63 +346,18 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       </nav>
 
-      <footer className="hidden lg:block bg-emerald-50/80 dark:bg-slate-950 border-t border-emerald-100 dark:border-slate-800 pt-16 pb-12 no-print">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-14 pb-16">
-            <div className="lg:col-span-5 space-y-8">
-              <div className="flex items-center gap-5">
-                <OrganizationSeal className="w-16 h-16 xl:w-20 xl:h-20" />
-                <div>
-                  <h2 className="text-xl xl:text-2xl font-black text-emerald-900 dark:text-white leading-tight bengali">{lang === 'bn' ? settings?.nameBn : settings?.nameEn}</h2>
-                  <p className="text-[10px] font-bold text-emerald-600 mt-1.5 uppercase bengali">{lang === 'bn' ? settings?.sloganBn : settings?.sloganEn}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 xl:gap-5">
-                {settings?.facebook && (
-                  <a href={getSafeUrl(settings.facebook)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 xl:w-12 xl:h-12 rounded-2xl bg-white dark:bg-blue-900/30 text-blue-600 flex items-center justify-center hover:scale-110 transition-all border border-blue-100 dark:border-blue-800 shadow-sm">
-                    <Facebook size={20} className="xl:size-[24px]" />
-                  </a>
-                )}
-                {settings?.youtube && (
-                  <a href={getSafeUrl(settings.youtube)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 xl:w-12 xl:h-12 rounded-2xl bg-white dark:bg-red-900/30 text-red-600 flex items-center justify-center hover:scale-110 transition-all border border-red-100 dark:border-red-800 shadow-sm">
-                    <Youtube size={20} className="xl:size-[24px]" />
-                  </a>
-                )}
-                {settings?.whatsappChannel && (
-                  <a href={getSafeUrl(settings.whatsappChannel)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 xl:w-12 xl:h-12 rounded-2xl bg-white dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center hover:scale-110 transition-all border border-emerald-100 dark:border-emerald-800 shadow-sm">
-                    <MessageCircle size={20} className="xl:size-[24px]" />
-                  </a>
-                )}
-              </div>
-            </div>
-            <div className="lg:col-span-3 space-y-6 xl:space-y-8">
-              <h3 className="text-sm font-black uppercase text-emerald-800 dark:text-emerald-400 bengali">দ্রুত লিঙ্ক</h3>
-              <ul className="space-y-4">
-                {NAV_ITEMS.map((item) => (
-                  <li key={item.path}><Link to={item.path} className="text-slate-600 dark:text-slate-400 hover:text-emerald-600 text-sm font-bold flex items-center gap-3 bengali">{t[item.label as keyof typeof t] as string}</Link></li>
-                ))}
-              </ul>
-            </div>
-            <div className="lg:col-span-4 space-y-6 xl:space-y-8">
-              <h3 className="text-sm font-black uppercase text-emerald-800 dark:text-emerald-400 bengali">যোগাযোগ</h3>
-              <div className="space-y-5">
-                <div className="flex items-start gap-4 text-slate-700 dark:text-slate-300">
-                  <MapPin size={20} className="text-emerald-600 shrink-0" />
-                  <p className="text-sm font-bold leading-relaxed bengali">{lang === 'bn' ? settings?.addressBn : settings?.addressEn}</p>
-                </div>
-                <div className="flex items-center gap-4 text-slate-700 dark:text-slate-300">
-                  <Phone size={20} className="text-emerald-600" />
-                  <p className="text-sm font-bold">{settings?.phone}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="pt-10 border-t border-emerald-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center md:text-left">© {new Date().getFullYear()} Azadi Social Welfare. All Rights Reserved.</div>
-            <div className="text-[11px] font-bold bengali opacity-50 text-slate-500 dark:text-emerald-400/60">
-               {t.devCredit}
-            </div>
-          </div>
+      <footer className="bg-slate-100 dark:bg-slate-950 py-16 no-print transition-colors duration-500">
+        <div className="container mx-auto px-4 flex flex-col items-center justify-center">
+          <a 
+            href="https://wa.me/8801712782564" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="group inline-flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95"
+          >
+            <span className="text-xl md:text-2xl font-medium text-slate-800 dark:text-slate-300 transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+              Developed by Ahmad Hossain Pavel
+            </span>
+          </a>
         </div>
       </footer>
     </div>

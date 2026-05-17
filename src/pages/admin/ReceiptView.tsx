@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Donation, OrganizationSettings, DonationStatus } from '../../types';
-import { Heart, Printer, ArrowLeft, Download, MessageCircle, ShieldCheck, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText } from 'lucide-react';
+import { Heart, Printer, ArrowLeft, Download, MessageCircle, Shield, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText } from 'lucide-react';
 import { ISLAMIC_QUOTES } from '../../utils/constants';
 
 declare var html2pdf: any;
@@ -228,7 +228,7 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
               <div className="flex justify-between items-end px-4">
                 <div className="relative">
                   <div className="w-20 h-20 border border-emerald-900/10 rounded-full flex flex-col items-center justify-center text-[6px] font-black transform -rotate-12 opacity-30 bg-white shadow-inner">
-                     <ShieldCheck size={18} className="mb-0.5 text-emerald-900" />
+                     <Shield size={18} className="mb-0.5 text-emerald-900" />
                      <span className="uppercase text-center leading-tight">Azadi Social Welfare<br/>Official Seal</span>
                   </div>
                 </div>

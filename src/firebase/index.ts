@@ -56,13 +56,11 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(stringified);
 }
 
-// Fallback values for safety, though firebase-applet-config.json should be primary
-const FIREBASE_PROJECT_ID_ENV = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-
+// Primary configuration source with fallback to environment variables for production
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseAppletConfig.apiKey,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseAppletConfig.authDomain,
-  projectId: FIREBASE_PROJECT_ID_ENV || firebaseAppletConfig.projectId,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseAppletConfig.projectId,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseAppletConfig.storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseAppletConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseAppletConfig.appId,
@@ -81,16 +79,44 @@ try {
   } else {
     // Validate required config
     if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-      console.warn("Firebase configuration is missing required fields. Check environment variables.");
+      console.error("CRITICAL: Firebase configuration is missing. Ensure firebase-applet-config.json exists or environment variables are set.");
     }
     app = initializeApp(firebaseConfig);
   }
   
-  // Use databaseId from config if available (Enterprise/Standard check)
-  const databaseId = (firebaseAppletConfig as any).firestoreDatabaseId || "(default)";
+  // Use databaseId from config or env if available
+  const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || (firebaseAppletConfig as any).firestoreDatabaseId || "(default)";
   db = getFirestore(app, databaseId);
   auth = getAuth(app);
   storage = getStorage(app);
+  
+  // Explicitly set persistence to LOCAL for stability on Android/PWA
+  const initAuth = async () => {
+    try {
+      const { setPersistence, browserLocalPersistence } = await import("firebase/auth");
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (err) {
+      console.warn("Auth persistence failed:", err);
+    }
+  };
+  initAuth();
+  
+  // Enable offline persistence for better Android/Mobile stability
+  const initPersistence = async () => {
+    try {
+      const { enableIndexedDbPersistence } = await import("firebase/firestore");
+      await enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn("Firestore persistence failed: Multiple tabs open.");
+        } else if (err.code === 'unimplemented') {
+          console.warn("Firestore persistence is not supported by this browser.");
+        }
+      });
+    } catch (err) {
+      console.warn("Firestore persistence initialization failed:", err);
+    }
+  };
+  initPersistence();
   
   setLogLevel('silent');
 

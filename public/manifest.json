@@ -1,14 +1,13 @@
-
 {
   "name": "আজাদী সমাজ কল্যাণ সংঘ",
-  "short_name": "আজাদী",
-  "description": "Azadi Social Welfare Organization Official Platform - Est. 1988",
+  "short_name": "আজাদী সংঘ",
+  "description": "আজাদী সমাজ কল্যাণ সংঘ - শিক্ষা, ঐক্য এবং মানবতার সেবায় নিবেদিত সিলেটের একটি ঐতিহ্যবাহী সামাজিক সংগঠন।",
   "start_url": "/?utm_source=pwa_app",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
-  "background_color": "#020617",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "background_color": "#065f46",
   "theme_color": "#065f46",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "scope": "/",
   "icons": [
     {
@@ -31,37 +30,38 @@
     },
     {
       "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
-      "sizes": "1024x1024",
-      "type": "image/png"
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Donation",
-      "url": "/#/donation",
+      "name": "অনুদান",
+      "url": "/donation",
       "icons": [{ "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh", "sizes": "192x192" }]
     },
     {
-      "name": "Events",
-      "url": "/#/events",
+      "name": "ইভেন্টস",
+      "url": "/events",
       "icons": [{ "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh", "sizes": "192x192" }]
     }
   ],
-  "categories": ["social", "welfare", "non-profit"],
+  "categories": ["social", "welfare", "community"],
   "screenshots": [
     {
       "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
-      "sizes": "1080x1920",
+      "sizes": "1170x2532",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Home Screen of Azadi App"
+      "label": "Home Screen Desktop"
     },
     {
       "src": "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
       "sizes": "1920x1080",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Home Screen of Azadi App on Tablet"
+      "label": "App Preview Tablet"
     }
   ]
 }

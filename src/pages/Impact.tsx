@@ -84,10 +84,10 @@ export const Impact: React.FC = () => {
             <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-emerald-950/50 dark:bg-slate-950/50 rounded-full flex items-center justify-center border-[12px] border-white/5 relative shadow-heavy backdrop-blur-sm group/chart overflow-hidden">
                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent"></div>
                <PieChart size={180} className="text-white opacity-10 group-hover/chart:scale-110 transition-transform duration-1000" />
-               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-white/5 hover:bg-white/0 transition-colors">
+               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-white/5 hover:bg-slate-900/40 transition-colors">
                   <div className="text-[11px] font-black opacity-60 uppercase tracking-[0.2em] text-white/80 mb-2">Total Transparency</div>
                   <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tighter drop-shadow-lg">৳ {totalDonations.toLocaleString()}</div>
-                  <div className="mt-4 px-4 py-1.5 bg-white/10 rounded-full text-[9px] font-bold uppercase tracking-widest border border-white/10 backdrop-blur-md">Total Income</div>
+                  <div className="mt-4 px-4 py-1.5 bg-white/10 dark:bg-emerald-500/10 rounded-full text-[9px] font-bold uppercase tracking-widest border border-white/10 dark:border-emerald-500/20 backdrop-blur-md">Total Income</div>
                </div>
             </div>
           </div>

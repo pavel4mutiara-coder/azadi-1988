@@ -150,10 +150,10 @@ export const Donation: React.FC = () => {
     <div className="max-w-5xl mx-auto space-y-12 animate-in slide-in-from-bottom-2 duration-500 pb-20 bengali">
       
       {/* Arabic Calligraphy Header Section */}
-      <div className="relative overflow-hidden rounded-[3rem] bg-emerald-950 p-10 md:p-16 flex flex-col items-center justify-center text-center shadow-2xl border border-emerald-800 transition-all group">
+      <div className="relative overflow-hidden rounded-[3rem] bg-emerald-950 dark:bg-slate-900 p-10 md:p-16 flex flex-col items-center justify-center text-center shadow-2xl border border-emerald-800 dark:border-slate-800 transition-all group">
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/arabic-bazazz.png')] group-hover:scale-110 transition-transform duration-1000"></div>
-        <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full"></div>
-        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-400/10 blur-[100px] rounded-full"></div>
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/20 dark:bg-emerald-500/5 blur-[100px] rounded-full"></div>
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-400/10 dark:bg-amber-500/5 blur-[100px] rounded-full"></div>
         
         <div className="relative z-10 space-y-8 w-full">
           <div className="mb-2 transform transition-transform duration-700">
@@ -246,15 +246,15 @@ export const Donation: React.FC = () => {
       </section>
 
       <div className="grid md:grid-cols-12 gap-10 items-start">
-        <form onSubmit={handleSubmit} className="md:col-span-7 bg-emerald-100/40 dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-emerald-200 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+        <form onSubmit={handleSubmit} className="md:col-span-7 bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
           
-          <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-slate-800 pb-8 relative z-10">
+            <div className="flex justify-between items-center border-b border-emerald-100 dark:border-slate-800 pb-8 relative z-10">
             <h3 className="text-2xl font-black text-emerald-900 dark:text-white flex items-center gap-3">
               <Wallet className="text-emerald-600 dark:text-emerald-400" />
               {lang === 'bn' ? 'অণুদান ফরম' : 'Donation Form'}
             </h3>
-            <label className="flex items-center gap-3 text-[10px] font-black cursor-pointer bg-white/70 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-emerald-200 dark:border-slate-800 select-none hover:bg-emerald-50 dark:hover:bg-slate-900 transition-colors">
+            <label className="flex items-center gap-3 text-[10px] font-black cursor-pointer bg-slate-50 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-emerald-200 dark:border-slate-800 select-none hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors">
               <input 
                 type="checkbox" 
                 className="w-5 h-5 text-emerald-600 dark:bg-slate-950 border-emerald-300 dark:border-slate-700 rounded-lg cursor-pointer focus:ring-emerald-500" 
@@ -273,7 +273,7 @@ export const Donation: React.FC = () => {
                   required 
                   type="text" 
                   onBlur={() => handleBlur('donorName')}
-                  className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.donorName && errors.donorName ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-emerald-800/30`} 
+                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.donorName && errors.donorName ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-slate-500`} 
                   placeholder="আপনার পূর্ণ নাম লিখুন" 
                   value={formData.donorName} 
                   onChange={e => setFormData({...formData, donorName: e.target.value})} 
@@ -290,7 +290,7 @@ export const Donation: React.FC = () => {
                     required 
                     type="number" 
                     onBlur={() => handleBlur('amount')}
-                    className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.amount && errors.amount ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black text-3xl tracking-tighter placeholder-emerald-800/30`} 
+                    className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.amount && errors.amount ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black text-3xl tracking-tighter placeholder-slate-400 dark:placeholder-slate-500`} 
                     placeholder="1000" 
                     value={formData.amount} 
                     onChange={e => setFormData({...formData, amount: e.target.value})} 
@@ -305,7 +305,7 @@ export const Donation: React.FC = () => {
                   type="tel" 
                   maxLength={11}
                   onBlur={() => handleBlur('phone')}
-                  className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-emerald-800/30`} 
+                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-slate-500`} 
                   placeholder="01XXXXXXXXX" 
                   value={formData.phone} 
                   onChange={e => {
@@ -324,7 +324,7 @@ export const Donation: React.FC = () => {
                   <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-600/50" size={20} />
                   <input 
                     type="email" 
-                    className="w-full bg-emerald-50/60 dark:bg-slate-950 border border-emerald-200/50 dark:border-slate-800 p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-emerald-800/30" 
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-slate-500" 
                     placeholder="example@mail.com" 
                     value={formData.email} 
                     onChange={e => setFormData({...formData, email: e.target.value})} 
@@ -337,7 +337,7 @@ export const Donation: React.FC = () => {
                   required 
                   type="text" 
                   onBlur={() => handleBlur('transactionId')}
-                  className={`w-full bg-emerald-50/60 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-emerald-200/50 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider placeholder-emerald-800/30`} 
+                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider placeholder-slate-400 dark:placeholder-slate-500`} 
                   placeholder="TRX12345..." 
                   value={formData.transactionId} 
                   onChange={e => setFormData({...formData, transactionId: e.target.value})} 
@@ -348,7 +348,7 @@ export const Donation: React.FC = () => {
 
             <div className="space-y-3">
               <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.purpose}</label>
-              <select className="w-full bg-emerald-50/60 dark:bg-slate-950 border border-emerald-200/50 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-emerald-950 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
+              <select className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
                 {t.categories.map((c: string) => <option key={c} value={c} className="font-bold py-3 bg-white dark:bg-slate-900">{c}</option>)}
               </select>
             </div>

@@ -6,12 +6,13 @@ import {
   Settings, Save, Globe, Mail, Upload, CheckCircle, 
   Facebook, Youtube, MessageCircle, RefreshCcw, 
   Image as ImageIcon, ExternalLink, Info, Database, 
-  Loader2, ShieldCheck, Copy, AlertCircle, Trash2 
+  Loader2, Shield, Copy, AlertCircle, Trash2, LogOut,
+  Moon, Sun
 } from 'lucide-react';
 import { uploadImage } from '../../firebase';
 
 export const SettingsManager: React.FC = () => {
-  const { lang, settings, saveSettings, restoreFromLegacy } = useApp();
+  const { lang, theme, setTheme, settings, saveSettings, restoreFromLegacy, logout } = useApp();
   const t = TRANSLATIONS[lang];
   const [localSettings, setLocalSettings] = useState(settings);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +94,7 @@ export const SettingsManager: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">নাম (বাংলা)</label>
-                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={localSettings.nameBn} onChange={e => setLocalSettings({...localSettings, nameBn: e.target.value})} />
+                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold font-bengali" value={localSettings.nameBn} onChange={e => setLocalSettings({...localSettings, nameBn: e.target.value})} />
               </div>
             </div>
 
@@ -117,6 +118,47 @@ export const SettingsManager: React.FC = () => {
                   <input type="tel" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 pl-12 rounded-xl font-bold" value={localSettings.phone} onChange={e => setLocalSettings({...localSettings, phone: e.target.value})} />
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Social & Payments Section */}
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-8">
+            <h3 className="text-xl font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase">
+              <Facebook size={20} className="text-blue-600" /> Social & Payment Links
+            </h3>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Facebook URL</label>
+                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={localSettings.facebook || ''} onChange={e => setLocalSettings({...localSettings, facebook: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">YouTube URL</label>
+                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={localSettings.youtube || ''} onChange={e => setLocalSettings({...localSettings, youtube: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">WhatsApp Channel</label>
+                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={localSettings.whatsappChannel || ''} onChange={e => setLocalSettings({...localSettings, whatsappChannel: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Admin WhatsApp</label>
+                <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={localSettings.adminWhatsApp || ''} onChange={e => setLocalSettings({...localSettings, adminWhatsApp: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+               <div className="space-y-2">
+                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">bKash</label>
+                 <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold text-pink-600" value={localSettings.bkash || ''} onChange={e => setLocalSettings({...localSettings, bkash: e.target.value})} />
+               </div>
+               <div className="space-y-2">
+                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Nagad</label>
+                 <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold text-orange-600" value={localSettings.nagad || ''} onChange={e => setLocalSettings({...localSettings, nagad: e.target.value})} />
+               </div>
+               <div className="space-y-2">
+                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Rocket</label>
+                 <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold text-purple-600" value={localSettings.roket || ''} onChange={e => setLocalSettings({...localSettings, roket: e.target.value})} />
+               </div>
             </div>
           </section>
         </div>
@@ -168,6 +210,67 @@ export const SettingsManager: React.FC = () => {
              <button className="w-full text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 p-4 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors">
                <Trash2 size={16} /> Reset All System Data
              </button>
+          </section>
+
+          {/* Appearance Section */}
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+              <Sun size={16} className="text-amber-500" /> Appearance & Theme
+            </h3>
+            <div className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 group">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${theme === 'dark' ? 'bg-amber-900/20 text-amber-500' : 'bg-slate-200 text-slate-600'}`}>
+                  {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                </div>
+                <div>
+                  <div className="text-xs font-black text-slate-900 dark:text-white uppercase">{lang === 'bn' ? 'ডার্ক মোড' : 'Dark Mode'}</div>
+                  <div className="text-[10px] font-bold text-slate-500">{lang === 'bn' ? 'চোখের আরামের জন্য অন্ধকার থিম' : 'Switch to dark theme for night usage'}</div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ring-2 ring-transparent ${theme === 'dark' ? 'bg-emerald-600' : 'bg-slate-300'}`}
+              >
+                <span className="sr-only">Toggle dark mode</span>
+                <span
+                  className={`${
+                    theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                  } inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out`}
+                />
+              </button>
+            </div>
+          </section>
+
+          {/* Session Management */}
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+              <LogOut size={16} className="text-orange-500" /> Account & Session
+            </h3>
+            <div className="p-5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <Shield className="text-emerald-600" size={18} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-[10px] font-black uppercase text-slate-400">Authenticated as</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">System Administrator</div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to logout?')) {
+                    logout();
+                  }
+                }}
+                className="w-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 py-3 rounded-xl font-black text-[11px] uppercase transition-all flex items-center justify-center gap-2 border border-orange-200 dark:border-orange-800/50"
+              >
+                <LogOut size={14} />
+                {t.logout}
+              </button>
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-wider">Security Version 4.0.2</p>
           </section>
 
         </div>

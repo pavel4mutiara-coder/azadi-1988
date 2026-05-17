@@ -77,7 +77,8 @@ export const TRANSLATIONS = {
     missionTitle: "Our Mission",
     visionTitle: "Our Vision",
     milestonesTitle: "Major Milestones",
-    devCredit: "Architected and Developed by Ahmed Hossain Pavel"
+    devCredit: "Developed by Ahmad Hossain Pavel",
+    whatsappNumber: "8801712782564"
   },
   bn: {
     home: "হোম",
@@ -130,7 +131,8 @@ export const TRANSLATIONS = {
     missionTitle: "আমাদের লক্ষ্য",
     visionTitle: "Our Vision",
     milestonesTitle: "উল্লেখযোগ্য মাইলফলক",
-    devCredit: "সফটওয়্যার আর্কিটেকচার ও বাস্তবায়নে: আহমেদ হোসেন পাভেল"
+    devCredit: "Developed by Ahmad Hossain Pavel",
+    whatsappNumber: "8801712782564"
   }
 };
 

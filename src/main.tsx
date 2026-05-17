@@ -20,6 +20,47 @@ if (rootElement) {
       </ErrorBoundary>
     );
     console.log("Main.tsx: Rendered.");
+    
+    // Register Service Worker for PWA stability and offline support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(registration => {
+            console.log('SW registered:', registration);
+            
+            // Check for updates every hour
+            setInterval(() => {
+              registration.update();
+            }, 1000 * 60 * 60);
+
+            // If an update is found and installed, reload the page
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New content is available
+                    if (window.confirm('A new version is available. Update now?')) {
+                      window.location.reload();
+                    }
+                  }
+                });
+              }
+            });
+          })
+          .catch(error => {
+            console.error('SW registration failed:', error);
+          });
+      });
+
+      // Handle controller change (e.g. from skipWaiting)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    }
   } catch (err) {
     console.error("Main.tsx: Render error", err);
   }

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
-import { ShieldCheck, PhoneCall, MessageCircle, User } from 'lucide-react';
+import { Shield, PhoneCall, MessageCircle, User } from 'lucide-react';
 
 export const Leadership: React.FC = () => {
   const { lang, leadership, settings } = useApp();
@@ -91,7 +91,7 @@ export const Leadership: React.FC = () => {
                         </div>
                         {!isVacant && (
                           <div className="absolute -bottom-1 -right-1 bg-emerald-600 dark:bg-emerald-500 text-white p-2 rounded-xl shadow-heavy ring-4 ring-white dark:ring-slate-900 transform group-hover:rotate-12 transition-all duration-500">
-                            <ShieldCheck size={16} />
+                            <Shield size={16} />
                           </div>
                         )}
                       </div>

@@ -15,6 +15,7 @@ const Leadership = lazy(() => import('./pages/Leadership').then(m => ({ default:
 const Donation = lazy(() => import('./pages/Donation').then(m => ({ default: m.Donation })));
 const DonationHistory = lazy(() => import('./pages/DonationHistory').then(m => ({ default: m.DonationHistory })));
 const Impact = lazy(() => import('./pages/Impact').then(m => ({ default: m.Impact })));
+const Notices = lazy(() => import('./pages/Notices').then(m => ({ default: m.Notices })));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -35,13 +36,28 @@ const LoadingSpinner = () => (
 const AdminLogin: React.FC = () => {
   const [username, setUsername] = useState('');
   const [pass, setPass] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login, loginWithGoogle, lang } = useApp();
   const t = TRANSLATIONS[lang];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!await login(username, pass)) {
-      alert(lang === 'bn' ? 'ভুল ইউজারনেম বা পাসওয়ার্ড!' : 'Invalid Username or Password!');
+    setIsLoggingIn(true);
+    try {
+      if (!await login(username, pass)) {
+        alert(lang === 'bn' ? 'ভুল ইউজারনেম বা পাসওয়ার্ড!' : 'Invalid Username or Password!');
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await loginWithGoogle();
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -61,10 +77,11 @@ const AdminLogin: React.FC = () => {
 
       <div className="space-y-4">
         <button 
-          onClick={() => loginWithGoogle()}
-          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-black py-4 px-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm group active:scale-95"
+          onClick={handleGoogleLogin}
+          disabled={isLoggingIn}
+          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-black py-4 px-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm group active:scale-95 disabled:opacity-50"
         >
-          <img src="https://www.google.com/favicon.ico" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google" />
+          {isLoggingIn ? <Loader2 className="animate-spin text-emerald-600" size={20} /> : <img src="https://www.google.com/favicon.ico" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google" />}
           <span className="text-[12px] uppercase tracking-wide">{lang === 'bn' ? 'গুগল দিয়ে লগইন করুন' : 'Sign in with Google'}</span>
         </button>
         
@@ -96,8 +113,13 @@ const AdminLogin: React.FC = () => {
           value={pass}
           onChange={e => setPass(e.target.value)}
         />
-        <button type="submit" className="w-full bg-emerald-600 text-white font-black py-5 rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 text-xs uppercase tracking-[0.2em] mt-2">
-          {t.login}
+        <button 
+          type="submit" 
+          disabled={isLoggingIn}
+          className="w-full bg-emerald-600 text-white font-black py-5 rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 text-xs uppercase tracking-[0.2em] mt-2 flex items-center justify-center gap-3 disabled:opacity-50"
+        >
+          {isLoggingIn && <Loader2 className="animate-spin" size={18} />}
+          {isLoggingIn ? (lang === 'bn' ? 'প্রক্রিয়া হচ্ছে...' : 'Processing...') : t.login}
         </button>
       </form>
     </div>
@@ -131,6 +153,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/donation" element={<Donation />} />
         <Route path="/donation-history" element={<DonationHistory />} />
         <Route path="/impact" element={<Impact />} />
+        <Route path="/notices" element={<Notices />} />
         
         {/* Admin Panel */}
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

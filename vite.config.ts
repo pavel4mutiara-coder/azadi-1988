@@ -9,11 +9,22 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    // Mobile apps often perform better with a single bundle or large chunks
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          'vendor-ui': ['lucide-react', 'motion/react'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,

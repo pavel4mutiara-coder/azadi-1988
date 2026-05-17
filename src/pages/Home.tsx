@@ -2,8 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
-import { GraduationCap, Users, HeartHandshake, HandHelping, Trophy, Heart, ArrowRight, Calendar, User, MapPin, ShieldCheck, BellRing, Newspaper, Clock, Megaphone, Info, Sparkles } from 'lucide-react';
+import { GraduationCap, Users, HeartHandshake, HandHelping, Trophy, Heart, ArrowRight, Calendar, User, MapPin, Shield, BellRing, Newspaper, Clock, Megaphone, Info, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+import { NoticeMarquee } from '../components/NoticeMarquee';
 
 const FEATURE_ICONS = [<GraduationCap />, <Users />, <HeartHandshake />, <HandHelping />, <Trophy />];
 
@@ -16,7 +18,7 @@ export const Home: React.FC = () => {
   const topLeaders = Array.isArray(leadership) ? [...leadership].sort((a, b) => (a.order || 99) - (b.order || 99)).slice(0, 4) : [];
   const recentEvents = Array.isArray(events) ? [...events].slice(0, 2) : [];
   const recentNews = Array.isArray(news) ? [...news].sort((a, b) => new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime()).slice(0, 3) : [];
-  const importantNotices = Array.isArray(notices) ? [...notices].sort((a, b) => new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime()).slice(0, 4) : [];
+  const allNotices = Array.isArray(notices) ? notices : [];
 
   return (
     <div id="home-page-root" className="space-y-20 sm:space-y-32 pb-24 bengali">
@@ -55,9 +57,9 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full max-w-sm mx-auto sm:max-w-none justify-center relative z-10 pt-6 sm:pt-10">
-            <Link to="/leadership" className="bg-white text-emerald-950 px-8 sm:px-14 py-4 sm:py-6 rounded-3xl font-black text-sm sm:text-xl hover:bg-emerald-50 transition-all shadow-heavy hover:-translate-y-2 active:scale-95 flex items-center justify-center bengali group overflow-hidden relative">
+            <Link to="/leadership" className="bg-white dark:bg-slate-800 text-emerald-950 dark:text-emerald-400 px-8 sm:px-14 py-4 sm:py-6 rounded-3xl font-black text-sm sm:text-xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-all shadow-heavy hover:-translate-y-2 active:scale-95 flex items-center justify-center bengali group overflow-hidden relative">
                <span className="relative z-10">{t.leadership}</span>
-               <div className="absolute inset-0 bg-emerald-100/50 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+               <div className="absolute inset-0 bg-emerald-100/50 dark:bg-emerald-900/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
             </Link>
             <Link to="/donation" className="bg-emerald-600 dark:bg-emerald-500 text-white px-8 sm:px-14 py-4 sm:py-6 rounded-3xl font-black text-sm sm:text-xl border border-emerald-400/30 hover:bg-emerald-500 transition-all shadow-heavy hover:-translate-y-2 active:scale-95 flex items-center justify-center gap-4 bengali group">
               <Heart size={24} className="group-hover:scale-125 transition-transform duration-300" fill="currentColor" />
@@ -67,37 +69,29 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Notice Board Ticker/Section */}
+      {/* Modern Professional Notice Board Section */}
       <section className="container mx-auto px-4">
-        <div className="bg-white dark:bg-slate-900 rounded-4xl border border-emerald-100 dark:border-slate-800 shadow-heavy overflow-hidden flex flex-col md:flex-row items-stretch group hover:shadow-soft transition-all duration-500">
-          <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-10 py-8 md:py-10 flex items-center justify-center gap-4 shrink-0 transition-colors group-hover:bg-emerald-700">
-            <BellRing size={28} className="animate-pulse" />
-            <span className="font-black uppercase tracking-[0.2em] text-[13px] bengali whitespace-nowrap">{t.notices}</span>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl sm:rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 shadow-soft overflow-hidden flex flex-col sm:flex-row items-stretch group transition-all duration-500">
+          <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-6 py-3 sm:px-8 sm:py-6 flex items-center justify-center gap-3 shrink-0 relative overflow-hidden group-hover:bg-emerald-700 transition-colors">
+            <div className="absolute inset-0 bg-white/10 translate-x-full group-hover:translate-x-0 transition-transform duration-700 skew-x-12"></div>
+            <BellRing size={18} className="animate-pulse relative z-10" />
+            <span className="font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] bengali whitespace-nowrap relative z-10">{t.notices}</span>
           </div>
-          <div className="flex-1 p-8 md:p-10 flex items-center bg-emerald-50/20 dark:bg-slate-900/50">
-             {importantNotices.length > 0 ? (
-               <div className="w-full">
-                 {importantNotices.slice(0, 1).map((notice) => (
-                   <div key={notice.id} className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                     <div className="flex items-start gap-5">
-                       {notice.isUrgent && <span className="px-4 py-1.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-full shrink-0 shadow-lg shadow-red-500/30 animate-bounce">Urgent</span>}
-                       <h3 className="font-black text-slate-900 dark:text-white text-lg md:text-2xl leading-[1.2] bengali group-hover:text-emerald-700 transition-colors">{lang === 'bn' ? notice.titleBn : notice.titleEn}</h3>
-                     </div>
-                     <div className="flex items-center gap-2 text-[11px] font-black text-slate-400 dark:text-slate-500 shrink-0 uppercase tracking-widest bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm">
-                       <Clock size={14} className="text-emerald-500" /> {notice.date ? new Date(notice.date).toLocaleDateString() : 'N/A'}
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             ) : (
-               <p className="text-slate-400 font-bold text-base italic">{lang === 'bn' ? 'বর্তমানে কোনো নতুন নোটিশ নেই।' : 'No new notices at this moment.'}</p>
-             )}
+          
+          <div className="flex-1 min-w-0 bg-emerald-50/10 dark:bg-slate-950/20 flex items-center py-2 sm:py-0">
+            <NoticeMarquee notices={allNotices} lang={lang} />
           </div>
-          <button className="px-10 py-8 md:py-10 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[13px] uppercase tracking-[0.1em] hover:opacity-90 transition-all bengali shrink-0">
-            {lang === 'bn' ? 'সব নোটিশ' : 'View All'}
-          </button>
+
+          <Link 
+            to="/notices" 
+            className="px-6 py-3 sm:px-8 sm:py-6 bg-slate-900 dark:bg-slate-800 text-white font-black text-[10px] sm:text-[11px] uppercase tracking-[0.1em] hover:bg-black dark:hover:bg-slate-700 transition-all bengali shrink-0 flex items-center justify-center gap-2"
+          >
+            {lang === 'bn' ? 'সব নোটিশ' : 'All Notices'}
+            <ArrowRight size={14} />
+          </Link>
         </div>
       </section>
+
 
       {/* Feature Grid */}
       <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8">
@@ -149,7 +143,7 @@ export const Home: React.FC = () => {
           ) : (
              <div className="col-span-full py-24 text-center bg-emerald-50/20 dark:bg-slate-950/50 rounded-[4rem] border border-dashed border-emerald-200 space-y-6 opacity-60">
                 <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto shadow-soft">
-                  <Megaphone size={40} className="text-emerald-200" />
+                  <Megaphone size={40} className="text-emerald-200 dark:text-emerald-800" />
                 </div>
                 <p className="font-black text-slate-400 text-lg bengali">{lang === 'bn' ? 'বর্তমানে কোনো সংবাদ নেই।' : 'No news updates available.'}</p>
              </div>
@@ -192,7 +186,7 @@ export const Home: React.FC = () => {
         
         <div className="relative z-10 space-y-8 max-w-4xl mx-auto">
            <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(16,185,129,0.3)] border border-emerald-400/30">
-              <ShieldCheck size={48} className="text-emerald-400 animate-pulse" />
+              <Shield size={48} className="text-emerald-400 animate-pulse" />
            </div>
            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-black leading-[1.1] bengali tracking-tighter">
               {lang === 'bn' ? 'মানবসেবায় আপনার ছোট পদক্ষেপ বড় পরিবর্তন আনতে পারে' : 'Small steps in human service can bring big changes'}
@@ -204,7 +198,7 @@ export const Home: React.FC = () => {
              <Link to="/donation" className="inline-flex items-center gap-4 bg-amber-500 text-emerald-950 px-10 py-6 rounded-3xl font-black text-lg hover:bg-amber-400 transition-all shadow-heavy shadow-amber-500/20 hover:-translate-y-2 active:scale-95 bengali group">
                 <Heart size={24} className="group-hover:scale-125 transition-transform" fill="currentColor" /> {t.donate}
              </Link>
-             <Link to="/about" className="inline-flex items-center gap-4 bg-white/10 text-white border border-white/20 backdrop-blur-md px-10 py-6 rounded-3xl font-black text-lg hover:bg-white/20 transition-all hover:-translate-y-2 active:scale-95 bengali">
+             <Link to="/about" className="inline-flex items-center gap-4 bg-white/10 dark:bg-emerald-500/10 text-white border border-white/20 dark:border-emerald-500/20 backdrop-blur-md px-10 py-6 rounded-3xl font-black text-lg hover:bg-white/20 transition-all hover:-translate-y-2 active:scale-95 bengali">
                 {lang === 'bn' ? 'আরও জানুন' : 'Learn More'} <ArrowRight size={24} />
              </Link>
            </div>

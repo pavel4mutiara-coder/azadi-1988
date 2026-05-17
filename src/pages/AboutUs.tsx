@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
-import { History, Target, Eye, Star, Award, ShieldCheck, Heart, Users, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
+import { History, Target, Eye, Star, Award, Shield, Heart, Users, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 
 export const AboutUs: React.FC = () => {
   const { lang, settings } = useApp();
@@ -41,7 +41,7 @@ export const AboutUs: React.FC = () => {
 
   const coreValues = [
     { icon: <Heart size={20}/>, label: lang === 'bn' ? 'মানবতা' : 'Humanity' },
-    { icon: <ShieldCheck size={20}/>, label: lang === 'bn' ? 'স্বচ্ছতা' : 'Transparency' },
+    { icon: <Shield size={20}/>, label: lang === 'bn' ? 'স্বচ্ছতা' : 'Transparency' },
     { icon: <Users size={20}/>, label: lang === 'bn' ? 'ঐক্য' : 'Unity' },
     { icon: <Award size={20}/>, label: lang === 'bn' ? 'সততা' : 'Integrity' },
   ];
@@ -51,7 +51,7 @@ export const AboutUs: React.FC = () => {
       {/* Hero Section */}
       <div className="text-center space-y-8 pt-10 px-4">
         <div className="flex flex-col items-center gap-6">
-          <div className="w-24 h-14 md:w-32 md:h-20 bg-white rounded-xl shadow-2xl border-4 border-emerald-900/10 overflow-hidden transform hover:scale-110 transition-transform duration-500">
+          <div className="w-24 h-14 md:w-32 md:h-20 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border-4 border-emerald-900/10 dark:border-emerald-500/20 overflow-hidden transform hover:scale-110 transition-transform duration-500">
              <img src={settings.flag} className="w-full h-full object-cover" alt="Organization Flag" />
           </div>
           <div className="inline-flex items-center gap-3 text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-[0.2em] text-[10px] px-6 py-2.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full border border-emerald-200 dark:border-emerald-700 shadow-sm">
@@ -93,7 +93,7 @@ export const AboutUs: React.FC = () => {
                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{lang === 'bn' ? 'বছরের গৌরব' : 'Years Legacy'}</div>
              </div>
              <div className="bg-blue-50 dark:bg-slate-950 p-8 rounded-[2.5rem] text-center space-y-2 border border-blue-100 dark:border-blue-900/50 shadow-sm">
-               <ShieldCheck className="mx-auto text-blue-500" />
+               <Shield className="mx-auto text-blue-500" />
                <div className="text-3xl font-black text-slate-900 dark:text-white">1988</div>
                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{lang === 'bn' ? 'প্রতিষ্ঠিত' : 'Established'}</div>
              </div>
@@ -187,34 +187,44 @@ export const AboutUs: React.FC = () => {
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">{lang === 'bn' ? 'আমাদের সাথে যোগাযোগ' : 'Contact Us'}</h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <a href={`tel:${settings.phone}`} className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
-            <div className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-              <Phone size={36} />
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <a href={`tel:${settings.phone}`} className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-5 hover:-translate-y-2 transition-all group">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+              <Phone size={28} />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-black text-slate-900 dark:text-white">{lang === 'bn' ? 'ফোন' : 'Phone'}</h4>
-              <p className="text-slate-500 font-bold font-mono tracking-wider">{settings.phone}</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{lang === 'bn' ? 'ফোন' : 'Phone'}</h4>
+              <p className="text-[14px] text-slate-500 font-bold font-mono tracking-wider">{settings.phone}</p>
             </div>
           </a>
 
-          <a href={`mailto:${settings.email}`} className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
-            <div className="w-20 h-20 rounded-3xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-              <Mail size={36} />
+          <a href={`https://wa.me/${t.whatsappNumber?.replace('+', '')}`} target="_blank" rel="noopener noreferrer" className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-5 hover:-translate-y-2 transition-all group">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+              <MessageCircle size={28} fill="currentColor" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-black text-slate-900 dark:text-white">{lang === 'bn' ? 'ইমেইল' : 'Email'}</h4>
-              <p className="text-slate-500 font-bold break-all">{settings.email}</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">WhatsApp</h4>
+              <p className="text-[14px] text-slate-500 font-bold font-mono tracking-wider">{t.whatsappNumber}</p>
             </div>
           </a>
 
-          <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-6 hover:-translate-y-2 transition-all group">
-            <div className="w-20 h-20 rounded-3xl bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
-              <MapPin size={36} />
+          <a href={`mailto:${settings.email}`} className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-5 hover:-translate-y-2 transition-all group">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+              <Mail size={28} />
             </div>
             <div className="space-y-1">
-              <h4 className="text-lg font-black text-slate-900 dark:text-white">{lang === 'bn' ? 'ঠিকানা' : 'Address'}</h4>
-              <p className="text-slate-500 font-bold leading-tight">{lang === 'bn' ? settings.addressBn : settings.addressEn}</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{lang === 'bn' ? 'ইমেইল' : 'Email'}</h4>
+              <p className="text-[14px] text-slate-500 font-bold break-all">{settings.email}</p>
+            </div>
+          </a>
+
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl flex flex-col items-center text-center gap-5 hover:-translate-y-2 transition-all group">
+            <div className="w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+              <MapPin size={28} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{lang === 'bn' ? 'ঠিকানা' : 'Address'}</h4>
+              <p className="text-[13px] text-slate-500 font-bold leading-tight">{lang === 'bn' ? settings.addressBn : settings.addressEn}</p>
             </div>
           </div>
         </div>
@@ -233,7 +243,7 @@ export const AboutUs: React.FC = () => {
                  href={settings.whatsappChannel} 
                  target="_blank" 
                  rel="noopener noreferrer"
-                 className="inline-flex items-center gap-3 bg-white text-emerald-900 px-12 py-5 rounded-2xl font-black text-xl hover:bg-emerald-50 transition-all shadow-xl hover:-translate-y-1 active:scale-95"
+                 className="inline-flex items-center gap-3 bg-white dark:bg-slate-800 text-emerald-900 dark:text-emerald-400 px-12 py-5 rounded-2xl font-black text-xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-all shadow-xl hover:-translate-y-1 active:scale-95"
                 >
                  <MessageCircle size={24} className="text-emerald-600" />
                  {lang === 'bn' ? 'চ্যানেল জয়েন করুন' : 'Join Channel'}
