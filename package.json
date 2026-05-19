@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Official Android App for Azadi Social Welfare Organization",
-  "main": "src/main.tsx",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

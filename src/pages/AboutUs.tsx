@@ -166,7 +166,7 @@ export const AboutUs: React.FC = () => {
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-white dark:border-slate-950 bg-emerald-600 text-white shadow-xl shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 transition-transform group-hover:scale-110">
                 <Star size={18} fill="currentColor" />
               </div>
-              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-3rem)] bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl hover:shadow-2xl transition-all duration-500">
+              <div className="w-[calc(100%_-_4rem)] md:w-[calc(50%_-_3rem)] bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-emerald-50 dark:border-slate-800 shadow-xl hover:shadow-2xl transition-all duration-500">
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-2xl font-black text-emerald-600">{m.year}</div>
                   <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-3 py-1 bg-slate-50 dark:bg-slate-950 rounded-lg">{lang === 'bn' ? m.titleBn : m.titleEn}</div>
