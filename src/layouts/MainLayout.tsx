@@ -249,7 +249,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 md:py-16 pb-24 md:pb-32 lg:pb-20">
+      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 md:py-16 pb-12 md:pb-32 lg:pb-20">
         {children}
       </main>
 
@@ -346,16 +346,20 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       </nav>
 
-      <footer className="bg-slate-100 dark:bg-slate-950 py-16 no-print transition-colors duration-500">
-        <div className="container mx-auto px-4 flex flex-col items-center justify-center">
+      <footer className="bg-slate-50 dark:bg-slate-950 pt-16 pb-32 md:pb-16 no-print transition-colors duration-500 border-t border-slate-100 dark:border-slate-900/50">
+        <div className="container mx-auto px-4 flex flex-col items-center justify-center gap-2">
           <a 
             href="https://wa.me/8801712782564" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="group inline-flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95"
+            className="group flex flex-col items-center justify-center text-center transition-all duration-500 hover:scale-105 active:scale-95"
           >
-            <span className="text-xl md:text-2xl font-medium text-slate-800 dark:text-slate-300 transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-              Developed by Ahmad Hossain Pavel
+            <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors">
+              Developed by
+            </span>
+            <span className="mt-1.5 text-sm md:text-lg font-black tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all duration-300 flex items-center gap-2">
+              Ahmad Hossain Pavel
+              <Sparkles size={14} className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
             </span>
           </a>
         </div>
