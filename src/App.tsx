@@ -1,6 +1,6 @@
 
 import React, { useState, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { MainLayout as Layout } from './layouts/MainLayout';
 import Home from './pages/Home';
