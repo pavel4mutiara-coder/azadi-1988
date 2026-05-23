@@ -66,7 +66,7 @@ export const Impact: React.FC = () => {
                   <span className="text-white">75%</span>
                 </div>
                 <div className="h-4 bg-emerald-950 dark:bg-slate-950 rounded-full overflow-hidden p-1 shadow-inner">
-                  <div className="h-full bg-emerald-400 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)] transition-all duration-1000" style={{ width: '75%' }}></div>
+                  <div className="h-full bg-emerald-400 rounded-full shadow-emerald-400/50 shadow-lg transition-all duration-1000" style={{ width: '75%' }}></div>
                 </div>
               </div>
               <div className="space-y-3">
@@ -75,13 +75,13 @@ export const Impact: React.FC = () => {
                   <span className="text-white">25%</span>
                 </div>
                 <div className="h-4 bg-emerald-950 dark:bg-slate-950 rounded-full overflow-hidden p-1 shadow-inner">
-                  <div className="h-full bg-amber-400 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.5)] transition-all duration-1000" style={{ width: '25%' }}></div>
+                  <div className="h-full bg-amber-400 rounded-full shadow-amber-400/50 shadow-lg transition-all duration-1000" style={{ width: '25%' }}></div>
                 </div>
               </div>
             </div>
           </div>
           <div className="flex justify-center xl:justify-end">
-            <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-emerald-950/50 dark:bg-slate-950/50 rounded-full flex items-center justify-center border-[12px] border-white/5 relative shadow-heavy backdrop-blur-sm group/chart overflow-hidden">
+            <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-emerald-950/50 dark:bg-slate-950/50 rounded-full flex items-center justify-center border-8 sm:border-[12px] border-white/5 relative shadow-heavy backdrop-blur-sm group/chart overflow-hidden">
                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent"></div>
                <PieChart size={180} className="text-white opacity-10 group-hover/chart:scale-110 transition-transform duration-1000" />
                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-white/5 hover:bg-slate-900/40 transition-colors">

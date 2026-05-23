@@ -4,22 +4,29 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation as DonationType } from '../types';
-import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send } from 'lucide-react';
+import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send, X, PlusSquare, Loader2 } from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { UploadDiagnosticPanel } from '../components/UploadDiagnosticPanel';
+import { Bug } from 'lucide-react';
 
 export const Donation: React.FC = () => {
   const { lang, settings, donations, addDonation } = useApp();
   const t = TRANSLATIONS[lang];
+  
+  const { upload, isUploading, progress: uploadProgress, error: uploadError, retry: retryUpload, hasLastAttempt } = useImageUpload();
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   
   const [formData, setFormData] = useState({ 
     donorName: '', 
     isAnonymous: false, 
     amount: '', 
     phone: '', 
-    email: '', // Added email
+    email: '', 
     transactionId: '', 
     purpose: t.categories[0],
-    paymentMethod: 'Bkash'
+    paymentMethod: 'Bkash',
+    image: '' // Added image URL
   });
   
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
@@ -70,6 +77,18 @@ export const Donation: React.FC = () => {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const url = await upload(file, "donations");
+        setFormData(prev => ({ ...prev, image: url }));
+      } catch (error) {
+        console.error("Donation screenshot upload failed:", error);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) {
@@ -86,6 +105,7 @@ export const Donation: React.FC = () => {
       transactionId: formData.transactionId,
       purpose: formData.purpose,
       paymentMethod: formData.paymentMethod,
+      image: formData.image, // Include image URL
       date: new Date().toISOString(),
       id: Date.now().toString(),
       status: DonationStatus.PENDING
@@ -352,11 +372,75 @@ export const Donation: React.FC = () => {
                 {t.categories.map((c: string) => <option key={c} value={c} className="font-bold py-3 bg-white dark:bg-slate-900">{c}</option>)}
               </select>
             </div>
+
+            <div className="space-y-3">
+              <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">
+                {lang === 'bn' ? 'পেমেন্ট স্ক্রিনশট (ঐচ্ছিক)' : 'Payment Screenshot (Optional)'}
+              </label>
+              <div className="relative group">
+                <div className={`w-full ${uploadError ? 'h-56' : 'h-40'} rounded-2xl border-2 border-dashed ${formData.image ? 'border-emerald-500' : uploadError ? 'border-amber-500' : 'border-slate-200 dark:border-slate-800'} bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center transition-all overflow-hidden relative`}>
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative flex items-center justify-center">
+                        <Loader2 className="text-emerald-500 animate-spin" size={32} />
+                        <span className="absolute text-[8px] font-black text-emerald-600">{uploadProgress}%</span>
+                      </div>
+                      <div className="w-24 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                      {uploadError && <p className="text-[9px] font-bold text-amber-600 px-4 text-center">{uploadError}</p>}
+                    </div>
+                  ) : uploadError ? (
+                    <div className="flex flex-col items-center gap-3 p-4">
+                      <AlertCircle className="text-amber-500" size={32} />
+                      <p className="text-[10px] font-bold text-amber-600 text-center uppercase tracking-wider">{uploadError}</p>
+                      <div className="flex gap-2">
+                        <button 
+                          type="button" 
+                          onClick={() => retryUpload()} 
+                          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-[10px] font-black rounded-lg hover:bg-amber-600 transition-all active:scale-95 z-30 shadow-lg shadow-amber-500/20"
+                        >
+                          <PlusSquare size={14} />
+                          {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'RETRY'}
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowDiagnostics(true)} 
+                          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-[10px] font-black rounded-lg hover:bg-slate-900 transition-all active:scale-95 z-30"
+                        >
+                          <Bug size={14} />
+                          DIAGNOSE
+                        </button>
+                      </div>
+                    </div>
+                  ) : formData.image ? (
+                    <img src={formData.image} className="w-full h-full object-contain p-2" alt="Screenshot" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <PlusSquare size={32} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">{lang === 'bn' ? 'স্ক্রিনশট যোগ করুন' : 'Add Screenshot'}</span>
+                    </div>
+                  )}
+                  <label className="absolute inset-0 cursor-pointer focus-within:ring-2 ring-emerald-500 ring-offset-2">
+                    <input type="file" className="sr-only" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
+                  </label>
+                </div>
+                {formData.image && !isUploading && (
+                  <button 
+                    type="button" 
+                    onClick={() => setFormData(prev => ({...prev, image: ''}))}
+                    className="absolute -top-2 -right-2 w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-rose-600 transition-all active:scale-90 z-20"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <button 
-            type="submit" 
-            disabled={!isValid && Object.keys(touched).length > 0}
+              type="submit" 
+              disabled={(!isValid && Object.keys(touched).length > 0) || isUploading}
             className={`w-full ${!isValid && Object.keys(touched).length > 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 hover:-translate-y-1 active:scale-95'} text-white font-black py-6 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-3 text-xl ring-4 ring-emerald-500/10 group`}
           >
             <Heart size={26} className="group-hover:scale-110 transition-transform" />
@@ -416,6 +500,7 @@ export const Donation: React.FC = () => {
           </div>
         </div>
       </div>
+      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };

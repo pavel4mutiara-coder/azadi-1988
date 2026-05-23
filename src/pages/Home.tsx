@@ -9,7 +9,7 @@ import { NoticeMarquee } from '../components/NoticeMarquee';
 
 const FEATURE_ICONS = [<GraduationCap />, <Users />, <HeartHandshake />, <HandHelping />, <Trophy />];
 
-export const Home: React.FC = () => {
+export default function Home() {
   const { lang, settings, leadership, events, notices, news } = useApp();
   const t = TRANSLATIONS[lang];
 
@@ -30,7 +30,7 @@ export const Home: React.FC = () => {
         
         <div className="relative z-10 space-y-10 sm:space-y-12 w-full max-w-6xl mx-auto">
           <div className="mb-4 transform hover:scale-105 transition-transform duration-700">
-            <div className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl text-emerald-300 drop-shadow-[0_0_20px_rgba(110,231,183,0.5)] font-serif italic select-none tracking-widest opacity-80">
+            <div className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl text-emerald-300 shadow-emerald-400/30 drop-shadow-xl font-serif italic select-none tracking-widest opacity-80">
                 بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
             </div>
           </div>
@@ -43,7 +43,7 @@ export const Home: React.FC = () => {
             <div className="flex flex-wrap justify-center gap-4 sm:gap-10 text-emerald-200 dark:text-emerald-400 font-black text-xs sm:text-lg md:text-3xl bengali tracking-tight uppercase">
               {features.map((f, i) => (
                 <span key={i} className="flex items-center gap-3 group/feat">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.8)] group-hover/feat:scale-150 transition-transform"></div>
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-amber-400 shadow-amber-400/50 shadow-md group-hover/feat:scale-150 transition-transform"></div>
                   {f}
                 </span>
               ))}
@@ -185,7 +185,7 @@ export const Home: React.FC = () => {
         <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-emerald-400/10 to-transparent"></div>
         
         <div className="relative z-10 space-y-8 max-w-4xl mx-auto">
-           <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(16,185,129,0.3)] border border-emerald-400/30">
+           <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-emerald-500/20 shadow-xl border border-emerald-400/30">
               <Shield size={48} className="text-emerald-400 animate-pulse" />
            </div>
            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-black leading-[1.1] bengali tracking-tighter">

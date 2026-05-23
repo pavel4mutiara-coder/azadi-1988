@@ -22,6 +22,7 @@ if (rootElement) {
     console.log("Main.tsx: Rendered.");
     
     // Register Service Worker for PWA stability and offline support
+    /*
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
@@ -61,6 +62,7 @@ if (rootElement) {
         window.location.reload();
       });
     }
+    */
   } catch (err) {
     console.error("Main.tsx: Render error", err);
   }

@@ -29,6 +29,8 @@ import {
   BellRing,
   Newspaper,
 } from 'lucide-react';
+import { StorageDiagnostics } from '../../components/StorageDiagnostics';
+
 
 export const AdminDashboard: React.FC = () => {
   const { lang, donations, settings, updateDonation, deleteDonation, addDonation, cloudSynced, cloudSyncStatus, cloudErrorMessage, cloudErrorType, retryCloudConnection, restoreFromLegacy, logout } = useApp();
@@ -279,6 +281,10 @@ export const AdminDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-10">
+        <StorageDiagnostics />
       </div>
     </div>
   );

@@ -178,7 +178,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       )}
 
-      <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl border-b border-emerald-100/50 dark:border-slate-800/50 no-print shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] transition-all duration-300">
+      <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl border-b border-emerald-100/50 dark:border-slate-800/50 no-print shadow-md transition-all duration-300">
         <div className="container mx-auto px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-3 group min-w-0 flex-1 lg:flex-initial transition-transform active:scale-[0.98]">
              <div className="relative">
@@ -256,7 +256,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
       {/* Responsive App-Style Bottom Nav Enhancement - Super Premium Edition */}
       <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-[100] no-print pointer-events-none">
         <div className="max-w-md mx-auto pointer-events-auto">
-          <div className="relative bg-surface/95 dark:bg-slate-900/98 backdrop-blur-2xl border border-app-border dark:border-slate-800/80 rounded-full shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] flex items-center justify-around px-2 py-1.5 overflow-visible group/nav transition-all duration-500 hover:shadow-emerald-500/10">
+          <div className="relative bg-surface/95 dark:bg-slate-900/98 backdrop-blur-2xl border border-app-border dark:border-slate-800/80 rounded-full shadow-2xl flex items-center justify-around px-2 py-1.5 overflow-visible group/nav transition-all duration-500 hover:shadow-emerald-500/10">
             {/* Animated Dynamic Accent Backlight */}
             <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-rose-500/20 rounded-[2.5rem] blur-2xl opacity-40 transition-opacity"></div>
             
@@ -346,21 +346,33 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       </nav>
 
-      <footer className="bg-slate-50 dark:bg-slate-950 pt-16 pb-32 md:pb-16 no-print transition-colors duration-500 border-t border-slate-100 dark:border-slate-900/50">
-        <div className="container mx-auto px-4 flex flex-col items-center justify-center gap-2">
+      <footer className="bg-slate-50 dark:bg-slate-950 pt-12 pb-40 md:pb-16 no-print transition-colors duration-500 border-t border-slate-100 dark:border-slate-900/50 relative">
+        <div className="container mx-auto px-4">
           <a 
             href="https://wa.me/8801712782564" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="group flex flex-col items-center justify-center text-center transition-all duration-500 hover:scale-105 active:scale-95"
+            className="group flex flex-col items-center justify-center text-center transition-all duration-500 active:scale-95 py-10"
           >
-            <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors">
-              Developed by
-            </span>
-            <span className="mt-1.5 text-sm md:text-lg font-black tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all duration-300 flex items-center gap-2">
-              Ahmad Hossain Pavel
-              <Sparkles size={14} className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </span>
+            <div className="flex flex-col items-center gap-1.5 group-hover:gap-2 transition-all duration-500">
+              <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors">
+                Crafted with Passion
+              </span>
+              <div className="h-[2px] w-6 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent group-hover:w-20 transition-all duration-700"></div>
+              <span className="text-[13px] md:text-base font-display font-black tracking-[0.15em] text-slate-900 dark:text-white uppercase group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all duration-300">
+                Ahmad Hossain Pavel
+              </span>
+            </div>
+            <div className="mt-4 flex items-center gap-2 opacity-30 group-hover:opacity-100 transition-all duration-500 group-hover:translate-y-1">
+              <div className="h-px w-4 bg-slate-300 dark:bg-slate-700"></div>
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 italic">Premium Digital Solutions</p>
+              <div className="h-px w-4 bg-slate-300 dark:bg-slate-700"></div>
+            </div>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700 scale-50 group-hover:scale-100 pointer-events-none">
+              <Sparkles size={10} className="text-emerald-500 animate-pulse" />
+              <Sparkles size={14} className="text-emerald-400 animate-bounce" />
+              <Sparkles size={10} className="text-emerald-500 animate-pulse" />
+            </div>
           </a>
         </div>
       </footer>

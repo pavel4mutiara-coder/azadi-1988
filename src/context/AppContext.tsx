@@ -24,10 +24,14 @@ import {
   subscribeLetterhead,
   getLegacyData,
   reEnableCloudNetwork,
-  repairImageUrl
+  repairImageUrl,
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  User
 } from '../firebase';
 import { INITIAL_COMMITTEE } from '../utils/committee';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
 
 console.log("AppContext module loading...");
 
@@ -75,6 +79,9 @@ interface AppState {
   updateEvents: (events: Event[]) => void;
   retryCloudConnection: () => void;
   restoreFromLegacy: () => Promise<void>;
+  resetAllData: () => Promise<void>;
+  exportBackup: () => void;
+  importBackup: (jsonText: string) => Promise<boolean>;
 }
 
 const DEFAULT_SETTINGS: OrganizationSettings = {
@@ -100,30 +107,6 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
 };
 
 const AppContext = createContext<AppState | undefined>(undefined);
-
-export const compressImage = (base64: string, maxWidth = 800, maxHeight = 800): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.src = base64;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-      if (width > height) {
-        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-      } else {
-        if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
-      }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { resolve(base64); return; }
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-    img.onerror = (err) => reject(err);
-  });
-};
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log("AppProvider rendering...");
@@ -438,7 +421,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const donation = donations.find(d => d.id === id);
         if (donation) saveItem("donations", id, { ...donation, status });
       },
-      deleteDonation: (id) => deleteItem("donations", id),
+      deleteDonation: async (id) => {
+        const donation = donations.find(d => d.id === id);
+        if (donation?.image) await import('../firebase').then(f => f.deleteStorageObject(donation.image!));
+        deleteItem("donations", id);
+      },
 
       saveSettings: (s) => saveSettingsCloud(s),
       saveLetterhead: (c) => saveLetterheadCloud(c),
@@ -449,22 +436,121 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateNews: (list) => list.forEach(n => saveItem("news", n.id, n)),
 
       saveLeader: (l) => saveItem("leadership", l.id || Date.now().toString(), l),
-      deleteLeader: (id) => deleteItem("leadership", id),
+      deleteLeader: async (id) => {
+        const leader = leadership.find(l => l.id === id);
+        if (leader?.image) await import('../firebase').then(f => f.deleteStorageObject(leader.image!));
+        deleteItem("leadership", id);
+      },
       
       saveEvent: (e) => saveItem("events", e.id || Date.now().toString(), e),
-      deleteEvent: (id) => deleteItem("events", id),
+      deleteEvent: async (id) => {
+        const event = events.find(e => e.id === id);
+        if (event?.image) await import('../firebase').then(f => f.deleteStorageObject(event.image!));
+        deleteItem("events", id);
+      },
 
       saveNotice: (n) => saveItem("notices", n.id || Date.now().toString(), n),
       deleteNotice: (id) => deleteItem("notices", id),
 
       saveNews: (n) => saveItem("news", n.id || Date.now().toString(), n),
-      deleteNews: (id) => deleteItem("news", id),
+      deleteNews: async (id) => {
+        const item = news.find(n => n.id === id);
+        if (item?.image) await import('../firebase').then(f => f.deleteStorageObject(item.image!));
+        deleteItem("news", id);
+      },
 
       retryCloudConnection: async () => {
         const enabled = await reEnableCloudNetwork();
         if (enabled) window.location.reload();
       },
-      restoreFromLegacy
+      restoreFromLegacy,
+      resetAllData: async () => {
+        try {
+          console.log("Resetting all system data...");
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('azadi_db_') || key === 'azadi_admin_session' || key === 'azadi_mock_user')) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(k => localStorage.removeItem(k));
+          
+          const databaseService = await import('../services/databaseService');
+          databaseService.seedDefaults();
+          
+          alert(lang === 'bn' ? 'সকল ডাটা রিসেট করা হয়েছে এবং ডিফল্ট সেটিংস লোড করা হয়েছে!' : 'All data reset and defaults re-seeded successfully!');
+          window.location.reload();
+        } catch (e) {
+          console.error("Failed to reset system data:", e);
+        }
+      },
+      exportBackup: () => {
+        try {
+          const backupData = {
+            version: "1.0",
+            timestamp: Date.now(),
+            settings: JSON.parse(localStorage.getItem('azadi_db_config_settings') || '{}'),
+            letterhead: JSON.parse(localStorage.getItem('azadi_db_config_letterhead') || '{}'),
+            leadership: JSON.parse(localStorage.getItem('azadi_db_leadership') || '[]'),
+            events: JSON.parse(localStorage.getItem('azadi_db_events') || '[]'),
+            donations: JSON.parse(localStorage.getItem('azadi_db_donations') || '[]'),
+            notices: JSON.parse(localStorage.getItem('azadi_db_notices') || '[]'),
+            news: JSON.parse(localStorage.getItem('azadi_db_news') || '[]'),
+          };
+          
+          const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `azadi-backup-${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          console.log("Database backup exported successfully.");
+        } catch (err) {
+          console.error("Failed to export backup:", err);
+          alert(lang === 'bn' ? 'ব্যাকআপ এক্সপোর্ট করতে সমস্যা হয়েছে!' : 'Backup export failed!');
+        }
+      },
+      importBackup: async (jsonText: string): Promise<boolean> => {
+        try {
+          const data = JSON.parse(jsonText);
+          if (!data) return false;
+          
+          if (data.settings && typeof data.settings === 'object') {
+            localStorage.setItem('azadi_db_config_settings', JSON.stringify(data.settings));
+          }
+          if (data.letterhead && typeof data.letterhead === 'object') {
+            localStorage.setItem('azadi_db_config_letterhead', JSON.stringify(data.letterhead));
+          }
+          if (data.leadership && Array.isArray(data.leadership)) {
+            localStorage.setItem('azadi_db_leadership', JSON.stringify(data.leadership));
+          }
+          if (data.events && Array.isArray(data.events)) {
+            localStorage.setItem('azadi_db_events', JSON.stringify(data.events));
+          }
+          if (data.donations && Array.isArray(data.donations)) {
+            localStorage.setItem('azadi_db_donations', JSON.stringify(data.donations));
+          }
+          if (data.notices && Array.isArray(data.notices)) {
+            localStorage.setItem('azadi_db_notices', JSON.stringify(data.notices));
+          }
+          if (data.news && Array.isArray(data.news)) {
+            localStorage.setItem('azadi_db_news', JSON.stringify(data.news));
+          }
+          
+          console.log("Database backup imported and restored successfully.");
+          alert(lang === 'bn' ? 'ব্যাকআপ সফলভাবে ডাটাবেজে রিস্টোর করা হয়েছে!' : 'Backup successfully restored to the database!');
+          window.location.reload();
+          return true;
+        } catch (e) {
+          console.error("Backup import failed:", e);
+          alert(lang === 'bn' ? 'ব্যাকআপ ফাইলটি সঠিক নয় বা করাপ্ট হয়ে গেছে।' : 'Invalid or corrupted backup file.');
+          return false;
+        }
+      }
     }}>
       {children}
     </AppContext.Provider>

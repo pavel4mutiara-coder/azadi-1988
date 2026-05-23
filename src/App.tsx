@@ -3,12 +3,10 @@ import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { MainLayout as Layout } from './layouts/MainLayout';
+import Home from './pages/Home';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TRANSLATIONS } from './utils/constants';
 import { Lock, Loader2 } from 'lucide-react';
-
-// Lazy load pages
-const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const AboutUs = lazy(() => import('./pages/AboutUs').then(m => ({ default: m.AboutUs })));
 const Events = lazy(() => import('./pages/Events').then(m => ({ default: m.Events })));
 const Leadership = lazy(() => import('./pages/Leadership').then(m => ({ default: m.Leadership })));

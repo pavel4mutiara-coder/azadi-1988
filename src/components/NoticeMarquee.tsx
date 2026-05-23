@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { BellRing, Clock, AlertTriangle } from 'lucide-react';
 import { Notice, Language } from '../types';
 

@@ -2,7 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { FileText, Printer, Save, Edit3, MapPin, Phone, Mail, Upload, Eraser, PenTool, Check, Download, Globe } from 'lucide-react';
+import { FileText, Printer, Save, Edit3, MapPin, Phone, Mail, Upload, Eraser, PenTool, Check, Download, Globe, Loader2, Bug } from 'lucide-react';
+import { useImageUpload } from '../../hooks/useImageUpload';
+import { UploadDiagnosticPanel } from '../../components/UploadDiagnosticPanel';
 
 declare var html2pdf: any;
 
@@ -14,6 +16,9 @@ export const LetterheadManager: React.FC = () => {
   const [today, setToday] = useState('');
   const [isDrawing, setIsDrawing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  const { upload, isUploading, progress: uploadProgress, error: uploadError } = useImageUpload();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const letterheadRef = useRef<HTMLDivElement>(null);
 
@@ -21,12 +26,15 @@ export const LetterheadManager: React.FC = () => {
     setToday(new Date().toLocaleDateString(viewMode === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
   }, [viewMode]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setLocalConfig(prev => ({ ...prev, signature: reader.result as string }));
-      reader.readAsDataURL(file);
+      try {
+        const url = await upload(file, "signatures");
+        setLocalConfig(prev => ({ ...prev, signature: url }));
+      } catch (error) {
+        console.error("Signature upload failed:", error);
+      }
     }
   };
 
@@ -44,10 +52,19 @@ export const LetterheadManager: React.FC = () => {
   };
 
   const clearCanvas = () => canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-  const saveSignatureFromCanvas = () => {
+  const saveSignatureFromCanvas = async () => {
     if (canvasRef.current) {
-      setLocalConfig({ ...localConfig, signature: canvasRef.current.toDataURL('image/png') });
-      alert(lang === 'bn' ? 'স্বাক্ষর সেভ হয়েছে!' : 'Signature captured!');
+      try {
+        const blob = await new Promise<Blob>((resolve) => {
+          canvasRef.current!.toBlob(b => resolve(b!), 'image/png');
+        });
+        const file = new File([blob], "signature.png", { type: "image/png" });
+        const url = await upload(file, "signatures");
+        setLocalConfig({ ...localConfig, signature: url });
+        alert(lang === 'bn' ? 'স্বাক্ষর সেভ হয়েছে!' : 'Signature captured and uploaded!');
+      } catch (error) {
+        alert("Failed to save signature.");
+      }
     }
   };
 
@@ -116,12 +133,42 @@ export const LetterheadManager: React.FC = () => {
           
           <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-md space-y-4">
             <h3 className="text-sm font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase"><PenTool size={18} className="text-emerald-500" /> Signature</h3>
-            <div className="relative bg-white border border-slate-200 rounded-xl h-32 md:h-40">
-              <canvas ref={canvasRef} width={400} height={160} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair touch-none" />
-              <div className="absolute top-1 right-1 flex gap-1">
-                <button onClick={clearCanvas} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg"><Eraser size={12} /></button>
-                <button onClick={saveSignatureFromCanvas} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><Check size={12} /></button>
+            
+            {localConfig.signature && (
+              <div className="relative group w-full h-20 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center p-2 mb-2">
+                 <img src={localConfig.signature} className="h-full object-contain" alt="Signature" />
+                 <button onClick={() => setLocalConfig({...localConfig, signature: ''})} className="absolute top-1 right-1 p-1 bg-rose-100 text-rose-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"><Eraser size={12} /></button>
               </div>
+            )}
+
+            <div className="relative bg-white border border-slate-200 rounded-xl h-32 md:h-40 overflow-hidden">
+              {isUploading ? (
+                <div className="absolute inset-0 z-20 bg-white/90 dark:bg-slate-950/90 flex flex-col items-center justify-center gap-3">
+                   <Loader2 className="animate-spin text-emerald-500" size={32} />
+                   <div className="w-24 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                   </div>
+                </div>
+              ) : uploadError ? (
+                <div className="absolute inset-0 z-20 bg-amber-50 dark:bg-amber-950/20 flex flex-col items-center justify-center gap-2 p-4 text-center">
+                   <Bug className="text-amber-500" size={24} />
+                   <button onClick={() => setShowDiagnostics(true)} className="text-[10px] font-black text-amber-600 underline uppercase tracking-widest">DIAGNOSE</button>
+                </div>
+              ) : (
+                <canvas ref={canvasRef} width={400} height={160} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair touch-none" />
+              )}
+              <div className="absolute top-1 right-1 flex gap-1 no-print">
+                <button onClick={clearCanvas} disabled={isUploading} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100"><Eraser size={12} /></button>
+                <button onClick={saveSignatureFromCanvas} disabled={isUploading} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100"><Check size={12} /></button>
+              </div>
+            </div>
+            
+            <div className="pt-2 no-print">
+              <label className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-100 transition-colors">
+                {isUploading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                {lang === 'bn' ? 'স্বাক্ষর আপলোড করুন' : 'Upload Signature'}
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
+              </label>
             </div>
           </div>
         </div>
@@ -182,6 +229,7 @@ export const LetterheadManager: React.FC = () => {
           </p>
         </div>
       </div>
+      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };

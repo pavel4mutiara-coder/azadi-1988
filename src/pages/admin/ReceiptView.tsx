@@ -204,7 +204,7 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
 
               {/* Amount Card - Reduced padding to allow more footer space */}
               <div className="flex justify-center">
-                <div className="bg-emerald-900 text-white px-16 py-8 rounded-[2.5rem] text-center shadow-xl relative overflow-hidden ring-[8px] ring-emerald-50">
+                <div className="bg-emerald-900 text-white px-16 py-8 rounded-[2.5rem] text-center shadow-xl relative overflow-hidden ring-8 ring-emerald-50">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full"></div>
                   <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-60 mb-2">মোট অনুদান পরিমাণ / Amount</div>
                   <div className="text-5xl font-black font-mono tracking-tighter">৳{donation.amount.toLocaleString()}</div>

@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { Users, Plus, Trash2, Edit2, Upload, AlertTriangle, RefreshCcw, Loader2 } from 'lucide-react';
 import { Leadership } from '../../types';
-import { uploadImage } from '../../firebase';
+import { useImageUpload } from '../../hooks/useImageUpload';
+import { UploadDiagnosticPanel } from '../../components/UploadDiagnosticPanel';
 import { INITIAL_COMMITTEE } from '../../utils/committee';
+import { Users, Plus, Trash2, Edit2, Upload, AlertTriangle, RefreshCcw, Loader2, Bug } from 'lucide-react';
 
 export const LeadershipManager: React.FC = () => {
-  const { lang, leadership, settings, updateLeadership, replaceLeadership } = useApp();
+  const { lang, leadership, settings, updateLeadership, replaceLeadership, saveLeader, deleteLeader } = useApp();
   const t = TRANSLATIONS[lang];
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  const { upload, isUploading, progress: uploadProgress, error: uploadError, retry: retryUpload } = useImageUpload();
   const [isRestoring, setIsRestoring] = useState(false);
   
   const [formData, setFormData] = useState<Omit<Leadership, 'id'>>({
@@ -31,13 +34,10 @@ export const LeadershipManager: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        setIsUploading(true);
-        const url = await uploadImage(file, "leadership");
+        const url = await upload(file, "leadership");
         setFormData(prev => ({ ...prev, image: url }));
       } catch (error) {
-        alert("Upload failed. Please try again.");
-      } finally {
-        setIsUploading(false);
+        console.error("Leadership upload failed:", error);
       }
     }
   };
@@ -69,17 +69,12 @@ export const LeadershipManager: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      const updatedLeader: Leadership = { ...formData, id: editingId };
-      updateLeadership(leadership.map(l => l.id === editingId ? updatedLeader : l));
-    } else {
-      const newLeader: Leadership = { 
-        ...formData, 
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      updateLeadership([...leadership, newLeader]);
-    }
+    const leaderData: Leadership = { 
+      ...formData, 
+      id: editingId || Date.now().toString(),
+      createdAt: formData.createdAt || new Date().toISOString()
+    };
+    saveLeader(leaderData);
     resetForm();
   };
 
@@ -121,7 +116,7 @@ export const LeadershipManager: React.FC = () => {
 
   const handleConfirmDelete = () => {
     if (deleteConfirmId) {
-      updateLeadership(leadership.filter(l => l.id !== deleteConfirmId));
+      deleteLeader(deleteConfirmId);
       setDeleteConfirmId(null);
     }
   };
@@ -159,12 +154,26 @@ export const LeadershipManager: React.FC = () => {
           <div className="flex flex-col lg:flex-row gap-6 md:gap-10">
             <div className="flex flex-col items-center gap-3">
               <div className="relative group">
-                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-emerald-500/20 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-                  {isUploading ? <Loader2 className="text-emerald-500 animate-spin" size={24} /> : formData.image ? <img src={formData.image} className="w-full h-full object-cover" alt="Preview" /> : <Users className="text-slate-300" size={32} />}
+                <div className={`w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 ${uploadError ? 'border-amber-500/50' : 'border-emerald-500/20'} bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center relative transition-all`}>
+                  {isUploading ? (
+                    <div className="flex flex-col items-center p-2">
+                      <Loader2 className="text-emerald-500 animate-spin" size={24} />
+                      <span className="text-[8px] font-black text-emerald-600 mt-1">{uploadProgress}%</span>
+                    </div>
+                  ) : uploadError ? (
+                    <div className="flex flex-col items-center p-2 text-center">
+                      <Bug className="text-amber-500 mb-1" size={16} />
+                      <button onClick={(e) => { e.stopPropagation(); setShowDiagnostics(true); }} className="text-[7px] font-black text-amber-600 underline uppercase tracking-tighter">DIAGNOSE</button>
+                    </div>
+                  ) : formData.image ? (
+                    <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
+                  ) : (
+                    <Users className="text-slate-300" size={32} />
+                  )}
                 </div>
                 <label htmlFor="leader-photo" className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity">
                   <Upload className="text-white" size={20} />
-                  <input id="leader-photo" type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  <input id="leader-photo" type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
                 </label>
               </div>
               <p className="text-[8px] font-black uppercase text-slate-400">Photo</p>

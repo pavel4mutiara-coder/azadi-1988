@@ -4,14 +4,18 @@ import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { Calendar, Plus, Trash2, Edit2, Upload, MapPin, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Event } from '../../types';
-import { uploadImage } from '../../firebase';
+import { useImageUpload } from '../../hooks/useImageUpload';
+import { UploadDiagnosticPanel } from '../../components/UploadDiagnosticPanel';
+import { AlertTriangle, Bug } from 'lucide-react';
 
 export const EventManager: React.FC = () => {
   const { lang, events, saveEvent, deleteEvent } = useApp();
   const t = TRANSLATIONS[lang];
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  const { upload, isUploading, progress: uploadProgress, error: uploadError, retry: retryUpload } = useImageUpload();
 
   // Added formatDate helper function to fix missing function error on line 149
   const formatDate = (dateStr: string) => {
@@ -41,13 +45,10 @@ export const EventManager: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        setIsUploading(true);
-        const url = await uploadImage(file, "events");
+        const url = await upload(file, "events");
         setFormData(prev => ({ ...prev, image: url }));
       } catch (error) {
-        alert("Upload failed. Please try again.");
-      } finally {
-        setIsUploading(false);
+        console.error("Event upload failed:", error);
       }
     }
   };
@@ -107,12 +108,50 @@ export const EventManager: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-6">
                <div className="relative group">
-                <div className="w-full h-56 rounded-3xl overflow-hidden border-2 border-emerald-500/20 bg-slate-50 dark:bg-slate-950 flex items-center justify-center shadow-inner">
-                  {isUploading ? <Loader2 className="text-emerald-500 animate-spin" size={32} /> : formData.image ? <img src={formData.image} className="w-full h-full object-cover" alt="Preview" /> : <ImageIcon className="text-slate-300" size={64} />}
+                <div className={`w-full ${uploadError ? 'h-64' : 'h-56'} rounded-3xl overflow-hidden border-2 ${uploadError ? 'border-amber-500/50' : 'border-emerald-500/20'} bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center shadow-inner relative transition-all`}>
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative flex items-center justify-center">
+                        <Loader2 className="text-emerald-500 animate-spin" size={48} />
+                        <span className="absolute text-[10px] font-black text-emerald-600">{uploadProgress}%</span>
+                      </div>
+                      <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                      {uploadError && <p className="text-[10px] font-bold text-amber-600 px-4 text-center">{uploadError}</p>}
+                    </div>
+                  ) : uploadError ? (
+                     <div className="flex flex-col items-center gap-4 p-6">
+                        <AlertTriangle className="text-amber-500" size={48} />
+                        <p className="text-xs font-bold text-amber-600 text-center uppercase tracking-wider">{uploadError}</p>
+                        <div className="flex gap-2">
+                          <button 
+                            type="button" 
+                            onClick={() => retryUpload()} 
+                            className="flex items-center gap-2 px-6 py-3 bg-amber-500 text-white text-xs font-black rounded-xl hover:bg-amber-600 transition-all active:scale-95 z-30 shadow-lg shadow-amber-500/20"
+                          >
+                            <Plus size={18} />
+                            {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'RETRY'}
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setShowDiagnostics(true)} 
+                            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white text-xs font-black rounded-xl hover:bg-slate-900 transition-all active:scale-95 z-30"
+                          >
+                            <Bug size={18} />
+                            DIAGNOSE
+                          </button>
+                        </div>
+                     </div>
+                  ) : formData.image ? (
+                    <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
+                  ) : (
+                    <ImageIcon className="text-slate-300" size={64} />
+                  )}
                 </div>
                 <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 rounded-3xl cursor-pointer transition-opacity">
                   <Upload className="text-white" size={32} />
-                  <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
                 </label>
               </div>
               <div className="space-y-1">
@@ -173,6 +212,7 @@ export const EventManager: React.FC = () => {
           </div>
         ))}
       </div>
+      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };

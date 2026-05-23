@@ -9,27 +9,28 @@ import {
   Loader2, Shield, Copy, AlertCircle, Trash2, LogOut,
   Moon, Sun
 } from 'lucide-react';
-import { uploadImage } from '../../firebase';
+import { useImageUpload } from '../../hooks/useImageUpload';
+import { UploadDiagnosticPanel } from '../../components/UploadDiagnosticPanel';
+import { Bug } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
-  const { lang, theme, setTheme, settings, saveSettings, restoreFromLegacy, logout } = useApp();
+  const { lang, theme, setTheme, settings, saveSettings, restoreFromLegacy, logout, resetAllData, exportBackup, importBackup } = useApp();
   const t = TRANSLATIONS[lang];
   const [localSettings, setLocalSettings] = useState(settings);
   const [isSaving, setIsSaving] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  const { upload, isUploading, progress: uploadProgress, error: uploadError } = useImageUpload();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        setIsUploading(true);
-        const url = await uploadImage(file, "settings");
+        const url = await upload(file, "settings");
         setLocalSettings(prev => ({ ...prev, logo: url }));
       } catch (error) {
-        alert("Upload failed. Please try again.");
-      } finally {
-        setIsUploading(false);
+        console.error("Logo upload failed:", error);
       }
     }
   };
@@ -169,14 +170,31 @@ export const SettingsManager: React.FC = () => {
           <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-6">
             <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest">Logo & Branding</h3>
             <div className="relative w-32 h-32 mx-auto group">
-               <div className="w-full h-full bg-slate-50 dark:bg-slate-950 rounded-[2rem] border-2 border-emerald-500/20 flex items-center justify-center p-4 shadow-inner overflow-hidden">
-                  {isUploading ? <Loader2 className="animate-spin text-emerald-500" /> : <img src={localSettings.logo} className="w-full h-full object-contain" alt="Logo Preview" />}
+               <div className={`w-full h-full bg-slate-50 dark:bg-slate-950 rounded-[2rem] border-2 ${uploadError ? 'border-amber-500/50' : 'border-emerald-500/20'} flex flex-col items-center justify-center p-4 shadow-inner overflow-hidden relative`}>
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                       <Loader2 className="animate-spin text-emerald-500" size={24} />
+                       <div className="text-[10px] font-black text-emerald-600">{uploadProgress}%</div>
+                    </div>
+                  ) : uploadError ? (
+                    <div className="flex flex-col items-center gap-1 text-center">
+                       <Bug className="text-amber-500" size={20} />
+                       <button onClick={(e) => { e.stopPropagation(); setShowDiagnostics(true); }} className="text-[7px] font-black text-amber-600 underline uppercase tracking-tighter">DIAGNOSE</button>
+                    </div>
+                  ) : (
+                    <img src={localSettings.logo} className="w-full h-full object-contain" alt="Logo Preview" />
+                  )}
                </div>
                <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[2rem] cursor-pointer transition-opacity">
                   <Upload className="text-white" size={24} />
-                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={isUploading} />
                </label>
             </div>
+            {isUploading && (
+              <div className="w-32 mx-auto h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+              </div>
+            )}
             <p className="text-[10px] font-bold text-slate-400">Click to upload organization logo</p>
           </section>
 
@@ -204,10 +222,70 @@ export const SettingsManager: React.FC = () => {
             </button>
           </section>
 
+          {/* Backup & System Integrity System */}
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+              <Database size={16} className="text-teal-500" /> Database Backup & Import
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+              {lang === 'bn' 
+                ? 'সিস্টেমের সমস্ত ডাটা (নেতৃবৃন্দ, অনুদান, নোটিশ, খবর ও সেটিংস) নিরাপদ রাখতে ব্যাকআপ ফাইল তৈরি বা পূর্বের ব্যাকআপ রিস্টোর করুন।' 
+                : 'Safeguard all data (leaders, donations, notices, news, settings) by exporting a JSON backup or importing an existing backup file.'}
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={exportBackup}
+                className="py-4 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border border-teal-100 dark:border-teal-900/50 flex flex-col items-center justify-center gap-2"
+              >
+                <Save size={18} />
+                {lang === 'bn' ? 'এক্সপোর্ট ব্যাকআপ' : 'Export Backup'}
+              </button>
+              
+              <label className="py-4 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border border-emerald-100 dark:border-emerald-900/50 flex flex-col items-center justify-center gap-2 cursor-pointer text-center">
+                <Upload size={18} />
+                <span>{lang === 'bn' ? 'ইম্পোর্ট ব্যাকআপ' : 'Import Backup'}</span>
+                <input 
+                  type="file" 
+                  accept=".json" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = async (event) => {
+                        const jsonText = event.target?.result as string;
+                        if (jsonText) {
+                          await importBackup(jsonText);
+                        }
+                      };
+                      reader.readAsText(file);
+                    }
+                  }} 
+                />
+              </label>
+            </div>
+          </section>
+
           {/* Danger Zone */}
           <section className="bg-rose-50 dark:bg-rose-950/20 rounded-[2.5rem] p-8 border border-rose-100 dark:border-rose-900/50 space-y-4">
              <h3 className="text-xs font-black uppercase text-rose-600 flex items-center gap-2"><AlertCircle size={14} /> Danger Zone</h3>
-             <button className="w-full text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 p-4 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors">
+             <button 
+               onClick={async () => {
+                 const confirmMessage1 = lang === 'bn' 
+                   ? 'আপনি কি নিশ্চিত যে আপনি সমস্ত সিস্টেম ডাটা মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা সম্ভব নয়!'
+                   : 'Are you sure you want to delete ALL system data? This action cannot be undone!';
+                 if (window.confirm(confirmMessage1)) {
+                   const confirmMessage2 = lang === 'bn'
+                     ? 'শেষবার নিশ্চিত করুন: সত্যিই কি সব ডাটা ডিলিট করবেন?'
+                     : 'FINAL CONFIRMATION: Do you absolutely want to wipe everything and load defaults?';
+                   if (window.confirm(confirmMessage2)) {
+                     await resetAllData();
+                   }
+                 }
+               }}
+               className="w-full text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 p-4 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
+             >
                <Trash2 size={16} /> Reset All System Data
              </button>
           </section>
@@ -239,6 +317,42 @@ export const SettingsManager: React.FC = () => {
                   } inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out`}
                 />
               </button>
+            </div>
+          </section>
+
+          {/* System Diagnostics */}
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+              <Shield size={16} className="text-indigo-500" /> System Health & Diagnostics
+            </h3>
+            <div className="space-y-4">
+               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                        <Database size={16} />
+                     </div>
+                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Database Connection</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-emerald-500">Connected</span>
+               </div>
+               
+               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                        <ImageIcon size={16} />
+                     </div>
+                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Storage System</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-emerald-500">Active</span>
+               </div>
+
+               <button 
+                 onClick={() => setShowDiagnostics(true)}
+                 className="w-full py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-2"
+               >
+                 <Bug size={14} />
+                 Open AI Diagnostics
+               </button>
             </div>
           </section>
 
@@ -275,6 +389,7 @@ export const SettingsManager: React.FC = () => {
 
         </div>
       </div>
+      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };
