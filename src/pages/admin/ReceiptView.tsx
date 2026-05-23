@@ -22,6 +22,15 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
     return ISLAMIC_QUOTES[parseInt(donation.id.slice(-2), 16) % ISLAMIC_QUOTES.length] || ISLAMIC_QUOTES[0];
   }, [donation.id]);
 
+  const signatoryConfig = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('azadi_db_config_letterhead');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     const convertToBase64 = async () => {
       try {
@@ -228,11 +237,18 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
               <div className="flex justify-between items-end px-4">
                 <div className="relative">
                   <div className="w-20 h-20 border border-emerald-900/10 rounded-full flex flex-col items-center justify-center text-[6px] font-black transform -rotate-12 opacity-30 bg-white shadow-inner">
-                     <Shield size={18} className="mb-0.5 text-emerald-900" />
+                     <Shield size={18} className="mb-0.5 text-emerald-950" />
                      <span className="uppercase text-center leading-tight">Azadi Social Welfare<br/>Official Seal</span>
                   </div>
                 </div>
-                <div className="text-center w-56 space-y-1.5">
+                <div className="text-center w-56 space-y-1.5 relative">
+                  {signatoryConfig?.signature && (
+                    <img 
+                      src={signatoryConfig.signature} 
+                      className="h-10 object-contain mx-auto absolute bottom-7 left-1/2 -translate-x-1/2 select-none" 
+                      alt="Signature" 
+                    />
+                  )}
                   <div className="h-0.5 bg-slate-950 w-full mb-1"></div>
                   <div className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-950">Authorized Signature</div>
                 </div>

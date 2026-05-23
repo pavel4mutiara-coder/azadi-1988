@@ -48,24 +48,104 @@ const DEFAULT_LETTERHEAD: LetterheadConfig = {
 
 class SimulatedDatabase {
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private inMemoryStore: Map<string, string> = new Map();
 
   constructor() {
     this.seedDefaults();
   }
 
+  private safeGetItem(key: string): string | null {
+    try {
+      const value = localStorage.getItem(key);
+      if (value !== null) {
+        // Hydrate in-memory copy
+        this.inMemoryStore.set(key, value);
+        return value;
+      }
+    } catch (e) {
+      console.warn(`[databaseService] localStorage read blocked for "${key}". Using active memory copy.`, e);
+    }
+    return this.inMemoryStore.get(key) || null;
+  }
+
+  private safeSetItem(key: string, value: string) {
+    this.inMemoryStore.set(key, value);
+    try {
+      localStorage.setItem(key, value);
+    } catch (e: any) {
+      console.error(`[databaseService] localStorage write failed for "${key}". Resilient memory backup retained.`, e);
+      // Quota limit hit: clear diagnostics to liberate memory
+      if (e.name === 'QuotaExceededError' || e.code === 22 || e.number === -2147024882) {
+        this.healQuotaExceeded();
+      }
+    }
+  }
+
+  private safeRemoveItem(key: string) {
+    this.inMemoryStore.delete(key);
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`[databaseService] localStorage delete blocked for "${key}".`, e);
+    }
+  }
+
+  private healQuotaExceeded() {
+    try {
+      console.warn('[databaseService] LocalStorage quota reached. Automatically purging non-critical telemetry...');
+      this.safeSetItem('azadi_db_diagnostics', JSON.stringify([]));
+    } catch (err) {
+      console.error('[databaseService] Automated quota resolution failed:', err);
+    }
+  }
+
   public seedDefaults() {
     try {
       // 1. Seed settings
-      if (!localStorage.getItem('azadi_db_config_settings')) {
-        localStorage.setItem('azadi_db_config_settings', JSON.stringify(DEFAULT_SETTINGS));
+      const settingsRaw = this.safeGetItem('azadi_db_config_settings');
+      let isSettingsValid = false;
+      try {
+        if (settingsRaw) {
+          JSON.parse(settingsRaw);
+          isSettingsValid = true;
+        }
+      } catch {
+        isSettingsValid = false;
       }
+      if (!isSettingsValid) {
+        this.safeSetItem('azadi_db_config_settings', JSON.stringify(DEFAULT_SETTINGS));
+      }
+
       // 2. Seed letterhead
-      if (!localStorage.getItem('azadi_db_config_letterhead')) {
-        localStorage.setItem('azadi_db_config_letterhead', JSON.stringify(DEFAULT_LETTERHEAD));
+      const letterheadRaw = this.safeGetItem('azadi_db_config_letterhead');
+      let isLetterheadValid = false;
+      try {
+        if (letterheadRaw) {
+          JSON.parse(letterheadRaw);
+          isLetterheadValid = true;
+        }
+      } catch {
+        isLetterheadValid = false;
       }
+      if (!isLetterheadValid) {
+        this.safeSetItem('azadi_db_config_letterhead', JSON.stringify(DEFAULT_LETTERHEAD));
+      }
+
       // 3. Seed leadership
-      const savedLeadership = localStorage.getItem('azadi_db_leadership');
-      if (!savedLeadership || JSON.parse(savedLeadership).length === 0) {
+      const savedLeadership = this.safeGetItem('azadi_db_leadership');
+      let isLeadershipValid = false;
+      let leadershipLength = 0;
+      try {
+        if (savedLeadership) {
+          const parsed = JSON.parse(savedLeadership);
+          isLeadershipValid = Array.isArray(parsed);
+          leadershipLength = parsed.length;
+        }
+      } catch {
+        isLeadershipValid = false;
+      }
+
+      if (!isLeadershipValid || leadershipLength === 0) {
         const initialLeaders: Leadership[] = INITIAL_COMMITTEE.map((l, i) => ({
           id: `leader-${i + 1}`,
           nameEn: l.nameEn,
@@ -82,14 +162,23 @@ class SimulatedDatabase {
           status: 'active',
           createdAt: new Date().toISOString()
         }));
-        localStorage.setItem('azadi_db_leadership', JSON.stringify(initialLeaders));
+        this.safeSetItem('azadi_db_leadership', JSON.stringify(initialLeaders));
       }
 
-      // Ensure keys exist
+      // Ensure keys exist & are valid arrays
       const collections: CollectionType[] = ['donations', 'events', 'notices', 'news', 'diagnostics'];
       collections.forEach(coll => {
-        if (!localStorage.getItem(`azadi_db_${coll}`)) {
-          localStorage.setItem(`azadi_db_${coll}`, JSON.stringify([]));
+        const raw = this.safeGetItem(`azadi_db_${coll}`);
+        let isValid = false;
+        try {
+          if (raw) {
+            isValid = Array.isArray(JSON.parse(raw));
+          }
+        } catch {
+          isValid = false;
+        }
+        if (!isValid) {
+          this.safeSetItem(`azadi_db_${coll}`, JSON.stringify([]));
         }
       });
     } catch (e) {
@@ -101,9 +190,30 @@ class SimulatedDatabase {
     try {
       const key = collName.startsWith('config_') ? `azadi_db_${collName}` : 
                   collName === 'config' ? 'azadi_db_config_settings' : `azadi_db_${collName}`;
-      const serialized = localStorage.getItem(key);
+      const serialized = this.safeGetItem(key);
       if (serialized) {
-        return JSON.parse(serialized);
+        try {
+          const parsed = JSON.parse(serialized);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          console.warn(`[databaseService] Corrupt JSON detected in key "${key}". Auto-remedying.`);
+          // Auto-remedying the corruption
+          if (collName === 'config_settings' || collName === 'settings' || key === 'azadi_db_config_settings') {
+            this.safeSetItem(key, JSON.stringify(DEFAULT_SETTINGS));
+            return [DEFAULT_SETTINGS];
+          } else if (collName === 'config_letterhead' || collName === 'letterhead' || key === 'azadi_db_config_letterhead') {
+            this.safeSetItem(key, JSON.stringify(DEFAULT_LETTERHEAD));
+            return [DEFAULT_LETTERHEAD];
+          } else if (collName === 'leadership') {
+            this.safeRemoveItem('azadi_db_leadership');
+            this.seedDefaults();
+            const reseeded = this.safeGetItem('azadi_db_leadership');
+            return reseeded ? JSON.parse(reseeded) : [];
+          } else {
+            this.safeSetItem(key, JSON.stringify([]));
+            return [];
+          }
+        }
       }
       if (collName === 'config_settings' || collName === 'settings') return [DEFAULT_SETTINGS];
       if (collName === 'config_letterhead' || collName === 'letterhead') return [DEFAULT_LETTERHEAD];
@@ -114,7 +224,7 @@ class SimulatedDatabase {
   }
 
   private saveCollectionData(collName: string, data: any[]) {
-    localStorage.setItem(`azadi_db_${collName}`, JSON.stringify(data));
+    this.safeSetItem(`azadi_db_${collName}`, JSON.stringify(data));
     this.notifyCollectionListeners(collName, data);
   }
 
@@ -133,11 +243,23 @@ class SimulatedDatabase {
 
     // Initial triggers
     if (collName === 'config_settings') {
-      const raw = localStorage.getItem('azadi_db_config_settings');
-      callback(raw ? JSON.parse(raw) : DEFAULT_SETTINGS);
+      const raw = this.safeGetItem('azadi_db_config_settings');
+      let parsed = DEFAULT_SETTINGS;
+      try {
+        if (raw) parsed = JSON.parse(raw);
+      } catch {
+        parsed = DEFAULT_SETTINGS;
+      }
+      callback(parsed);
     } else if (collName === 'config_letterhead') {
-      const raw = localStorage.getItem('azadi_db_config_letterhead');
-      callback(raw ? JSON.parse(raw) : DEFAULT_LETTERHEAD);
+      const raw = this.safeGetItem('azadi_db_config_letterhead');
+      let parsed = DEFAULT_LETTERHEAD;
+      try {
+        if (raw) parsed = JSON.parse(raw);
+      } catch {
+        parsed = DEFAULT_LETTERHEAD;
+      }
+      callback(parsed);
     } else {
       callback(this.getCollection(collName));
     }
@@ -157,7 +279,7 @@ class SimulatedDatabase {
       
       if (collName === 'config') {
         const itemKey = `azadi_db_config_${id}`;
-        localStorage.setItem(itemKey, JSON.stringify(data));
+        this.safeSetItem(itemKey, JSON.stringify(data));
         this.notifyCollectionListeners(`config_${id}`, data);
         return { success: true };
       }

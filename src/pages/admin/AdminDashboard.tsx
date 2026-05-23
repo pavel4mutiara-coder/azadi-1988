@@ -286,6 +286,85 @@ export const AdminDashboard: React.FC = () => {
       <div className="mt-10">
         <StorageDiagnostics />
       </div>
+
+      {showCashForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div onClick={() => setShowCashForm(false)} className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity duration-300"></div>
+          
+          {/* Form Container */}
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-4xl border border-slate-100 dark:border-slate-800 p-8 shadow-heavy relative animate-in zoom-in-95 duration-200">
+            <button onClick={() => setShowCashForm(false)} className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
+              <X size={20} />
+            </button>
+            
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">
+              {lang === 'bn' ? 'নতুন নগদ অনুদান যুক্ত করুন' : 'Add Cash Donation'}
+            </h3>
+            
+            <form onSubmit={handleCashSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'দাতার নাম' : 'Donor Name'} <span className="text-slate-300 ml-1">({lang === 'bn' ? 'ফাঁকা রাখলে বেনামী হবে' : 'Leave empty for Anonymous'})</span>
+                </label>
+                <input 
+                  type="text"
+                  placeholder={lang === 'bn' ? 'উদা: মোঃ সায়মন...' : 'e.g., John Doe'}
+                  value={cashFormData.donorName}
+                  onChange={e => setCashFormData({ ...cashFormData, donorName: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-emerald-500 focus:ring-2 font-bold transition-all text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'পরিমাণ (টাকা) *' : 'Amount (BDT) *'}
+                </label>
+                <input 
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="5000"
+                  value={cashFormData.amount}
+                  onChange={e => setCashFormData({ ...cashFormData, amount: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-emerald-500 focus:ring-2 font-black transition-all text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'গ্রহণের খাত *' : 'Purpose *'}
+                </label>
+                <select 
+                  value={cashFormData.purpose}
+                  onChange={e => setCashFormData({ ...cashFormData, purpose: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-emerald-500 focus:ring-2 font-black transition-all text-sm text-slate-900 dark:text-slate-100"
+                >
+                  {t.categories.map((c: string) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setShowCashForm(false)}
+                  className="flex-1 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-xs uppercase py-4 rounded-2xl hover:bg-slate-100 cursor-pointer text-center border border-slate-200 dark:border-slate-700"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 bg-emerald-600 text-white font-black text-xs uppercase py-4 rounded-2xl hover:bg-emerald-700 active:scale-95 transition-all text-center"
+                >
+                  {lang === 'bn' ? 'যোগ করুন' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

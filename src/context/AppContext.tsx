@@ -343,8 +343,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sessionStorage.clear(); // Clear session storage
       document.cookie = "azadi_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       
-      // Force immediate redirect to home
-      window.location.href = '/';
+      // Force immediate redirect to home via Hash route and reload safely
+      window.location.hash = '#/';
+      window.location.reload();
     } catch (error) {
       console.error("Logout Error:", error);
     }
@@ -487,16 +488,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       exportBackup: () => {
         try {
+          const safeParse = (key: string, fallback: any) => {
+            try {
+              const val = localStorage.getItem(key);
+              return val ? JSON.parse(val) : fallback;
+            } catch {
+              return fallback;
+            }
+          };
+
           const backupData = {
             version: "1.0",
             timestamp: Date.now(),
-            settings: JSON.parse(localStorage.getItem('azadi_db_config_settings') || '{}'),
-            letterhead: JSON.parse(localStorage.getItem('azadi_db_config_letterhead') || '{}'),
-            leadership: JSON.parse(localStorage.getItem('azadi_db_leadership') || '[]'),
-            events: JSON.parse(localStorage.getItem('azadi_db_events') || '[]'),
-            donations: JSON.parse(localStorage.getItem('azadi_db_donations') || '[]'),
-            notices: JSON.parse(localStorage.getItem('azadi_db_notices') || '[]'),
-            news: JSON.parse(localStorage.getItem('azadi_db_news') || '[]'),
+            settings: safeParse('azadi_db_config_settings', {}),
+            letterhead: safeParse('azadi_db_config_letterhead', {}),
+            leadership: safeParse('azadi_db_leadership', []),
+            events: safeParse('azadi_db_events', []),
+            donations: safeParse('azadi_db_donations', []),
+            notices: safeParse('azadi_db_notices', []),
+            news: safeParse('azadi_db_news', []),
           };
           
           const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });

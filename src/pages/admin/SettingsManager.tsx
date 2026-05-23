@@ -50,12 +50,6 @@ export const SettingsManager: React.FC = () => {
     }
   };
 
-  const copyRules = () => {
-    navigator.clipboard.writeText(FIRESTORE_RULES);
-    setCopyStatus(true);
-    setTimeout(() => setCopyStatus(false), 2000);
-  };
-
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500 pb-20 bengali">
       {/* Header */}
