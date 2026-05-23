@@ -6,6 +6,8 @@
  */
 
 import { crashlyticsService } from './crashlyticsService';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { storage } from '../firebase';
 
 export interface UploadLog {
   id: string;
@@ -213,7 +215,7 @@ class UploadService {
     folder: string = 'uploads', 
     onProgress?: (progress: number) => void
   ): Promise<string> {
-    this.addLog('info', `UPLOAD_EXEC: Starting client-side storage pipeline in '/${folder}'...`, { filename: file.name });
+    this.addLog('info', `UPLOAD_EXEC: Starting Firebase Storage upload pipeline in '/${folder}'...`, { filename: file.name });
 
     try {
       await this.validateFile(file);
@@ -226,20 +228,29 @@ class UploadService {
         throw new Error(`Compressed file size exceeds the max threshold: ${(compressedBlob.size / 1024 / 1024).toFixed(1)}MB > 5MB`);
       }
 
-      this.addLog('info', 'Processing file data chunk...');
+      this.addLog('info', 'Uploading to Firebase Storage...');
       
-      if (onProgress) onProgress(20);
-      await new Promise(r => setTimeout(r, 200));
+      const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const fileRef = ref(storage, `${folder}/${uniqueName}`);
+      const uploadTask = uploadBytesResumable(fileRef, compressedBlob);
 
-      if (onProgress) onProgress(55);
-      const dataUrl = await this.blobToDataURL(compressedBlob);
-      await new Promise(r => setTimeout(r, 200));
-
-      if (onProgress) onProgress(85);
-      this.addLog('success', 'Local persistent Base64 created successfully!', { length: dataUrl.length });
-      
-      if (onProgress) onProgress(100);
-      return dataUrl;
+      return new Promise<string>((resolve, reject) => {
+        uploadTask.on('state_changed', 
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            if (onProgress) onProgress(progress);
+          }, 
+          (error) => {
+            this.addLog('error', 'Firebase Storage upload failed', error);
+            reject(error);
+          }, 
+          async () => {
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            this.addLog('success', 'Firebase Storage upload success!', { downloadUrl });
+            resolve(downloadUrl);
+          }
+        );
+      });
     } catch (error: any) {
       this.addLog('error', 'Upload process aborted', { message: error.message });
       throw error;
@@ -247,9 +258,15 @@ class UploadService {
   }
 
   async delete(url: string) {
-    if (!url || !url.startsWith('http')) return;
-    this.addLog('info', 'Simulating asset deletion...', { url: url.substring(0, 40) + '...' });
-    this.addLog('success', 'Asset successfully removed from index.');
+    if (!url || !url.startsWith('http') || !url.includes('firebasestorage')) return;
+    this.addLog('info', 'Executing Firebase Storage asset deletion...', { url: url.substring(0, 40) + '...' });
+    try {
+      const fileRef = ref(storage, url);
+      await deleteObject(fileRef);
+      this.addLog('success', 'Asset successfully deleted from Firebase Storage.');
+    } catch (err: any) {
+      this.addLog('error', 'Asset deletion failed', err);
+    }
   }
 }
 

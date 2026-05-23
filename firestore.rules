@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Catch-all safety filter
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable core validation primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'pavel4mutiara@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Donations
+    match /donations/{donationId} {
+      allow read: if true;
+      allow create: if (
+        incoming().donorName is string && incoming().donorName.size() <= 200 &&
+        incoming().amount is number && incoming().amount > 0 &&
+        incoming().phone is string && incoming().phone.size() <= 32 &&
+        incoming().transactionId is string && incoming().transactionId.size() <= 128 &&
+        incoming().purpose is string && incoming().purpose.size() <= 128 &&
+        incoming().paymentMethod is string && incoming().paymentMethod.size() <= 32 &&
+        (incoming().image == null || incoming().image == "" || (incoming().image is string && incoming().image.size() <= 2048)) &&
+        incoming().status == 'PENDING' &&
+        incoming().date is string && incoming().date.size() <= 64
+      );
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Leadership
+    match /leadership/{leaderId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Notices
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // News
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Configuration / settings
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admins registry
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow write: if false;
+    }
+  }
+}
