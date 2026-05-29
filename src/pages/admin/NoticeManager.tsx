@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { BellRing, Plus, Trash2, Edit2, Clock, AlertCircle } from 'lucide-react';
+import { BellRing, Plus, Trash2, Edit2, Clock } from 'lucide-react';
 import { Notice } from '../../types';
 
 export const NoticeManager: React.FC = () => {
@@ -20,8 +19,12 @@ export const NoticeManager: React.FC = () => {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    const noticeData: Notice = { ...formData, id: editingId || Date.now().toString() };
-    saveNotice(noticeData);
+    if (editingId) {
+      saveNotice({ ...formData, id: editingId } as Notice);
+    } else {
+      const newId = `notice_${Date.now()}`;
+      saveNotice({ ...formData, id: newId } as Notice);
+    }
     resetForm();
   };
 
@@ -56,7 +59,7 @@ export const NoticeManager: React.FC = () => {
             <BellRing className="text-amber-500" />
             {t.notices}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">{lang === 'bn' ? 'নোটিশ বোর্ড পরিচালনা করুন' : 'Manage Notice Board'}</p>
+          <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">{lang === 'bn' ? 'সংগঠনের নোটিশ বোর্ড তদারকি ও নতুন নোটিশ প্রকাশ করুন' : 'Oversee notice boards and publish active administrative notices'}</p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl active:scale-95">
           <Plus size={20} /> {lang === 'bn' ? 'নতুন নোটিশ' : 'New Notice'}
@@ -93,12 +96,12 @@ export const NoticeManager: React.FC = () => {
                 </div>
               </div>
               <textarea rows={4} placeholder="Content (EN)" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-medium" value={formData.contentEn} onChange={e => setFormData({...formData, contentEn: e.target.value})} />
-              <textarea rows={4} placeholder="বিস্তারিত (বাংলা)" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-medium" value={formData.contentBn} onChange={e => setFormData({...formData, contentBn: e.target.value})} />
+              <textarea rows={4} placeholder="বিস্তারিত (বাংলা)" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-4 rounded-xl font-medium" value={formData.contentBn} onChange={e => setFormData({...formData, contentBn: e.target.value})} />
             </div>
           </div>
           <div className="flex gap-4">
-            <button type="submit" className="flex-1 bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-emerald-700 transition-all">{editingId ? 'Update Notice' : 'Post Notice'}</button>
-            <button type="button" onClick={resetForm} className="px-10 bg-slate-100 text-slate-500 font-black py-4 rounded-xl">Cancel</button>
+            <button type="submit" className="flex-1 bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-emerald-700 transition-all">{editingId ? (lang === 'bn' ? 'নোটিশ আপডেট করুন' : 'Update Notice') : (lang === 'bn' ? 'নোটিশ পোস্ট করুন' : 'Post Notice')}</button>
+            <button type="button" onClick={resetForm} className="px-10 bg-slate-100 dark:bg-slate-850 text-slate-500 dark:text-slate-400 font-black py-4 rounded-xl">Cancel</button>
           </div>
         </form>
       )}
@@ -109,7 +112,7 @@ export const NoticeManager: React.FC = () => {
             <div className="flex-1 space-y-3 text-center md:text-left">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                 <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {new Date(notice.date).toLocaleDateString()}</span>
-                {notice.isUrgent && <span className="px-3 py-1 bg-red-500 text-white text-[9px] font-black uppercase rounded-full animate-pulse">Urgent</span>}
+                {notice.isUrgent && <span className="px-3 py-1 bg-red-500 text-white text-[9px] font-black uppercase rounded-full">Urgent</span>}
               </div>
               <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight bengali">{lang === 'bn' ? notice.titleBn : notice.titleEn}</h3>
               <p className="text-slate-500 dark:text-slate-400 font-bold text-sm line-clamp-2 bengali">{lang === 'bn' ? notice.contentBn : notice.contentEn}</p>

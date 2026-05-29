@@ -1,21 +1,14 @@
-
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation as DonationType } from '../types';
-import { Copy, CheckCircle, Heart, Phone, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send, X, PlusSquare, Loader2 } from 'lucide-react';
+import { Copy, CheckCircle, Heart, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send, X, Loader2 } from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
-import { useImageUpload } from '../hooks/useImageUpload';
-import { UploadDiagnosticPanel } from '../components/UploadDiagnosticPanel';
-import { Bug } from 'lucide-react';
 
 export const Donation: React.FC = () => {
   const { lang, settings, donations, addDonation } = useApp();
   const t = TRANSLATIONS[lang];
-  
-  const { upload, isUploading, progress: uploadProgress, error: uploadError, retry: retryUpload, hasLastAttempt } = useImageUpload();
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   
   const [formData, setFormData] = useState({ 
     donorName: '', 
@@ -24,14 +17,15 @@ export const Donation: React.FC = () => {
     phone: '', 
     email: '', 
     transactionId: '', 
-    purpose: t.categories[0],
+    purpose: t.categories?.[0] || 'General Donation',
     paymentMethod: 'Bkash',
-    image: '' // Added image URL
+    image: ''
   });
   
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [submittedDonation, setSubmittedDonation] = useState<DonationType | null>(null);
+  const [submittedDonation, setSubmittedDonation] = useState<Donation | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const approvedDonations = donations.filter(d => d.status === DonationStatus.APPROVED);
   const totalReceived = approvedDonations.reduce((acc, curr) => acc + curr.amount, 0);
@@ -43,8 +37,6 @@ export const Donation: React.FC = () => {
       errs.amount = lang === 'bn' ? 'পরিমাণ প্রদান করুন' : 'Amount is required';
     } else if (amountNum <= 0) {
       errs.amount = lang === 'bn' ? 'সঠিক পরিমাণ লিখুন' : 'Enter a valid amount';
-    } else if (amountNum < 10) {
-      errs.amount = lang === 'bn' ? 'ন্যূনতম ১০ টাকা' : 'Minimum 10 BDT';
     }
 
     const phoneRegex = /^01[3-9]\d{8}$/;
@@ -77,27 +69,38 @@ export const Donation: React.FC = () => {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const url = await upload(file, "donations");
-        setFormData(prev => ({ ...prev, image: url }));
-      } catch (error) {
-        console.error("Donation screenshot upload failed:", error);
-      }
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) {
       setTouched({ donorName: true, amount: true, phone: true, transactionId: true });
       return;
     }
 
-    const newDonation: any = {
-      donorName: formData.donorName,
+    if (isSubmitting) return;
+
+    // Direct Cooldown Check (anti-spam, 60 seconds cooldown)
+    const cooldownMs = 60 * 1000;
+    const lastSubStr = localStorage.getItem('last_donation_submit');
+    if (lastSubStr) {
+      const lastSub = Number(lastSubStr);
+      const diff = Date.now() - lastSub;
+      if (diff < cooldownMs) {
+        const secsLeft = Math.ceil((cooldownMs - diff) / 1000);
+        alert(lang === 'bn' 
+          ? `অনুগ্রহ করে নতুনভাবে ফরম জমা দেওয়ার পূর্বে ${secsLeft} সেকেন্ড অপেক্ষা করুন।` 
+          : `Please wait ${secsLeft} seconds before submitting again.`
+        );
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
+    const cleanTxId = formData.transactionId.trim().toUpperCase().replace(/[^A-Z0-9_\-]/g, '') || Date.now().toString();
+
+    const newDonation: Donation = {
+      id: cleanTxId,
+      donorName: formData.donorName || 'Anonymous Giver',
       isAnonymous: formData.isAnonymous,
       amount: Number(formData.amount),
       phone: formData.phone,
@@ -105,16 +108,21 @@ export const Donation: React.FC = () => {
       transactionId: formData.transactionId,
       purpose: formData.purpose,
       paymentMethod: formData.paymentMethod,
-      image: formData.image, // Include image URL
       date: new Date().toISOString(),
-      id: Date.now().toString(),
       status: DonationStatus.PENDING
     };
 
-    addDonation(newDonation);
-    setSubmittedDonation(newDonation);
-    setFormData({ donorName: '', isAnonymous: false, amount: '', phone: '', email: '', transactionId: '', purpose: t.categories[0], paymentMethod: 'Bkash' });
-    setTouched({});
+    try {
+      await addDonation(newDonation);
+      localStorage.setItem('last_donation_submit', Date.now().toString());
+      setSubmittedDonation(newDonation);
+      setFormData({ donorName: '', isAnonymous: false, amount: '', phone: '', email: '', transactionId: '', purpose: t.categories?.[0] || 'General Donation', paymentMethod: 'Bkash', image: '' });
+      setTouched({});
+    } catch (err) {
+      alert(lang === 'bn' ? 'অনুদান জমা দিতে সমস্যা হয়েছে।' : 'Error submitting donation to real-time sync.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const donationSteps = [
@@ -170,28 +178,46 @@ export const Donation: React.FC = () => {
     <div className="max-w-5xl mx-auto space-y-12 animate-in slide-in-from-bottom-2 duration-500 pb-20 bengali">
       
       {/* Arabic Calligraphy Header Section */}
-      <div className="relative overflow-hidden rounded-[3rem] bg-emerald-950 dark:bg-slate-900 p-10 md:p-16 flex flex-col items-center justify-center text-center shadow-2xl border border-emerald-800 dark:border-slate-800 transition-all group">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/arabic-bazazz.png')] group-hover:scale-110 transition-transform duration-1000"></div>
-        <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/20 dark:bg-emerald-500/5 blur-[100px] rounded-full"></div>
-        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-400/10 dark:bg-amber-500/5 blur-[100px] rounded-full"></div>
+      <div className="p-2 border border-emerald-500/20 rounded-[3.5rem] bg-gradient-to-r from-emerald-950 via-teal-950 to-emerald-950 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 shadow-2xl transition-all relative overflow-hidden group">
+        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/arabic-bazazz.png')] group-hover:scale-105 transition-transform duration-1000"></div>
+        <div className="absolute -top-32 -left-32 w-80 h-80 bg-emerald-500/20 dark:bg-emerald-500/5 blur-[120px] rounded-full"></div>
+        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-emerald-400/15 dark:bg-amber-500/5 blur-[120px] rounded-full"></div>
         
-        <div className="relative z-10 space-y-8 w-full">
-          <div className="mb-2 transform transition-transform duration-700">
-            <div className="text-4xl md:text-7xl text-emerald-300 font-serif italic tracking-wide drop-shadow-[0_0_15px_rgba(110,231,183,0.3)] select-none pointer-events-none">
-               وَمَا تُنْفِقُوا مِنْ خَيْرٍ فَلِأَنْفُسِكُمْ
-            </div>
-          </div>
+        <div className="border border-dashed border-emerald-500/25 dark:border-emerald-500/15 rounded-[3.25rem] p-8 md:p-14 flex flex-col items-center justify-center text-center relative z-10 space-y-8 w-full">
           
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent rounded-full"></div>
-            <div className="space-y-3 max-w-2xl px-4">
+          {/* Traditional Decorative Motif / Corners */}
+          <div className="absolute top-4 left-4 w-6 h-6 border-t border-l border-emerald-400/40 rounded-tl-xl"></div>
+          <div className="absolute top-4 right-4 w-6 h-6 border-t border-r border-emerald-400/40 rounded-tr-xl"></div>
+          <div className="absolute bottom-4 left-4 w-6 h-6 border-b border-l border-emerald-400/40 rounded-bl-xl"></div>
+          <div className="absolute bottom-4 right-4 w-6 h-6 border-b border-r border-emerald-400/40 rounded-br-xl"></div>
+          
+          <div className="space-y-6 w-full">
+            {/* Arabic Calligraphy Verse */}
+            <div className="transform transition-transform duration-700 hover:scale-[1.02]">
+              <div 
+                dir="rtl" 
+                className="text-4xl sm:text-5xl md:text-7xl text-emerald-300 font-arabic-amiri tracking-wide select-none leading-relaxed drop-shadow-[0_2px_15px_rgba(52,211,153,0.45)]"
+              >
+                وَمَا تُنْفِقُوا مِنْ خَيْرٍ فَلِأَنْفُسِكُمْ
+              </div>
+            </div>
+            
+            {/* Elegant Divider */}
+            <div className="flex items-center justify-center gap-4">
+              <span className="w-16 h-px bg-gradient-to-r from-transparent to-emerald-400/30"></span>
+              <div className="w-1.5 h-1.5 bg-emerald-400 rotate-45"></div>
+              <span className="w-16 h-px bg-gradient-to-l from-transparent to-emerald-400/30"></span>
+            </div>
+
+            {/* Translation & Citation */}
+            <div className="space-y-4 max-w-2xl mx-auto px-4">
               <p className="text-emerald-50 dark:text-emerald-100/90 text-lg md:text-xl font-medium leading-relaxed bengali" style={{ fontFamily: '"Noto Sans Bengali", sans-serif', letterSpacing: 'normal' }}>
                 {lang === 'bn' 
                   ? '“তোমরা যে উত্তম বস্তু ব্যয় করো, তা তোমাদের নিজেদের কল্যাণের জন্যই”'
                   : '“Whatever good you spend is for your own souls”'}
               </p>
-              <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-emerald-400/60 bengali">
-                — {lang === 'bn' ? 'সূরা আল-বাকারা: ২৭২' : 'Surah Al-Baqarah: 272'}
+              <div className="inline-block py-1 px-4 rounded-full bg-emerald-950/50 dark:bg-slate-900 border border-emerald-500/20 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-emerald-400/80 bengali">
+                {lang === 'bn' ? '— সূরা আল-বাকারা: ২৭২' : '— Surah Al-Baqarah: 272'}
               </div>
             </div>
           </div>
@@ -269,7 +295,7 @@ export const Donation: React.FC = () => {
         <form onSubmit={handleSubmit} className="md:col-span-7 bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
           
-            <div className="flex justify-between items-center border-b border-emerald-100 dark:border-slate-800 pb-8 relative z-10">
+          <div className="flex justify-between items-center border-b border-emerald-100 dark:border-slate-800 pb-8 relative z-10">
             <h3 className="text-2xl font-black text-emerald-900 dark:text-white flex items-center gap-3">
               <Wallet className="text-emerald-600 dark:text-emerald-400" />
               {lang === 'bn' ? 'অণুদান ফরম' : 'Donation Form'}
@@ -369,82 +395,22 @@ export const Donation: React.FC = () => {
             <div className="space-y-3">
               <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.purpose}</label>
               <select className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
-                {t.categories.map((c: string) => <option key={c} value={c} className="font-bold py-3 bg-white dark:bg-slate-900">{c}</option>)}
+                {t.categories?.map((c: string) => <option key={c} value={c} className="font-bold py-3 bg-white dark:bg-slate-900">{c}</option>)}
               </select>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">
-                {lang === 'bn' ? 'পেমেন্ট স্ক্রিনশট (ঐচ্ছিক)' : 'Payment Screenshot (Optional)'}
-              </label>
-              <div className="relative group">
-                <div className={`w-full ${uploadError ? 'h-56' : 'h-40'} rounded-2xl border-2 border-dashed ${formData.image ? 'border-emerald-500' : uploadError ? 'border-amber-500' : 'border-slate-200 dark:border-slate-800'} bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center transition-all overflow-hidden relative`}>
-                  {isUploading ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="relative flex items-center justify-center">
-                        <Loader2 className="text-emerald-500 animate-spin" size={32} />
-                        <span className="absolute text-[8px] font-black text-emerald-600">{uploadProgress}%</span>
-                      </div>
-                      <div className="w-24 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                      </div>
-                      {uploadError && <p className="text-[9px] font-bold text-amber-600 px-4 text-center">{uploadError}</p>}
-                    </div>
-                  ) : uploadError ? (
-                    <div className="flex flex-col items-center gap-3 p-4">
-                      <AlertCircle className="text-amber-500" size={32} />
-                      <p className="text-[10px] font-bold text-amber-600 text-center uppercase tracking-wider">{uploadError}</p>
-                      <div className="flex gap-2">
-                        <button 
-                          type="button" 
-                          onClick={() => retryUpload()} 
-                          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-[10px] font-black rounded-lg hover:bg-amber-600 transition-all active:scale-95 z-30 shadow-lg shadow-amber-500/20"
-                        >
-                          <PlusSquare size={14} />
-                          {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'RETRY'}
-                        </button>
-                        <button 
-                          type="button" 
-                          onClick={() => setShowDiagnostics(true)} 
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-[10px] font-black rounded-lg hover:bg-slate-900 transition-all active:scale-95 z-30"
-                        >
-                          <Bug size={14} />
-                          DIAGNOSE
-                        </button>
-                      </div>
-                    </div>
-                  ) : formData.image ? (
-                    <img src={formData.image} className="w-full h-full object-contain p-2" alt="Screenshot" />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 opacity-40">
-                      <PlusSquare size={32} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">{lang === 'bn' ? 'স্ক্রিনশট যোগ করুন' : 'Add Screenshot'}</span>
-                    </div>
-                  )}
-                  <label className="absolute inset-0 cursor-pointer focus-within:ring-2 ring-emerald-500 ring-offset-2">
-                    <input type="file" className="sr-only" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
-                  </label>
-                </div>
-                {formData.image && !isUploading && (
-                  <button 
-                    type="button" 
-                    onClick={() => setFormData(prev => ({...prev, image: ''}))}
-                    className="absolute -top-2 -right-2 w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-rose-600 transition-all active:scale-90 z-20"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
             </div>
           </div>
 
           <button 
-              type="submit" 
-              disabled={(!isValid && Object.keys(touched).length > 0) || isUploading}
-            className={`w-full ${!isValid && Object.keys(touched).length > 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 hover:-translate-y-1 active:scale-95'} text-white font-black py-6 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-3 text-xl ring-4 ring-emerald-500/10 group`}
+            type="submit" 
+            disabled={isSubmitting}
+            className={`w-full bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 hover:-translate-y-1 active:scale-95 text-white font-black py-6 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-3 text-xl ring-4 ring-emerald-500/10 group ${isSubmitting ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
           >
-            <Heart size={26} className="group-hover:scale-110 transition-transform" />
-            {t.submit}
+            {isSubmitting ? (
+              <Loader2 className="animate-spin text-white animate-infinite" size={26} />
+            ) : (
+              <Heart size={26} className="group-hover:scale-110 transition-transform" />
+            )}
+            {isSubmitting ? (lang === 'bn' ? 'প্রক্রিয়াধীন...' : 'Processing...') : t.submit}
           </button>
         </form>
 
@@ -500,7 +466,6 @@ export const Donation: React.FC = () => {
           </div>
         </div>
       </div>
-      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };

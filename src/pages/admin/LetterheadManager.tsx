@@ -1,12 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { FileText, Printer, Save, Edit3, MapPin, Phone, Mail, Upload, Eraser, PenTool, Check, Download, Globe, Loader2, Bug } from 'lucide-react';
-import { useImageUpload } from '../../hooks/useImageUpload';
-import { UploadDiagnosticPanel } from '../../components/UploadDiagnosticPanel';
-
-declare var html2pdf: any;
+import { FileText, Printer, Save, Edit3, PenTool, Check, Eraser, Download, Video } from 'lucide-react';
 
 export const LetterheadManager: React.FC = () => {
   const { lang, settings, letterhead, saveLetterhead } = useApp();
@@ -16,27 +11,13 @@ export const LetterheadManager: React.FC = () => {
   const [today, setToday] = useState('');
   const [isDrawing, setIsDrawing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   
-  const { upload, isUploading, progress: uploadProgress, error: uploadError } = useImageUpload();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const letterheadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString(viewMode === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
   }, [viewMode]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const url = await upload(file, "signatures");
-        setLocalConfig(prev => ({ ...prev, signature: url }));
-      } catch (error) {
-        console.error("Signature upload failed:", error);
-      }
-    }
-  };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => { setIsDrawing(true); draw(e); };
   const stopDrawing = () => { setIsDrawing(false); if (canvasRef.current) canvasRef.current.getContext('2d')?.beginPath(); };
@@ -52,42 +33,36 @@ export const LetterheadManager: React.FC = () => {
   };
 
   const clearCanvas = () => canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-  const saveSignatureFromCanvas = async () => {
+  const saveSignatureFromCanvas = () => {
     if (canvasRef.current) {
-      try {
-        const blob = await new Promise<Blob>((resolve) => {
-          canvasRef.current!.toBlob(b => resolve(b!), 'image/png');
-        });
-        const file = new File([blob], "signature.png", { type: "image/png" });
-        const url = await upload(file, "signatures");
-        setLocalConfig({ ...localConfig, signature: url });
-        alert(lang === 'bn' ? 'স্বাক্ষর সেভ হয়েছে!' : 'Signature captured and uploaded!');
-      } catch (error) {
-        alert("Failed to save signature.");
-      }
+      const dataUrl = canvasRef.current.toDataURL();
+      setLocalConfig({ ...localConfig, signature: dataUrl });
+      alert(lang === 'bn' ? 'স্বাক্ষর ক্যাপচার করা হয়েছে!' : 'Signature captured successfully!');
     }
   };
 
-  const handleSave = () => { saveLetterhead(localConfig); alert(lang === 'bn' ? 'লেটারহেড সংরক্ষিত হয়েছে!' : 'Letterhead saved!'); };
-
-  const handleDownloadPDF = async () => {
-    if (!letterheadRef.current) return;
-    setIsGeneratingPdf(true);
+  const handleSave = async () => { 
     try {
+      await saveLetterhead(localConfig); 
+      alert(lang === 'bn' ? 'প্যাড সেটিংস সফলভাবে সেভ করা হয়েছে!' : 'Letterhead configuration successfully saved to Firestore!');
+    } catch(e) {
+      alert(lang === 'bn' ? 'সেভ করতে ব্যর্থ হয়েছে।' : 'Failed to save letterhead config.');
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (typeof html2pdf !== 'undefined') {
       const element = letterheadRef.current;
       const opt = {
         margin: 0,
-        filename: `Azadi_Letterhead_${viewMode}.pdf`,
+        filename: `official_pad_${Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      await html2pdf().set(opt).from(element).save();
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-      alert('Failed to generate PDF. Please try again.');
-    } finally {
-      setIsGeneratingPdf(false);
+      html2pdf().from(element).set(opt).save();
+    } else {
+      window.print();
     }
   };
 
@@ -114,8 +89,8 @@ export const LetterheadManager: React.FC = () => {
           </h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleSave} className="flex-1 md:flex-none bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg"><Save size={16} /> Save</button>
-          <button onClick={handleDownloadPDF} disabled={isGeneratingPdf} className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg"><Download size={16} /> PDF</button>
+          <button onClick={handleSave} className="flex-1 md:flex-none bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg"><Save size={16} /> {lang === 'bn' ? 'সেভ করুন' : 'Save Config'}</button>
+          <button onClick={handleDownloadPDF} className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg"><Download size={16} /> {lang === 'bn' ? 'PDF ডাউনলোড' : 'Download PDF'}</button>
           <button onClick={handlePrint} className="flex-1 md:flex-none bg-slate-900 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg"><Printer size={16} /> Print</button>
         </div>
       </div>
@@ -132,43 +107,14 @@ export const LetterheadManager: React.FC = () => {
           </div>
           
           <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-md space-y-4">
-            <h3 className="text-sm font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase"><PenTool size={18} className="text-emerald-500" /> Signature</h3>
+            <h3 className="text-sm font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase"><PenTool size={18} className="text-emerald-500" /> Draw Signature</h3>
             
-            {localConfig.signature && (
-              <div className="relative group w-full h-20 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center p-2 mb-2">
-                 <img src={localConfig.signature} className="h-full object-contain" alt="Signature" />
-                 <button onClick={() => setLocalConfig({...localConfig, signature: ''})} className="absolute top-1 right-1 p-1 bg-rose-100 text-rose-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"><Eraser size={12} /></button>
-              </div>
-            )}
-
             <div className="relative bg-white border border-slate-200 rounded-xl h-32 md:h-40 overflow-hidden">
-              {isUploading ? (
-                <div className="absolute inset-0 z-20 bg-white/90 dark:bg-slate-950/90 flex flex-col items-center justify-center gap-3">
-                   <Loader2 className="animate-spin text-emerald-500" size={32} />
-                   <div className="w-24 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                   </div>
-                </div>
-              ) : uploadError ? (
-                <div className="absolute inset-0 z-20 bg-amber-50 dark:bg-amber-950/20 flex flex-col items-center justify-center gap-2 p-4 text-center">
-                   <Bug className="text-amber-500" size={24} />
-                   <button onClick={() => setShowDiagnostics(true)} className="text-[10px] font-black text-amber-600 underline uppercase tracking-widest">DIAGNOSE</button>
-                </div>
-              ) : (
-                <canvas ref={canvasRef} width={400} height={160} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair touch-none" />
-              )}
+              <canvas ref={canvasRef} width={400} height={160} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair touch-none" />
               <div className="absolute top-1 right-1 flex gap-1 no-print">
-                <button onClick={clearCanvas} disabled={isUploading} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100"><Eraser size={12} /></button>
-                <button onClick={saveSignatureFromCanvas} disabled={isUploading} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100"><Check size={12} /></button>
+                <button onClick={clearCanvas} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100"><Eraser size={12} /></button>
+                <button onClick={saveSignatureFromCanvas} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100"><Check size={12} /></button>
               </div>
-            </div>
-            
-            <div className="pt-2 no-print">
-              <label className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-100 transition-colors">
-                {isUploading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
-                {lang === 'bn' ? 'স্বাক্ষর আপলোড করুন' : 'Upload Signature'}
-                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
-              </label>
             </div>
           </div>
         </div>
@@ -188,7 +134,7 @@ export const LetterheadManager: React.FC = () => {
                 fontFamily: '"Noto Sans Bengali", sans-serif'
               }}
             >
-              {/* Pad content (already correctly styled from previous versions) */}
+              {/* Pad content */}
               <div className="text-center mb-4">
                 <div className="inline-block px-10 py-1.5 border-b border-emerald-950/10 text-[13px] text-emerald-950 uppercase" style={{ ...BENGALI_STYLE }}>
                   {viewMode === 'bn' ? settings.sloganBn : settings.sloganEn}
@@ -211,7 +157,7 @@ export const LetterheadManager: React.FC = () => {
               </div>
 
               <div className="flex-1 px-4 text-[14px] leading-relaxed" style={{ ...BENGALI_STYLE, fontWeight: 500 }}>
-                {localConfig.bodyText || 'পত্রের মূল বিষয়বস্তু এখানে প্রদর্শিত হবে...'}
+                {localConfig.bodyText || (viewMode === 'bn' ? 'পত্রের মূল বিষয়বস্তু এখানে প্রদর্শিত হবে...' : 'The official letter content layout will be rendered here...')}
               </div>
 
               <div className="pt-6 border-t border-emerald-900/5 mt-4 flex justify-between items-end">
@@ -229,7 +175,6 @@ export const LetterheadManager: React.FC = () => {
           </p>
         </div>
       </div>
-      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };

@@ -2,79 +2,97 @@
   "entities": {
     "Donation": {
       "title": "Donation",
-      "description": "Records of donations made by users",
+      "description": "Information about a donation made by a user",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "donorName": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
         "amount": { "type": "number" },
         "phone": { "type": "string" },
+        "email": { "type": "string" },
         "transactionId": { "type": "string" },
         "purpose": { "type": "string" },
-        "paymentMethod": { "type": "string" },
-        "image": { "type": "string" },
         "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
-        "date": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "number" }
-      }
+        "date": { "type": "string" },
+        "paymentMethod": { "type": "string" }
+      },
+      "required": ["id", "donorName", "isAnonymous", "amount", "phone", "transactionId", "purpose", "status", "date", "paymentMethod"]
     },
     "Leadership": {
       "title": "Leadership",
-      "description": "Staff or committee members",
+      "description": "Committee members and organization leadership info",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "nameBn": { "type": "string" },
         "nameEn": { "type": "string" },
-        "designationBn": { "type": "string" },
+        "nameBn": { "type": "string" },
         "designationEn": { "type": "string" },
+        "designationBn": { "type": "string" },
+        "subDesignationEn": { "type": "string" },
+        "subDesignationBn": { "type": "string" },
+        "category": { "type": "string", "enum": ["leader", "executive", "advisor", "volunteer", "member"] },
+        "messageEn": { "type": "string" },
+        "messageBn": { "type": "string" },
+        "phone": { "type": "string" },
         "image": { "type": "string" },
         "order": { "type": "number" },
-        "updatedAt": { "type": "number" }
-      }
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "nameEn", "nameBn", "designationEn", "designationBn", "messageEn", "messageBn", "phone", "image", "order"]
     },
     "Event": {
       "title": "Event",
-      "description": "Organization events",
+      "description": "Official events hosted by the organization",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "titleBn": { "type": "string" },
         "titleEn": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "descriptionBn": { "type": "string" },
+        "locationEn": { "type": "string" },
+        "locationBn": { "type": "string" },
         "date": { "type": "string" },
         "image": { "type": "string" },
-        "updatedAt": { "type": "number" }
-      }
+        "meetUrl": { "type": "string" }
+      },
+      "required": ["id", "titleEn", "titleBn", "descriptionEn", "descriptionBn", "locationEn", "locationBn", "date", "image"]
     },
     "Notice": {
       "title": "Notice",
-      "description": "Official notices",
+      "description": "Important announcements/notices published by the admin",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "titleBn": { "type": "string" },
         "titleEn": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "contentEn": { "type": "string" },
+        "contentBn": { "type": "string" },
         "date": { "type": "string" },
-        "isUrgent": { "type": "boolean" },
-        "updatedAt": { "type": "number" }
-      }
+        "isUrgent": { "type": "boolean" }
+      },
+      "required": ["id", "titleEn", "titleBn", "contentEn", "contentBn", "date", "isUrgent"]
     },
     "News": {
       "title": "News",
-      "description": "Organization news updates",
+      "description": "Latest stories or articles about the organization activities",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "titleBn": { "type": "string" },
         "titleEn": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "contentEn": { "type": "string" },
+        "contentBn": { "type": "string" },
         "date": { "type": "string" },
-        "image": { "type": "string" },
-        "updatedAt": { "type": "number" }
-      }
+        "image": { "type": "string" }
+      },
+      "required": ["id", "titleEn", "titleBn", "contentEn", "contentBn", "date", "image"]
     },
-    "Settings": {
-      "title": "Settings",
-      "description": "Organization configuration",
+    "OrganizationSettings": {
+      "title": "OrganizationSettings",
+      "description": "General profile settings for the organization",
       "type": "object",
       "properties": {
         "nameBn": { "type": "string" },
@@ -95,18 +113,94 @@
         "roket": { "type": "string" },
         "facebook": { "type": "string" },
         "youtube": { "type": "string" },
-        "whatsappChannel": { "type": "string" },
-        "updatedAt": { "type": "number" }
-      }
+        "whatsappChannel": { "type": "string" }
+      },
+      "required": ["nameBn", "nameEn", "sloganBn", "sloganEn", "addressBn", "addressEn", "phone", "email", "establishedBn", "establishedEn", "logo", "flag"]
+    },
+    "LetterheadConfig": {
+      "title": "LetterheadConfig",
+      "description": "Signatory letterhead setup",
+      "type": "object",
+      "properties": {
+        "leaderName": { "type": "string" },
+        "designation": { "type": "string" },
+        "signature": { "type": "string" },
+        "stampText": { "type": "string" },
+        "bodyText": { "type": "string" }
+      },
+      "required": ["leaderName", "designation", "signature", "stampText", "bodyText"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "User shared testimonial or story",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "nameBn": { "type": "string" },
+        "roleEn": { "type": "string" },
+        "roleBn": { "type": "string" },
+        "locationEn": { "type": "string" },
+        "locationBn": { "type": "string" },
+        "quoteEn": { "type": "string" },
+        "quoteBn": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED"] }
+      },
+      "required": ["id", "nameEn", "quoteEn", "image", "createdAt", "status"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Financial ledger expense items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "descriptionBn": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "amount", "category", "descriptionEn", "descriptionBn", "date"]
     }
   },
   "firestore": {
-    "donations": { "schema": "Donation", "description": "Collection of all donations" },
-    "leadership": { "schema": "Leadership", "description": "Collection of leadership team members" },
-    "events": { "schema": "Event", "description": "Collection of organization events" },
-    "notices": { "schema": "Notice", "description": "Collection of official notices" },
-    "news": { "schema": "News", "description": "Collection of news updates" },
-    "config/settings": { "schema": "Settings", "description": "Global organization settings" },
-    "config/letterhead": { "schema": "object", "description": "Letterhead configuration" }
+    "settings/config": {
+      "schema": { "$ref": "#/entities/OrganizationSettings" },
+      "description": "Single document holding the general system-wide Settings"
+    },
+    "settings/letterhead": {
+      "schema": { "$ref": "#/entities/LetterheadConfig" },
+      "description": "Single document holding the Letterhead Configurations"
+    },
+    "donations/{donationId}": {
+      "schema": { "$ref": "#/entities/Donation" },
+      "description": "Collections of donations"
+    },
+    "leadership/{leaderId}": {
+      "schema": { "$ref": "#/entities/Leadership" },
+      "description": "Collections of leaders"
+    },
+    "events/{eventId}": {
+      "schema": { "$ref": "#/entities/Event" },
+      "description": "Collections of organization events"
+    },
+    "notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/Notice" },
+      "description": "Collection of official notices"
+    },
+    "news/{newsId}": {
+      "schema": { "$ref": "#/entities/News" },
+      "description": "Collection of news reports"
+    },
+    "testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/Testimonial" },
+      "description": "Collection of user testimonials"
+    },
+    "expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "Collection of financial expense items"
+    }
   }
 }

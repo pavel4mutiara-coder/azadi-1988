@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Donation, OrganizationSettings, DonationStatus } from '../../types';
 import { Heart, Printer, ArrowLeft, Download, MessageCircle, Shield, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText } from 'lucide-react';
 import { ISLAMIC_QUOTES } from '../../utils/constants';
+import { useApp } from '../../context/AppContext';
 
 declare var html2pdf: any;
 
@@ -11,101 +12,125 @@ interface Props {
   settings: OrganizationSettings;
   onBack: () => void;
   isPublic?: boolean;
+  autoDownload?: boolean;
+  onDownloadDone?: () => void;
 }
 
-export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPublic = false }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [base64Logo, setBase64Logo] = useState<string | null>(null);
+export const ReceiptView: React.FC<Props> = ({ 
+  donation, 
+  settings, 
+  onBack, 
+  isPublic = false,
+  autoDownload = false,
+  onDownloadDone
+}) => {
+  const { letterhead, lang } = useApp();
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const selectedQuote = useMemo(() => {
     return ISLAMIC_QUOTES[parseInt(donation.id.slice(-2), 16) % ISLAMIC_QUOTES.length] || ISLAMIC_QUOTES[0];
   }, [donation.id]);
 
-  const signatoryConfig = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('azadi_db_config_letterhead');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
+  const signatoryConfig = letterhead;
+  const base64Logo = settings.logo;
+
+  const handleDownload = () => {
+    if (typeof html2pdf !== 'undefined') {
+      const element = receiptRef.current;
+      const opt = {
+        margin: 0,
+        filename: `receipt_REC-${donation.id.slice(-8)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().from(element).set(opt).save();
+    } else {
+      window.print();
     }
-  }, []);
+  };
 
   useEffect(() => {
-    const convertToBase64 = async () => {
-      try {
-        const response = await fetch(settings.logo);
-        const blob = await response.blob();
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      } catch (err) {
-        return settings.logo;
-      }
-    };
-    convertToBase64().then(res => setBase64Logo(res));
-  }, [settings.logo]);
-
-  const generatePdfBlob = async (): Promise<Blob | null> => {
-    if (!receiptRef.current) return null;
-    const opt = {
-      margin: 0,
-      filename: `Azadi_Receipt_${donation.transactionId}.pdf`,
-      image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: { 
-        scale: 4, 
-        useCORS: true, 
-        letterRendering: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        y: 0,
-        scrollY: 0,
-        windowWidth: 794, // 210mm at 96dpi
-        windowHeight: 1123 // 297mm at 96dpi
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: 'avoid-all' }
-    };
-    try {
-      return await html2pdf().set(opt).from(receiptRef.current).output('blob');
-    } catch (err) {
-      console.error("PDF generation failed:", err);
-      return null;
+    if (autoDownload) {
+      const timer = setTimeout(() => {
+        handleDownload();
+        if (onDownloadDone) {
+          onDownloadDone();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [autoDownload, donation]);
 
-  const handleDownload = async () => {
-    if (!receiptRef.current) return;
-    setIsGenerating(true);
-    try {
-      const blob = await generatePdfBlob();
-      if (!blob) throw new Error("Could not generate blob");
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Azadi_Receipt_${donation.transactionId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error(err);
-      alert('PDF তৈরিতে সমস্যা হয়েছে।');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleWhatsAppShare = () => {
-    const text = `আসসালামু আলাইকুম,\n\n*দাতার নাম:* ${donation.isAnonymous ? 'নাম প্রকাশে অনিচ্ছুক' : donation.donorName}\n*পরিমাণ:* ৳${donation.amount}\n*ট্রানজেকশন আইডি:* ${donation.transactionId}\n\nধন্যবাদান্তে,\nআজাদী সমাজ কল্যাণ সংঘ।`;
-    const url = `https://wa.me/${settings.adminWhatsApp}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 md:p-8 pb-24 bengali">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 md:p-8 pb-24 bengali print-receipt-wrapper">
+      <style>{`
+        @media print {
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          #root, .app-container, #app-layout-root {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+          }
+          header, footer, nav, .no-print, .no-print * {
+            display: none !important;
+            height: 0 !important;
+            overflow: hidden !important;
+          }
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+          }
+          .print-receipt-wrapper {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            min-height: 0 !important;
+          }
+          .print-receipt-wrapper .max-w-4xl {
+            max-width: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-receipt-wrapper .overflow-x-auto {
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            justify-content: center !important;
+          }
+          .print-receipt-wrapper div[ref] {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+          }
+        }
+      `}</style>
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Action Bar */}
@@ -116,14 +141,16 @@ export const ReceiptView: React.FC<Props> = ({ donation, settings, onBack, isPub
           <div className="flex gap-2">
             <button 
               onClick={handleDownload} 
-              disabled={isGenerating || !base64Logo} 
-              className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase disabled:opacity-50"
+              className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase"
             >
-              {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
-              PDF ডাউনলোড
+              <Download size={14} /> 
+              {lang === 'bn' ? 'PDF ডাউনলোড' : 'PDF Download'}
             </button>
-            <button onClick={() => window.print()} className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-black transition-all uppercase">
-              <Printer size={14} /> প্রিন্ট
+            <button 
+              onClick={handlePrint} 
+              className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-black transition-all uppercase"
+            >
+              <Printer size={14} /> {lang === 'bn' ? 'প্রিন্ট রশিদ' : 'Print Receipt'}
             </button>
           </div>
         </div>

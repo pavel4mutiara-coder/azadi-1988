@@ -1,52 +1,73 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { 
-  Settings, Save, Globe, Mail, Upload, CheckCircle, 
+  Settings, Save, Globe, Mail, CheckCircle, 
   Facebook, Youtube, MessageCircle, RefreshCcw, 
   Image as ImageIcon, ExternalLink, Info, Database, 
-  Loader2, Shield, Copy, AlertCircle, Trash2, LogOut,
-  Moon, Sun
+  Shield, Copy, AlertCircle, Trash2, LogOut, Moon, Sun
 } from 'lucide-react';
-import { useImageUpload } from '../../hooks/useImageUpload';
-import { UploadDiagnosticPanel } from '../../components/UploadDiagnosticPanel';
-import { Bug } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
-  const { lang, theme, setTheme, settings, saveSettings, restoreFromLegacy, logout, resetAllData, exportBackup, importBackup } = useApp();
+  const { lang, theme, setTheme, settings, saveSettings, restoreFromLegacy, resetAllData, user } = useApp();
   const t = TRANSLATIONS[lang];
   const [localSettings, setLocalSettings] = useState(settings);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
-  
-  const { upload, isUploading, progress: uploadProgress, error: uploadError } = useImageUpload();
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  React.useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+
+  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
+  const isSuperAdmin = user?.email === superAdminEmail;
+
+  const handleSave = async () => {
+    try {
+      await saveSettings(localSettings);
+      alert(lang === 'bn' ? 'সেটিংস সফলভাবে সেভ করা হয়েছে!' : 'Settings successfully saved to Firestore!');
+    } catch (e) {
+      alert(lang === 'bn' ? 'সেভ করতে ব্যর্থ হয়েছে।' : 'Failed to save settings.');
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!isSuperAdmin) {
+      alert(lang === 'bn' ? 'অ্যাক্সেস অস্বীকার করা হয়েছে: শুধুমাত্র প্রধান ডেভেলপার এই কাজটি করতে পারবেন।' : 'Access Denied: Only the primary developer is permitted to seed default template data.');
+      return;
+    }
+
+    const input = window.prompt(lang === 'bn' ? 'ডাটা রিস্টোর করতে অনুগ্রহ করে ফায়ারবেস ইমেইল টাইপ করুন:' : 'Please type your developer email to confirm data restore:');
+    if (input !== superAdminEmail) {
+      alert(lang === 'bn' ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Authorization failed.');
+      return;
+    }
+
+    if (window.confirm(lang === 'bn' ? 'আপনি কি পূর্ববর্তী ডেমো ডেটা রিস্টোর করতে চান?' : 'Are you sure you want to restore the default database data?')) {
       try {
-        const url = await upload(file, "settings");
-        setLocalSettings(prev => ({ ...prev, logo: url }));
-      } catch (error) {
-        console.error("Logo upload failed:", error);
+        await restoreFromLegacy();
+        alert(lang === 'bn' ? 'সফলভাবে ডাটাবেজ ডেমো ডাটা রিস্টোর হয়েছে!' : 'Default template database successfully re-seeded!');
+      } catch (e) {
+        alert(lang === 'bn' ? 'রিস্টোর করতে ব্যর্থ হয়েছে।' : 'Restore failed.');
       }
     }
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    await saveSettings(localSettings);
-    setIsSaving(false);
-    alert(lang === 'bn' ? 'সেটিংস সংরক্ষিত হয়েছে!' : 'Settings updated successfully!');
-  };
+  const handleWipe = async () => {
+    if (!isSuperAdmin) {
+      alert(lang === 'bn' ? 'অ্যাক্সেস অস্বীকার করা হয়েছে: শুধুমাত্র প্রধান ডেভেলপার ডাটাবেজ খালি করতে পারবেন।' : 'Access Denied: Only the primary developer is permitted to wipe the database.');
+      return;
+    }
 
-  const handleRestore = async () => {
-    if (window.confirm(lang === 'bn' ? 'আপনি কি পুরনো ডাটাবেজ থেকে সব ডাটা রিস্টোর করতে চান?' : 'Do you want to restore all data from the legacy database?')) {
-      setIsRestoring(true);
-      await restoreFromLegacy();
-      setIsRestoring(false);
+    const input = window.prompt(lang === 'bn' ? 'ডাটাবেজ সম্পুর্ণ মুছে ফেলতে অনুগ্রহ করে "WIPE DATABASE" টাইপ করুন:' : 'Please type "WIPE DATABASE" in all caps to confirm database wipe:');
+    if (input !== 'WIPE DATABASE') {
+      alert(lang === 'bn' ? 'মুছে ফেলার কাজ বাতিল করা হয়েছে।' : 'Wipe operation cancelled.');
+      return;
+    }
+
+    try {
+      await resetAllData();
+      alert(lang === 'bn' ? 'ডাটাবেজ সফলভাবে খালি করা হয়েছে।' : 'Database successfully wiped clean.');
+    } catch (e) {
+      alert(lang === 'bn' ? 'রিসেট করতে ব্যর্থ হয়েছে।' : 'Reset failed.');
     }
   };
 
@@ -59,14 +80,13 @@ export const SettingsManager: React.FC = () => {
             <Settings className="text-emerald-500" />
             {t.settings}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">Configure organization identity and cloud sync</p>
+          <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">{lang === 'bn' ? 'সংগঠনের মূল তথ্য এবং প্রোফাইল পরিচিতি কনফিগার করুন' : 'Configure organizational identity info and profiles'}</p>
         </div>
         <button 
           onClick={handleSave} 
-          disabled={isSaving}
-          className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50"
+          className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl hover:bg-emerald-700 active:scale-95 transition-all"
         >
-          {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+          <Save size={20} />
           {lang === 'bn' ? 'সেভ করুন' : 'Save Settings'}
         </button>
       </div>
@@ -162,125 +182,44 @@ export const SettingsManager: React.FC = () => {
         <div className="lg:col-span-4 space-y-8">
           {/* Logo Section */}
           <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-6">
-            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest">Logo & Branding</h3>
-            <div className="relative w-32 h-32 mx-auto group">
-               <div className={`w-full h-full bg-slate-50 dark:bg-slate-950 rounded-[2rem] border-2 ${uploadError ? 'border-amber-500/50' : 'border-emerald-500/20'} flex flex-col items-center justify-center p-4 shadow-inner overflow-hidden relative`}>
-                  {isUploading ? (
-                    <div className="flex flex-col items-center gap-2">
-                       <Loader2 className="animate-spin text-emerald-500" size={24} />
-                       <div className="text-[10px] font-black text-emerald-600">{uploadProgress}%</div>
-                    </div>
-                  ) : uploadError ? (
-                    <div className="flex flex-col items-center gap-1 text-center">
-                       <Bug className="text-amber-500" size={20} />
-                       <button onClick={(e) => { e.stopPropagation(); setShowDiagnostics(true); }} className="text-[7px] font-black text-amber-600 underline uppercase tracking-tighter">DIAGNOSE</button>
-                    </div>
-                  ) : (
-                    <img src={localSettings.logo} className="w-full h-full object-contain" alt="Logo Preview" />
-                  )}
-               </div>
-               <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[2rem] cursor-pointer transition-opacity">
-                  <Upload className="text-white" size={24} />
-                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={isUploading} />
-               </label>
+            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest">Logo Branding URL</h3>
+            <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-bold text-sm" value={localSettings.logo} onChange={e => setLocalSettings({...localSettings, logo: e.target.value})} />
+            <div className="w-24 h-24 mx-auto bg-slate-50 dark:bg-slate-950 rounded-2xl p-2 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden">
+              <img src={localSettings.logo} className="object-contain" alt="Logo Preview" />
             </div>
-            {isUploading && (
-              <div className="w-32 mx-auto h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-              </div>
-            )}
-            <p className="text-[10px] font-bold text-slate-400">Click to upload organization logo</p>
           </section>
 
           {/* Data Recovery System */}
-          <section className="bg-emerald-900 text-white rounded-[2.5rem] p-8 shadow-2xl space-y-6 relative overflow-hidden group">
+          <section className="bg-emerald-950 dark:bg-emerald-900/10 text-white rounded-[2.5rem] p-8 shadow-2xl space-y-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
               <Database size={100} />
             </div>
             <div className="space-y-2 relative z-10">
               <h3 className="text-xl font-black flex items-center gap-2">
-                <RefreshCcw size={20} className={isRestoring ? 'animate-spin' : ''} />
+                <RefreshCcw size={20} />
                 ডাটা রিস্টোর (Restore)
               </h3>
               <p className="text-xs text-emerald-100/60 font-bold leading-relaxed">
-                আপনার যদি আগের ইভেন্ট বা নেতৃবৃন্দের লিস্ট হারিয়ে গিয়ে থাকে, তবে এই বাটনে ক্লিক করে পুরনো ডাটাবেজ থেকে ডাটাগুলো পুনরায় ফিরিয়ে আনতে পারেন।
+                আপনার ইভেন্ট বা নেতৃবৃন্দের লিস্ট ডেমোতে রিস্টোর করতে এই বাটনে ক্লিক করতে পারেন।
               </p>
             </div>
             <button 
               onClick={handleRestore}
-              disabled={isRestoring}
-              className="w-full bg-white text-emerald-950 py-4 rounded-2xl font-black text-[11px] uppercase shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 relative z-10"
+              className="w-full bg-white text-emerald-950 py-4 rounded-2xl font-black text-[11px] uppercase shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-2 relative z-10"
             >
-              {isRestoring ? <Loader2 className="animate-spin" size={14} /> : <Database size={14} />}
+              <Database size={14} />
               {lang === 'bn' ? 'ডাটা রিস্টোর করুন' : 'Restore All Data'}
             </button>
           </section>
 
-          {/* Backup & System Integrity System */}
-          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
-            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-              <Database size={16} className="text-teal-500" /> Database Backup & Import
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
-              {lang === 'bn' 
-                ? 'সিস্টেমের সমস্ত ডাটা (নেতৃবৃন্দ, অনুদান, নোটিশ, খবর ও সেটিংস) নিরাপদ রাখতে ব্যাকআপ ফাইল তৈরি বা পূর্বের ব্যাকআপ রিস্টোর করুন।' 
-                : 'Safeguard all data (leaders, donations, notices, news, settings) by exporting a JSON backup or importing an existing backup file.'}
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={exportBackup}
-                className="py-4 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border border-teal-100 dark:border-teal-900/50 flex flex-col items-center justify-center gap-2"
-              >
-                <Save size={18} />
-                {lang === 'bn' ? 'এক্সপোর্ট ব্যাকআপ' : 'Export Backup'}
-              </button>
-              
-              <label className="py-4 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border border-emerald-100 dark:border-emerald-900/50 flex flex-col items-center justify-center gap-2 cursor-pointer text-center">
-                <Upload size={18} />
-                <span>{lang === 'bn' ? 'ইম্পোর্ট ব্যাকআপ' : 'Import Backup'}</span>
-                <input 
-                  type="file" 
-                  accept=".json" 
-                  className="hidden" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = async (event) => {
-                        const jsonText = event.target?.result as string;
-                        if (jsonText) {
-                          await importBackup(jsonText);
-                        }
-                      };
-                      reader.readAsText(file);
-                    }
-                  }} 
-                />
-              </label>
-            </div>
-          </section>
-
           {/* Danger Zone */}
-          <section className="bg-rose-50 dark:bg-rose-950/20 rounded-[2.5rem] p-8 border border-rose-100 dark:border-rose-900/50 space-y-4">
-             <h3 className="text-xs font-black uppercase text-rose-600 flex items-center gap-2"><AlertCircle size={14} /> Danger Zone</h3>
+          <section className="bg-rose-50 dark:bg-rose-950/20 rounded-[2.5rem] p-8 border border-rose-100 dark:border-rose-900/50 space-y-4 text-center">
+             <h3 className="text-xs font-black uppercase text-rose-600 flex items-center justify-center gap-2"><AlertCircle size={14} /> Danger Zone</h3>
              <button 
-               onClick={async () => {
-                 const confirmMessage1 = lang === 'bn' 
-                   ? 'আপনি কি নিশ্চিত যে আপনি সমস্ত সিস্টেম ডাটা মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা সম্ভব নয়!'
-                   : 'Are you sure you want to delete ALL system data? This action cannot be undone!';
-                 if (window.confirm(confirmMessage1)) {
-                   const confirmMessage2 = lang === 'bn'
-                     ? 'শেষবার নিশ্চিত করুন: সত্যিই কি সব ডাটা ডিলিট করবেন?'
-                     : 'FINAL CONFIRMATION: Do you absolutely want to wipe everything and load defaults?';
-                   if (window.confirm(confirmMessage2)) {
-                     await resetAllData();
-                   }
-                 }
-               }}
+               onClick={handleWipe}
                className="w-full text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 p-4 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
              >
-               <Trash2 size={16} /> Reset All System Data
+               <Trash2 size={16} /> WIPE DATABASE SYSTEM
              </button>
           </section>
 
@@ -296,7 +235,7 @@ export const SettingsManager: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xs font-black text-slate-900 dark:text-white uppercase">{lang === 'bn' ? 'ডার্ক মোড' : 'Dark Mode'}</div>
-                  <div className="text-[10px] font-bold text-slate-500">{lang === 'bn' ? 'চোখের আরামের জন্য অন্ধকার থিম' : 'Switch to dark theme for night usage'}</div>
+                  <div className="text-[10px] font-bold text-slate-500">{lang === 'bn' ? 'চোখের আরামের জন্য অন্ধকার থিম' : 'Switch to dark theme'}</div>
                 </div>
               </div>
               
@@ -317,73 +256,17 @@ export const SettingsManager: React.FC = () => {
           {/* System Diagnostics */}
           <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
             <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-              <Shield size={16} className="text-indigo-500" /> System Health & Diagnostics
+              <Shield size={16} className="text-indigo-500" /> Static Visual Client Status
             </h3>
             <div className="space-y-4">
-               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-                        <Database size={16} />
-                     </div>
-                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Database Connection</span>
-                  </div>
-                  <span className="text-[10px] font-black uppercase text-emerald-500">Connected</span>
-               </div>
-               
-               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-                        <ImageIcon size={16} />
-                     </div>
-                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Storage System</span>
-                  </div>
-                  <span className="text-[10px] font-black uppercase text-emerald-500">Active</span>
-               </div>
-
-               <button 
-                 onClick={() => setShowDiagnostics(true)}
-                 className="w-full py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-2"
-               >
-                 <Bug size={14} />
-                 Open AI Diagnostics
-               </button>
-            </div>
-          </section>
-
-          {/* Session Management */}
-          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
-            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-              <LogOut size={16} className="text-orange-500" /> Account & Session
-            </h3>
-            <div className="p-5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <Shield className="text-emerald-600" size={18} />
-                </div>
-                <div className="flex-1">
-                  <div className="text-[10px] font-black uppercase text-slate-400">Authenticated as</div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">System Administrator</div>
-                </div>
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Environment status</span>
+                <span className="text-[10px] font-black uppercase text-emerald-500">STATIC ACTIVE</span>
               </div>
-              
-              <button 
-                onClick={() => {
-                  if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to logout?')) {
-                    logout();
-                  }
-                }}
-                className="w-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 py-3 rounded-xl font-black text-[11px] uppercase transition-all flex items-center justify-center gap-2 border border-orange-200 dark:border-orange-800/50"
-              >
-                <LogOut size={14} />
-                {t.logout}
-              </button>
             </div>
-            <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-wider">Security Version 4.0.2</p>
           </section>
-
         </div>
       </div>
-      <UploadDiagnosticPanel isOpen={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
     </div>
   );
 };

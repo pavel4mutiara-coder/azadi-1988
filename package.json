@@ -13,7 +13,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@capacitor-community/firebase-crashlytics": "^3.0.0",
     "@capacitor/android": "^6.0.0",
     "@capacitor/app": "^6.0.0",
     "@capacitor/camera": "^6.0.0",
@@ -40,7 +39,6 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
-    "@firebase/eslint-plugin-security-rules": "^0.0.2",
     "@vitejs/plugin-react": "^4.2.0",
     "eslint": "^10.4.0",
     "typescript": "^5.0.0",

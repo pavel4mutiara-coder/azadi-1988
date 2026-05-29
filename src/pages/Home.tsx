@@ -6,6 +6,7 @@ import { GraduationCap, Users, HeartHandshake, HandHelping, Trophy, Heart, Arrow
 import { Link } from 'react-router-dom';
 
 import { NoticeMarquee } from '../components/NoticeMarquee';
+import { MemberImage } from '../components/MemberImage';
 
 const FEATURE_ICONS = [<GraduationCap />, <Users />, <HeartHandshake />, <HandHelping />, <Trophy />];
 
@@ -170,7 +171,7 @@ export default function Home() {
             <div key={leader.id} className="bg-white dark:bg-slate-900 p-8 rounded-4xl border border-emerald-50 dark:border-slate-800 flex flex-col items-center text-center group hover:-translate-y-3 transition-all shadow-soft hover:shadow-heavy relative overflow-hidden">
                <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-600/10 group-hover:bg-emerald-600 transition-colors"></div>
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-emerald-500/10 mb-6 bg-white dark:bg-slate-950 p-1.5 relative group-hover:border-emerald-500 transition-all shadow-inner scale-100 group-hover:scale-105 duration-500">
-                <img src={leader.image || settings.logo} className="w-full h-full object-cover rounded-full" alt={leader.nameBn} />
+                <MemberImage src={leader.image} alt={lang === 'bn' ? leader.nameBn : leader.nameEn} fallbackSrc={settings.logo} />
               </div>
               <h4 className="font-black text-slate-900 dark:text-white text-lg sm:text-xl leading-tight bengali group-hover:text-emerald-600 transition-colors">{lang === 'bn' ? leader.nameBn : leader.nameEn}</h4>
               <p className="text-[11px] font-black text-emerald-600 uppercase mt-2 tracking-widest bengali opacity-80">{lang === 'bn' ? leader.designationBn : leader.designationEn}</p>

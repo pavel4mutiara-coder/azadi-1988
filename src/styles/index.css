@@ -1,9 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", "Inter", "Noto Sans Bengali", sans-serif;
   --font-bengali: "Noto Sans Bengali", sans-serif;
+  --font-arabic-amiri: "Amiri", serif;
+  --font-arabic-kufi: "Reem Kufi", sans-serif;
 
   --radius-xl: 1.25rem;
   --radius-2xl: 1.5rem;

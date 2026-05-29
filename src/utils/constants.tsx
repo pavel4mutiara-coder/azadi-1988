@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
@@ -78,7 +78,8 @@ export const TRANSLATIONS = {
     visionTitle: "Our Vision",
     milestonesTitle: "Major Milestones",
     devCredit: "Developed by Ahmad Hossain Pavel",
-    whatsappNumber: "8801712782564"
+    whatsappNumber: "8801712782564",
+    testimonials: "Testimonials"
   },
   bn: {
     home: "হোম",
@@ -132,7 +133,8 @@ export const TRANSLATIONS = {
     visionTitle: "Our Vision",
     milestonesTitle: "উল্লেখযোগ্য মাইলফলক",
     devCredit: "Developed by Ahmad Hossain Pavel",
-    whatsappNumber: "8801712782564"
+    whatsappNumber: "8801712782564",
+    testimonials: "টেস্টিমোনিয়াল"
   }
 };
 
@@ -152,5 +154,6 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'donation', path: '/admin/donations', icon: <Heart size={20} /> },
   { label: 'events', path: '/admin/events', icon: <Calendar size={20} /> },
   { label: 'letterhead', path: '/admin/letterhead', icon: <FileText size={20} /> },
+  { label: 'testimonials', path: '/admin/testimonials', icon: <MessageSquare size={20} /> },
   { label: 'settings', path: '/admin/settings', icon: <Settings size={20} /> },
 ];

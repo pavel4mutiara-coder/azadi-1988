@@ -1,21 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Global Catch-all safety filter
+    
+    // Global Safety Net (Default Deny)
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Reusable core validation primitives
+    // Standard hard-coded primitives and helpers
     function isSignedIn() {
       return request.auth != null;
+    }
+    
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
     }
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'pavel4mutiara@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "pavel4mutiara@gmail.com"
       );
     }
 
@@ -27,62 +31,239 @@ service cloud.firestore {
       return request.resource.data;
     }
 
-    function existing() {
-      return resource.data;
+    // Settings Validation Block
+    function isValidSettings(data) {
+      return data.keys().hasAll(['nameBn', 'nameEn', 'sloganBn', 'sloganEn', 'addressBn', 'addressEn', 'phone', 'email', 'establishedBn', 'establishedEn', 'logo', 'flag', 'adminWhatsApp', 'bkash', 'nagad', 'roket', 'facebook', 'youtube', 'whatsappChannel'])
+        && data.keys().size() == 19
+        && data.nameBn is string && data.nameBn.size() <= 300
+        && data.nameEn is string && data.nameEn.size() <= 300
+        && data.sloganBn is string && data.sloganBn.size() <= 500
+        && data.sloganEn is string && data.sloganEn.size() <= 500
+        && data.addressBn is string && data.addressBn.size() <= 1000
+        && data.addressEn is string && data.addressEn.size() <= 1000
+        && data.phone is string && data.phone.size() <= 50
+        && data.email is string && data.email.size() <= 100
+        && data.establishedBn is string && data.establishedBn.size() <= 100
+        && data.establishedEn is string && data.establishedEn.size() <= 100
+        && data.logo is string
+        && data.flag is string
+        && data.adminWhatsApp is string && data.adminWhatsApp.size() <= 50
+        && data.bkash is string && data.bkash.size() <= 50
+        && data.nagad is string && data.nagad.size() <= 50
+        && data.roket is string && data.roket.size() <= 50
+        && data.facebook is string
+        && data.youtube is string
+        && data.whatsappChannel is string;
     }
 
-    // Donations
+    function isValidLetterhead(data) {
+      return data.keys().hasAll(['leaderName', 'designation', 'signature', 'stampText', 'bodyText'])
+        && data.keys().size() == 5
+        && data.leaderName is string && data.leaderName.size() <= 200
+        && data.designation is string && data.designation.size() <= 200
+        && data.signature is string
+        && data.stampText is string && data.stampText.size() <= 200
+        && data.bodyText is string && data.bodyText.size() <= 50000;
+    }
+
+    match /settings/config {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSettings(incoming());
+    }
+
+    match /settings/letterhead {
+      allow read: if true;
+      allow write: if isAdmin() && isValidLetterhead(incoming());
+    }
+
+    // Donations schema validation
+    function isValidDonation(data) {
+      return data.keys().hasAll(['id', 'donorName', 'isAnonymous', 'amount', 'phone', 'transactionId', 'purpose', 'status', 'date', 'paymentMethod'])
+        && (data.keys().size() == 10 || (data.keys().size() == 11 && data.keys().hasAny(['email'])))
+        && (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 200))
+        && data.id is string && data.id.size() <= 128
+        && data.donorName is string && data.donorName.size() <= 200
+        && data.isAnonymous is bool
+        && data.amount is number && data.amount > 0 && data.amount < 100000000
+        && data.phone is string && data.phone.size() <= 32
+        && data.transactionId is string && data.transactionId.size() <= 128
+        && data.purpose is string && data.purpose.size() <= 200
+        && data.status is string && (data.status == 'PENDING' || data.status == 'APPROVED' || data.status == 'REJECTED')
+        && data.date is string && data.date.size() <= 50
+        && data.paymentMethod is string && data.paymentMethod.size() <= 100;
+    }
+
     match /donations/{donationId} {
-      allow read: if true;
-      allow create: if (
-        incoming().donorName is string && incoming().donorName.size() <= 200 &&
-        incoming().amount is number && incoming().amount > 0 &&
-        incoming().phone is string && incoming().phone.size() <= 32 &&
-        incoming().transactionId is string && incoming().transactionId.size() <= 128 &&
-        incoming().purpose is string && incoming().purpose.size() <= 128 &&
-        incoming().paymentMethod is string && incoming().paymentMethod.size() <= 32 &&
-        (incoming().image == null || incoming().image == "" || (incoming().image is string && incoming().image.size() <= 2048)) &&
-        incoming().status == 'PENDING' &&
-        incoming().date is string && incoming().date.size() <= 64
-      );
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if isValidId(donationId);
+      allow list: if true;
+      allow create: if isValidId(donationId) && donationId == incoming().id && isValidDonation(incoming()) && (isAdmin() || incoming().status == 'PENDING');
+      allow update: if isValidId(donationId) && donationId == incoming().id && isAdmin() && isValidDonation(incoming());
+      allow delete: if isValidId(donationId) && isAdmin();
     }
 
-    // Leadership
+    // Leadership validation
+    function isValidLeader(data) {
+      return data.keys().hasAll(['id', 'nameEn', 'nameBn', 'designationEn', 'designationBn', 'messageEn', 'messageBn', 'phone', 'image', 'order'])
+        && (data.keys().size() >= 10 && data.keys().size() <= 15)
+        && data.id is string && data.id.size() <= 128
+        && data.nameEn is string && data.nameEn.size() <= 200
+        && data.nameBn is string && data.nameBn.size() <= 200
+        && data.designationEn is string && data.designationEn.size() <= 200
+        && data.designationBn is string && data.designationBn.size() <= 200
+        && (!data.keys().hasAny(['subDesignationEn']) || (data.subDesignationEn is string && data.subDesignationEn.size() <= 200))
+        && (!data.keys().hasAny(['subDesignationBn']) || (data.subDesignationBn is string && data.subDesignationBn.size() <= 200))
+        && (!data.keys().hasAny(['category']) || (data.category is string && (data.category == 'leader' || data.category == 'executive' || data.category == 'advisor' || data.category == 'volunteer' || data.category == 'member')))
+        && data.messageEn is string && data.messageEn.size() <= 5000
+        && data.messageBn is string && data.messageBn.size() <= 5000
+        && data.phone is string && data.phone.size() <= 32
+        && data.image is string
+        && (!data.keys().hasAny(['status']) || (data.status == 'active' || data.status == 'inactive'))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is string && data.createdAt.size() <= 100))
+        && data.order is number;
+    }
+
     match /leadership/{leaderId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow list: if true;
+      allow get: if isValidId(leaderId);
+      allow create, update: if isValidId(leaderId) && isAdmin() && isValidLeader(incoming());
+      allow delete: if isValidId(leaderId) && isAdmin();
     }
 
-    // Events
+    // Events Validation
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'descriptionEn', 'descriptionBn', 'locationEn', 'locationBn', 'date', 'image'])
+        && (data.keys().size() == 9 || (data.keys().size() == 10 && data.keys().hasAny(['meetUrl'])))
+        && (!data.keys().hasAny(['meetUrl']) || (data.meetUrl is string && data.meetUrl.size() <= 1000))
+        && data.id is string && data.id.size() <= 128
+        && data.titleEn is string && data.titleEn.size() <= 200
+        && data.titleBn is string && data.titleBn.size() <= 200
+        && data.descriptionEn is string && data.descriptionEn.size() <= 5000
+        && data.descriptionBn is string && data.descriptionBn.size() <= 5000
+        && data.locationEn is string && data.locationEn.size() <= 5000
+        && data.locationBn is string && data.locationBn.size() <= 5000
+        && data.date is string
+        && data.image is string;
+    }
+
     match /events/{eventId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow list: if true;
+      allow get: if isValidId(eventId);
+      allow create, update: if isValidId(eventId) && isAdmin() && isValidEvent(incoming());
+      allow delete: if isValidId(eventId) && isAdmin();
     }
 
-    // Notices
+    // Notices Validation
+    function isValidNotice(data) {
+      return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'contentEn', 'contentBn', 'date', 'isUrgent'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.titleEn is string && data.titleEn.size() <= 200
+        && data.titleBn is string && data.titleBn.size() <= 200
+        && data.contentEn is string && data.contentEn.size() <= 10000
+        && data.contentBn is string && data.contentBn.size() <= 10000
+        && data.date is string
+        && data.isUrgent is bool;
+    }
+
     match /notices/{noticeId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow list: if true;
+      allow get: if isValidId(noticeId);
+      allow create, update: if isValidId(noticeId) && isAdmin() && isValidNotice(incoming());
+      allow delete: if isValidId(noticeId) && isAdmin();
     }
 
-    // News
+    // News Validation
+    function isValidNews(data) {
+      return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'contentEn', 'contentBn', 'date', 'image'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.titleEn is string && data.titleEn.size() <= 200
+        && data.titleBn is string && data.titleBn.size() <= 200
+        && data.contentEn is string && data.contentEn.size() <= 10000
+        && data.contentBn is string && data.contentBn.size() <= 10000
+        && data.date is string
+        && data.image is string;
+    }
+
     match /news/{newsId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow list: if true;
+      allow get: if isValidId(newsId);
+      allow create, update: if isValidId(newsId) && isAdmin() && isValidNews(incoming());
+      allow delete: if isValidId(newsId) && isAdmin();
     }
 
-    // Configuration / settings
-    match /config/{configId} {
-      allow read: if true;
-      allow write: if isAdmin();
+    // Audit logs Validation
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'action', 'userId', 'userEmail', 'timestamp', 'details'])
+        && data.keys().size() == 6
+        && data.id is string && data.id.size() <= 128
+        && data.action is string && data.action.size() <= 200
+        && data.userId is string && data.userId.size() <= 128
+        && data.userEmail is string && data.userEmail.size() <= 200
+        && data.timestamp is string && data.timestamp.size() <= 100
+        && data.details is string && data.details.size() <= 50000;
     }
 
-    // Admins registry
+    match /audit_logs/{logId} {
+      allow list, get: if isAdmin();
+      allow create: if isSignedIn() && isValidId(logId) && isValidAuditLog(incoming());
+      allow update, delete: if false;
+    }
+
+    // Admins path
     match /admins/{adminId} {
-      allow read: if isSignedIn() && request.auth.uid == adminId;
-      allow write: if false;
+      allow read: if isSignedIn() && (adminId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Testimonials path
+    function isValidTestimonial(data) {
+      return data.keys().hasAll(['id', 'nameEn', 'nameBn', 'roleEn', 'roleBn', 'locationEn', 'locationBn', 'quoteEn', 'quoteBn', 'image', 'createdAt', 'status'])
+        && data.keys().size() == 12
+        && data.id is string && data.id.size() <= 128
+        && data.nameEn is string && data.nameEn.size() <= 200
+        && data.nameBn is string && data.nameBn.size() <= 200
+        && data.roleEn is string && data.roleEn.size() <= 200
+        && data.roleBn is string && data.roleBn.size() <= 200
+        && data.locationEn is string && data.locationEn.size() <= 200
+        && data.locationBn is string && data.locationBn.size() <= 200
+        && data.quoteEn is string && data.quoteEn.size() <= 2500
+        && data.quoteBn is string && data.quoteBn.size() <= 2500
+        && data.image is string
+        && data.createdAt is string
+        && data.status is string && (data.status == 'PENDING' || data.status == 'APPROVED');
+    }
+
+    match /testimonials/{testimonialId} {
+      allow list: if true;
+      allow get: if isValidId(testimonialId);
+      allow create: if isValidId(testimonialId) && testimonialId == incoming().id && isValidTestimonial(incoming()) && (isAdmin() || incoming().status == 'PENDING');
+      allow update: if isValidId(testimonialId) && testimonialId == incoming().id && isAdmin() && isValidTestimonial(incoming());
+      allow delete: if isValidId(testimonialId) && isAdmin();
+    }
+
+    // Expenses path and validation
+    function isValidExpense(data) {
+      return data.keys().hasAll(['id', 'amount', 'category', 'descriptionEn', 'descriptionBn', 'date'])
+        && data.keys().size() == 6
+        && data.id is string && data.id.size() <= 128
+        && data.amount is number && data.amount > 0 && data.amount < 100000000
+        && data.category is string && data.category.size() <= 200
+        && data.descriptionEn is string && data.descriptionEn.size() <= 5000
+        && data.descriptionBn is string && data.descriptionBn.size() <= 5000
+        && data.date is string && data.date.size() <= 100;
+    }
+
+    match /expenses/{expenseId} {
+      allow list: if true;
+      allow get: if isValidId(expenseId);
+      allow create, update: if isValidId(expenseId) && expenseId == incoming().id && isAdmin() && isValidExpense(incoming());
+      allow delete: if isValidId(expenseId) && isAdmin();
+    }
+
+    // Connection testing doc
+    match /test/connection {
+      allow read: if true;
     }
   }
 }

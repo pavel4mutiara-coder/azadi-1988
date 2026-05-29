@@ -21,13 +21,13 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     setIsIOS(ios);
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -40,7 +40,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     if (ios && !isStandalone && !isDismissed) {
       setTimeout(() => setShowInstallBanner(true), 3000);
     }
-  }, []);
+  }, [isDismissed]);
 
   const handleInstallClick = async () => {
     if (isIOS) {
@@ -59,7 +59,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   const handleDismiss = () => {
     setShowInstallBanner(false);
     setShowIOSInstructions(false);
-    sessionStorage.setItem('pwa_banner_dismissed', 'true');
+    setIsDismissed(true);
   };
 
   const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";

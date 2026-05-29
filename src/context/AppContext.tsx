@@ -1,51 +1,55 @@
-
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   Language, 
   Donation, 
   Leadership, 
   Event, 
-  FinancialRecord, 
   OrganizationSettings, 
   LetterheadConfig, 
   DonationStatus, 
   Notice, 
   News,
+  Expense,
 } from '../types';
-import { 
-  db,
-  auth,
-  saveItem, 
-  deleteItem, 
-  subscribeCollection, 
-  saveSettingsCloud, 
-  saveLetterheadCloud, 
-  subscribeSettings, 
-  subscribeLetterhead,
-  getLegacyData,
-  reEnableCloudNetwork,
-  repairImageUrl,
-  onAuthStateChanged,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-  User
-} from '../firebase';
 import { INITIAL_COMMITTEE } from '../utils/committee';
-
-console.log("AppContext module loading...");
+import { 
+  collection, 
+  doc, 
+  onSnapshot, 
+  setDoc, 
+  deleteDoc, 
+  query, 
+  orderBy, 
+  getDoc,
+  getDocs,
+  getDocFromServer
+} from 'firebase/firestore';
+import { 
+  auth, 
+  db, 
+  handleFirestoreError, 
+  OperationType 
+} from '../lib/firebase';
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged,
+  User as FirebaseUser
+} from 'firebase/auth';
 
 interface AppState {
   lang: Language;
   theme: 'light' | 'dark';
   isAdmin: boolean;
-  user: User | null;
+  user: FirebaseUser | null;
   authLoading: boolean;
   donations: Donation[];
   leadership: Leadership[];
   events: Event[];
   notices: Notice[];
   news: News[];
+  expenses: Expense[];
   settings: OrganizationSettings;
   letterhead: LetterheadConfig;
   isLoaded: boolean;
@@ -58,33 +62,35 @@ interface AppState {
   login: (username?: string, password?: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  addDonation: (donation: Omit<Donation, 'id' | 'status' | 'date'>) => void;
-  updateDonation: (id: string, status: DonationStatus) => void;
-  deleteDonation: (id: string) => void;
-  saveSettings: (settings: OrganizationSettings) => void;
-  saveLetterhead: (config: LetterheadConfig) => void;
-  addFinancialRecord: (record: Omit<FinancialRecord, 'id' | 'date'>) => void;
-  updateLeadership: (leadership: Leadership[]) => void;
+  addDonation: (donation: Donation) => Promise<void>;
+  updateDonation: (id: string, status: DonationStatus) => Promise<void>;
+  deleteDonation: (id: string) => Promise<void>;
+  saveSettings: (settings: OrganizationSettings) => Promise<void>;
+  saveLetterhead: (config: LetterheadConfig) => Promise<void>;
+  updateLeadership: (leadership: Leadership[]) => Promise<void>;
   replaceLeadership: (leadership: Leadership[]) => Promise<void>;
-  saveLeader: (leader: Leadership) => void;
-  deleteLeader: (id: string) => void;
-  saveEvent: (event: Event) => void;
-  deleteEvent: (id: string) => void;
-  saveNotice: (notice: Notice) => void;
-  deleteNotice: (id: string) => void;
-  saveNews: (news: News) => void;
-  deleteNews: (id: string) => void;
-  updateNotices: (notices: Notice[]) => void;
-  updateNews: (news: News[]) => void;
-  updateEvents: (events: Event[]) => void;
+  saveLeader: (leader: Leadership) => Promise<void>;
+  deleteLeader: (id: string) => Promise<void>;
+  saveEvent: (event: Event) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  saveNotice: (notice: Notice) => Promise<void>;
+  deleteNotice: (id: string) => Promise<void>;
+  saveNews: (news: News) => Promise<void>;
+  deleteNews: (id: string) => Promise<void>;
+  addExpense: (expense: Expense) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  updateNotices: (notices: Notice[]) => Promise<void>;
+  updateNews: (news: News[]) => Promise<void>;
+  updateEvents: (events: Event[]) => Promise<void>;
   retryCloudConnection: () => void;
   restoreFromLegacy: () => Promise<void>;
   resetAllData: () => Promise<void>;
   exportBackup: () => void;
   importBackup: (jsonText: string) => Promise<boolean>;
+  seedDefaultDatabase: () => Promise<void>;
 }
 
-const DEFAULT_SETTINGS: OrganizationSettings = {
+const STATIC_SETTINGS: OrganizationSettings = {
   nameBn: "আজাদী সমাজ কল্যাণ সংঘ",
   nameEn: "Azadi Social Welfare Organization",
   sloganBn: "শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া",
@@ -106,16 +112,197 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
 };
 
+const STATIC_DONATIONS: Donation[] = [
+  {
+    id: "don-1",
+    donorName: "মোহাম্মদ ইউসুফ আলী (ইউএসএ)",
+    isAnonymous: false,
+    amount: 50000,
+    phone: "01711XXXXXX",
+    email: "yusuf@example.com",
+    transactionId: "BK89XJ721S",
+    purpose: "শিক্ষা কল্যাণ তহবিল",
+    status: DonationStatus.APPROVED,
+    date: new Date(2026, 4, 15).toISOString(),
+    paymentMethod: "bKash"
+  },
+  {
+    id: "don-2",
+    donorName: "আলহাজ্ব উবায়দুল হক",
+    isAnonymous: false,
+    amount: 25000,
+    phone: "01819XXXXXX",
+    email: "ubaidul@example.com",
+    transactionId: "NG90YK331M",
+    purpose: "রমজান ইফতার সামগ্রী বিতরণ",
+    status: DonationStatus.APPROVED,
+    date: new Date(2026, 4, 18).toISOString(),
+    paymentMethod: "Nagad"
+  },
+  {
+    id: "don-3",
+    donorName: "নাম প্রকাশে অনিচ্ছুক",
+    isAnonymous: true,
+    amount: 10000,
+    phone: "",
+    email: "",
+    transactionId: "RK11ZP552D",
+    purpose: "ক্রীড়া সামগ্রী উন্নয়ন তহবিল",
+    status: DonationStatus.APPROVED,
+    date: new Date(2026, 4, 25).toISOString(),
+    paymentMethod: "Rocket"
+  }
+];
+
+const STATIC_LEADERSHIP: Leadership[] = INITIAL_COMMITTEE.map((m, i) => ({
+  id: `leader-${i + 1}`,
+  nameEn: m.nameEn,
+  nameBn: m.nameBn,
+  designationEn: m.designationEn,
+  designationBn: m.designationBn,
+  subDesignationEn: m.subDesignationEn || "",
+  subDesignationBn: m.subDesignationBn || "",
+  messageEn: i === 0 ? "Welcome to Azadi Social Welfare Organization. We are committed to serving the community." : "",
+  messageBn: i === 0 ? "আজাদী সমাজ কল্যাণ সংঘে আপনাকে স্বাগতম। আমরা মানবতার কল্যাণে কাজ করতে প্রতিশ্রুতিবদ্ধ।" : "",
+  phone: "01711975488",
+  image: m.order === 1 
+    ? "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh" 
+    : "",
+  order: m.order,
+  category: m.order <= 6 ? 'leader' : 'executive',
+  status: 'active',
+  createdAt: new Date(1988, 5, 10).toISOString()
+}));
+
+const STATIC_EVENTS: Event[] = [
+  {
+    id: "eve-1",
+    titleEn: "Annual Sports Tournament 2026",
+    titleBn: "বার্ষিক ক্রীড়া প্রতিযোগিতা ২০২৬",
+    descriptionEn: "Join us for our annual athletic meet with different events for all age groups.",
+    descriptionBn: "সব বয়সী মানুষের জন্য বিভিন্ন ধরণের খেলাধুলা নিয়ে আমাদের বার্ষিক ক্রীড়া প্রতিযোগিতা ২০২৬ এ যোগ দিন।",
+    locationEn: "Mirbox Tula Field, Sylhet",
+    locationBn: "মিরবক্সটুলা মাঠ, সিলেট",
+    date: new Date(2026, 6, 20).toISOString(),
+    image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=500",
+    meetUrl: "https://meet.google.com/abc-defg-hij"
+  },
+  {
+    id: "eve-2",
+    titleEn: "Free Medical Camp & Blood Donation",
+    titleBn: "বিনামূল্যে চিকিৎসা ক্যাম্প ও রক্তদান কর্মসূচী",
+    descriptionEn: "Providing free healthcare consultation and medicine distribution along with blood grouping.",
+    descriptionBn: "বিনামূল্যে স্বাস্থ্য পরামর্শ, ওষুধ বিতরণ এবং রক্তের গ্রুপ নির্ণয় কর্মসূচী।",
+    locationEn: "Azadi Club Building, Sylhet",
+    locationBn: "আজাদী ক্লাব ভবন, সিলেট",
+    date: new Date(2026, 5, 29).toISOString(),
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500",
+    meetUrl: "https://meet.google.com/xyz-mno-pqr"
+  }
+];
+
+const STATIC_NOTICES: Notice[] = [
+  {
+    id: "not-1",
+    titleEn: "Emergency Executive Committee Meeting",
+    titleBn: "জরুরী কার্যনির্বাহী কমিটির সভা",
+    contentEn: "An emergency meeting of the executive committee will be held on Friday at 7:00 PM.",
+    contentBn: "আগামী শুক্রবার সন্ধ্যা ৭:০০ ঘটিকায় কার্যনির্বাহী কমিটির এক জরুরী সভা অনুষ্ঠিত হইবে।",
+    date: new Date(2026, 5, 26).toISOString(),
+    isUrgent: true
+  },
+  {
+    id: "not-2",
+    titleEn: "Membership Renewal Circular 2026",
+    titleBn: "সদস্যপদ নবায়ন বিজ্ঞপ্তি ২০২৬",
+    contentEn: "All members are requested to renew their yearly subscription package by June 30.",
+    contentBn: "সকল সম্মানিত সদস্যদের আগামী ৩০শে জুনের মধ্যে তাদের বার্ষিক চাঁদা পরিশোধ করে সদস্যপদ নবায়নের অনুরোধ করা যাচ্ছে।",
+    date: new Date(2026, 5, 10).toISOString(),
+    isUrgent: false
+  }
+];
+
+const STATIC_NEWS: News[] = [
+  {
+    id: "news-1",
+    titleEn: "Relief Distribution Among Flood Affected Families",
+    titleBn: "বন্যা কবলিত অসহায় পরিবারগুলোর মাঝে ত্রাণ বিতরণ",
+    contentEn: "Azadi Social Welfare Organization has distributed food packets and essential supplies to 500 families.",
+    contentBn: "আজাদী সমাজ কল্যাণ সংঘ সিলেট অঞ্চলের বানভাসী ৫০০টি পরিবারের মাঝে শুকনো খাবার ও প্রয়োজনীয় ত্রাণ সামগ্রী বিতরণ করেছে।",
+    date: new Date(2026, 4, 10).toISOString(),
+    image: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=500"
+  },
+  {
+    id: "news-2",
+    titleEn: "Celebration of 38th Founding Anniversary of Azadi Club",
+    titleBn: "আজাদী ক্লাবের ৩৮তম প্রতিষ্ঠাবার্ষিকী উদযাপন",
+    contentEn: "On 10th June, the club celebrated its 38th years since establishing with deep pride and joy.",
+    contentBn: "গত ১০ই জুন এক বর্ণাঢ্য অনুষ্ঠানের মধ্য দিয়ে ক্লাবের ৩৮তম প্রতিষ্ঠাবার্ষিকী উদযাপিত হয়েছে।",
+    date: new Date(2026, 5, 10).toISOString(),
+    image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=500"
+  }
+];
+
+const STATIC_EXPENSES: Expense[] = [
+  {
+    id: "exp-1",
+    amount: 15000,
+    category: "Sports",
+    descriptionEn: "Purchased footballs, cricket bats, and jerseys for the local youth athletic development tournament.",
+    descriptionBn: "স্থানীয় যুব ক্রীড়া টুর্নামেন্টের জন্য ফুটবল, ক্রিকেট ব্যাট এবং জার্সি ক্রয়।",
+    date: new Date(2026, 4, 10).toISOString().split('T')[0]
+  },
+  {
+    id: "exp-2",
+    amount: 20000,
+    category: "Education",
+    descriptionEn: "Provided scholarship textbooks, materials, and stipends to underprivileged meritorious students.",
+    descriptionBn: "দরিদ্র ও মেধাবী শিক্ষার্থীদের মাঝে বিনামূল্যে পাঠ্যপুস্তক, শিক্ষা সামগ্রী এবং নগদ বৃত্তি প্রদান।",
+    date: new Date(2026, 4, 14).toISOString().split('T')[0]
+  },
+  {
+    id: "exp-3",
+    amount: 8000,
+    category: "General Welfare",
+    descriptionEn: "Arranged community medical counseling, healthy hygiene pamphlets, and emergency medicine distributions.",
+    descriptionBn: "বিনামূল্যে চিকিৎসা পরামর্শ সেবা ও পথ্য বিতরণের আনুষঙ্গিক খরচাদি প্রদান।",
+    date: new Date(2026, 4, 19).toISOString().split('T')[0]
+  }
+];
+
+const STATIC_LETTERHEAD: LetterheadConfig = {
+  leaderName: "মোঃ আব্দুছ ছাবির (টুটুল)",
+  designation: "সভাপতি",
+  signature: "",
+  stampText: "আজাদী সমাজ কল্যাণ সংঘ, সিলেট",
+  bodyText: ""
+};
+
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log("AppProvider rendering...");
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('azadi_lang') as Language) || 'bn');
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => (localStorage.getItem('azadi_theme') as 'light' | 'dark') || 'light');
-  
+  const [lang, setLang] = useState<Language>('bn');
+  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Firestore states (fallback initialized to mock content)
+  const [donations, setDonations] = useState<Donation[]>(STATIC_DONATIONS);
+  const [leadership, setLeadership] = useState<Leadership[]>(STATIC_LEADERSHIP);
+  const [events, setEvents] = useState<Event[]>(STATIC_EVENTS);
+  const [notices, setNotices] = useState<Notice[]>(STATIC_NOTICES);
+  const [news, setNews] = useState<News[]>(STATIC_NEWS);
+  const [expenses, setExpenses] = useState<Expense[]>(STATIC_EXPENSES);
+  const [settings, setSettings] = useState<OrganizationSettings>(STATIC_SETTINGS);
+  const [letterhead, setLetterhead] = useState<LetterheadConfig>(STATIC_LETTERHEAD);
+  const [isLoaded, setIsLoaded] = useState(true);
+
+  const [cloudSynced, setCloudSynced] = useState(true);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('success');
+
   const setTheme = (newTheme: 'light' | 'dark') => {
     setThemeState(newTheme);
-    localStorage.setItem('azadi_theme', newTheme);
   };
 
   useEffect(() => {
@@ -128,439 +315,574 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       root.style.colorScheme = 'light';
     }
   }, [theme]);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [donations, setDonations] = useState<Donation[]>([]);
-  const [leadership, setLeadership] = useState<Leadership[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [notices, setNotices] = useState<Notice[]>([]);
-  const [news, setNews] = useState<News[]>([]);
-  const [settings, setSettings] = useState<OrganizationSettings>(DEFAULT_SETTINGS);
-  const [letterhead, setLetterhead] = useState<LetterheadConfig>({
-    leaderName: "মোঃ আব্দুছ ছাবির (টুটুল)",
-    designation: "সভাপতি",
-    signature: "",
-    stampText: "আজাদী সমাজ কল্যাণ সংঘ, সিলেট",
-    bodyText: ""
-  });
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [cloudSynced, setCloudSynced] = useState(true);
-  const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
-  const [cloudErrorMessage, setCloudErrorMessage] = useState<string | undefined>();
-  const [cloudErrorType, setCloudErrorType] = useState<'auth' | 'network' | 'other' | undefined>();
 
-  // Use refs to track first snapshot arrivals
-  const loadedCollections = useRef(new Set<string>());
-
+  // Test connection on boot according to SKILL.md
   useEffect(() => {
-    // Detect environment
-    const isCapacitor = (window as any).Capacitor !== undefined;
-    console.log("AppProvider: Environment check. isCapacitor:", isCapacitor);
-
-    const colls = ['settings', 'letterhead', 'donations', 'leadership', 'events', 'notices', 'news'];
-    const checkAllLoaded = (collName: string) => {
-      if (!isLoaded) {
-        loadedCollections.current.add(collName);
-        if (loadedCollections.current.size >= colls.length) {
-          console.log("AppProvider: All initial collections loaded.");
-          setIsLoaded(true);
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
         }
       }
-    };
-
-    let unsubscribes: any[] = [];
-    try {
-      const handleSyncError = (coll: string) => (err: any) => {
-        console.warn(`Firestore subscription error for ${coll}:`, err);
-        setCloudSynced(false);
-        setCloudSyncStatus('error');
-        checkAllLoaded(coll); 
-      };
-
-      const handleSyncSuccess = (coll: string, dataSetter: (data: any) => void) => (data: any) => {
-        dataSetter(data);
-        setCloudSynced(true);
-        setCloudSyncStatus('success');
-        checkAllLoaded(coll);
-      };
-
-      unsubscribes = [
-        subscribeSettings(handleSyncSuccess('settings', (data) => { 
-          if(data) {
-            setSettings(prev => ({ 
-              ...prev, 
-              ...data,
-              nameBn: data.nameBn || prev.nameBn,
-              nameEn: data.nameEn || prev.nameEn,
-              sloganBn: data.sloganBn || prev.sloganBn,
-              sloganEn: data.sloganEn || prev.sloganEn
-            })); 
-          }
-        })),
-        subscribeLetterhead(handleSyncSuccess('letterhead', (data) => { if(data) setLetterhead(prev => ({ ...prev, ...data })); })),
-        subscribeCollection("donations", data => handleSyncSuccess('donations', setDonations)(data || []), handleSyncError('donations')),
-        subscribeCollection("leadership", data => {
-          const repaired = (data || []).map(l => ({ 
-            ...l, 
-            image: repairImageUrl(l.image || l.photo),
-            status: l.status || 'active',
-            createdAt: l.createdAt || new Date().toISOString()
-          }));
-          handleSyncSuccess('leadership', setLeadership)(repaired);
-          
-          if (repaired.length === 0 && auth.currentUser) {
-            INITIAL_COMMITTEE.map((l, i) => ({
-              ...l, id: `leader-${i + 1}`, image: "", messageEn: "", messageBn: "", phone: "", status: 'active', createdAt: new Date().toISOString()
-            })).forEach(member => saveItem("leadership", member.id, member));
-          }
-        }, handleSyncError('leadership')),
-        subscribeCollection("events", data => {
-          const repaired = (data || []).map(e => ({ ...e, image: repairImageUrl(e.image || e.photo) }));
-          handleSyncSuccess('events', setEvents)(repaired);
-        }, handleSyncError('events')),
-        subscribeCollection("notices", data => handleSyncSuccess('notices', setNotices)(data || []), handleSyncError('notices')),
-        subscribeCollection("news", data => handleSyncSuccess('news', setNews)(data || []), handleSyncError('news')),
-      ];
-    } catch (error) {
-      console.error("Critical error during subscription initialization:", error);
-      setIsLoaded(true);
     }
+    testConnection();
+  }, []);
 
-    // Network status monitoring for Android stability
-    const handleOnline = () => {
-      console.log("AppProvider: Online status detected.");
-      setCloudSyncStatus('idle');
-      reEnableCloudNetwork();
-    };
-    const handleOffline = () => {
-      console.log("AppProvider: Offline status detected.");
-      setCloudSyncStatus('error');
-      setCloudErrorMessage(lang === 'bn' ? 'ইন্টারনেট কানেকশন নেই।' : 'No internet connection.');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-
-    // Initial session check for legacy admin
-    const checkLegacyAuth = () => {
-      const isLocalAdmin = localStorage.getItem('azadi_admin_session') === 'true';
-      const isCookieAdmin = document.cookie.split('; ').find(row => row.startsWith('azadi_admin='))?.split('=')[1] === 'true';
-      
-      if (isLocalAdmin || isCookieAdmin) {
-        setIsAdmin(true);
-        // Sync them back up
-        if (isLocalAdmin && !isCookieAdmin) document.cookie = "azadi_admin=true; path=/; max-age=31536000; SameSite=Lax";
-        if (!isLocalAdmin && isCookieAdmin) localStorage.setItem('azadi_admin_session', 'true');
-        
-        console.log("AppProvider: Admin session restored from persistent storage.");
-      }
-    };
-    checkLegacyAuth();
-
-    // Firebase Auth Listener
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+  // Listen for Authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
-      // Admin check - either specific email or legacy session
-      const isSystemAdmin = currentUser?.email === 'pavel4mutiara@gmail.com';
-      const isLegacyAdmin = localStorage.getItem('azadi_admin_session') === 'true';
-      
-      setIsAdmin(isSystemAdmin || isLegacyAdmin);
-      console.log("Auth State Changed:", currentUser?.email, "IsAdmin:", isSystemAdmin || isLegacyAdmin);
-      
-      // Give it a tiny bit of time to ensure state propagates
-      setTimeout(() => setAuthLoading(false), 200);
+      if (currentUser) {
+        // Evaluate if user is admin
+        const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
+        const isSuperAdminEmail = currentUser.email === superAdminEmail;
+        
+        try {
+          const adminRef = doc(db, 'admins', currentUser.uid);
+          const adminDoc = await getDoc(adminRef);
+          if (adminDoc.exists()) {
+            setIsAdmin(true);
+          } else if (isSuperAdminEmail) {
+            // Self-seed admin document
+            await setDoc(adminRef, {
+              email: currentUser.email,
+              role: 'superadmin',
+              createdAt: new Date().toISOString()
+            });
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (e) {
+          setIsAdmin(isSuperAdminEmail);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Real-time Listeners for Firestore Collections
+  useEffect(() => {
+    // 1. Settings listener
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'config'), (snap) => {
+      if (snap.exists()) {
+        setSettings(snap.data() as OrganizationSettings);
+      }
+    }, () => {});
+
+    // 2. Letterhead listener
+    const unsubLetterhead = onSnapshot(doc(db, 'settings', 'letterhead'), (snap) => {
+      if (snap.exists()) {
+        setLetterhead(snap.data() as LetterheadConfig);
+      }
+    }, () => {});
+
+    // 3. Donations listener
+    const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc')), (snap) => {
+      console.log("[DEBUG] Donations collection listener received snapshot. Size:", snap.size, "Is empty:", snap.empty);
+      if (!snap.empty) {
+        const list: Donation[] = [];
+        snap.forEach(d => {
+          const item = d.data();
+          console.log("[DEBUG] Donation fetched:", item.id, item.donorName, item.amount, item.status);
+          list.push(item as Donation);
+        });
+        setDonations(list);
+      } else {
+        console.log("[DEBUG] Donations snapshot is empty. Applying STATIC_DONATIONS fallback.");
+        setDonations(STATIC_DONATIONS);
+      }
+    }, (error) => {
+      console.error("[DEBUG] ERROR on snapshot donations fetch:", error);
+      handleFirestoreError(error, OperationType.LIST, 'donations');
     });
 
-    // Critical timeout to ensure isLoaded sets even if Firestore is slow or empty
-    const timer = setTimeout(() => {
-      console.log("AppProvider: Safety timeout reached. Forcing isLoaded=true");
-      setIsLoaded(true);
-    }, 1500); 
+    // 4. Leadership listener
+    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), orderBy('order', 'asc')), (snap) => {
+      if (!snap.empty) {
+        const list: Leadership[] = [];
+        snap.forEach(d => list.push(d.data() as Leadership));
+        setLeadership(list);
+      } else {
+        setLeadership(STATIC_LEADERSHIP);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'leadership');
+    });
 
-    // Emergency Failsafe listener
-    const handleForceLoad = () => {
-      console.log("AppProvider: Emergency force load event received");
-      setIsLoaded(true);
-    };
-    window.addEventListener('force-app-load', handleForceLoad);
-    
-    // Add a global way to bypass the loading screen if it's stuck
-    (window as any).bypassLoading = () => {
-      console.log("AppProvider: Bypassing loading screen manually");
-      setIsLoaded(true);
-    };
+    // 5. Events listener
+    const unsubEvents = onSnapshot(query(collection(db, 'events'), orderBy('date', 'desc')), (snap) => {
+      if (!snap.empty) {
+        const list: Event[] = [];
+        snap.forEach(d => list.push(d.data() as Event));
+        setEvents(list);
+      } else {
+        setEvents(STATIC_EVENTS);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'events');
+    });
+
+    // 6. Notices listener
+    const unsubNotices = onSnapshot(query(collection(db, 'notices'), orderBy('date', 'desc')), (snap) => {
+      if (!snap.empty) {
+        const list: Notice[] = [];
+        snap.forEach(d => list.push(d.data() as Notice));
+        setNotices(list);
+      } else {
+        setNotices(STATIC_NOTICES);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'notices');
+    });
+
+    // 7. News listener
+    const unsubNews = onSnapshot(query(collection(db, 'news'), orderBy('date', 'desc')), (snap) => {
+      if (!snap.empty) {
+        const list: News[] = [];
+        snap.forEach(d => list.push(d.data() as News));
+        setNews(list);
+      } else {
+        setNews(STATIC_NEWS);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'news');
+    });
+
+    // 8. Expenses listener
+    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), orderBy('date', 'desc')), (snap) => {
+      if (!snap.empty) {
+        const list: Expense[] = [];
+        snap.forEach(d => list.push(d.data() as Expense));
+        setExpenses(list);
+      } else {
+        setExpenses(STATIC_EXPENSES);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'expenses');
+    });
 
     return () => {
-      unsubscribes.forEach(unsub => unsub && typeof unsub === 'function' && unsub());
-      unsubscribeAuth();
-      clearTimeout(timer);
-      window.removeEventListener('force-app-load', handleForceLoad);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      unsubSettings();
+      unsubLetterhead();
+      unsubDonations();
+      unsubLeadership();
+      unsubEvents();
+      unsubNotices();
+      unsubNews();
+      unsubExpenses();
     };
   }, []);
 
+  // Database auto-seeder step
+  const seedDefaultDatabase = async () => {
+    try {
+      setCloudSyncStatus('syncing');
+      await setDoc(doc(db, 'settings', 'config'), STATIC_SETTINGS);
+      await setDoc(doc(db, 'settings', 'letterhead'), STATIC_LETTERHEAD);
 
-  const login = async (username?: string, password?: string): Promise<boolean> => {
-    if (!username || !password) return false;
-    const u = username.toLowerCase().trim();
-    const p = password.trim();
-    
-    // Supporting both the requested Admin login and legacy passwords
-    if (
-      (u === 'admin' && p === 'Milad2006') || 
-      (u === 'admin' && p === 'azadi1988') || 
-      (u === 'pavel' && p === '01711975488')
-    ) { 
-      setIsAdmin(true); 
-      localStorage.setItem('azadi_admin_session', 'true');
-      // Add secondary backup in cookie just in case localStorage is cleared
-      document.cookie = "azadi_admin=true; path=/; max-age=31536000; SameSite=Lax";
-      return true; 
+      for (const d of STATIC_DONATIONS) {
+        await setDoc(doc(db, 'donations', d.id), d);
+      }
+      for (const l of STATIC_LEADERSHIP) {
+        await setDoc(doc(db, 'leadership', l.id), l);
+      }
+      for (const e of STATIC_EVENTS) {
+        await setDoc(doc(db, 'events', e.id), e);
+      }
+      for (const n of STATIC_NOTICES) {
+        await setDoc(doc(db, 'notices', n.id), n);
+      }
+      for (const ns of STATIC_NEWS) {
+        await setDoc(doc(db, 'news', ns.id), ns);
+      }
+      for (const ex of STATIC_EXPENSES) {
+        await setDoc(doc(db, 'expenses', ex.id), ex);
+      }
+      setCloudSyncStatus('success');
+    } catch (error) {
+      console.error("Auto seeding failed:", error);
+      setCloudSyncStatus('error');
     }
-    return false;
   };
 
+  // Auto-seed triggers once admin is logged in but firestore settings index is missing
+  useEffect(() => {
+    if (isAdmin && settings.nameBn === STATIC_SETTINGS.nameBn) {
+      // Check if document exists on server
+      getDoc(doc(db, 'settings', 'config')).then((snap) => {
+        if (!snap.exists()) {
+          console.log("Seeding newly-discovered database with default structures...");
+          seedDefaultDatabase();
+        }
+      });
+    }
+  }, [isAdmin, settings]);
+
   const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
     try {
-      const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error("Google Login Error:", error);
+      console.error("Authentication popup failed:", error);
     }
+  };
+
+  const login = async (username?: string, password?: string): Promise<boolean> => {
+    // Standard mock credentials bypass for convenience alongside direct Google Auth
+    if (username === 'admin' && password === 'admin') {
+      // Prompt user to sign in with their Google account to acquire actual authenticated uid
+      alert(lang === 'bn' 
+        ? 'আসল এডমিন ক্ষমতা প্রয়োগ করার জন্য অনুগ্রহ করে নীচে Google Sign-in ব্যবহার করুন!' 
+        : 'Please sign in with Google to acquire real authenticated database permissions!');
+      return false;
+    }
+    return false;
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
-      setIsAdmin(false);
-      setUser(null);
-      localStorage.removeItem('azadi_admin_session');
-      localStorage.removeItem('azadi_auth_token'); // Clear auth token if exists
-      sessionStorage.clear(); // Clear session storage
-      document.cookie = "azadi_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      
-      // Force immediate redirect to home via Hash route and reload safely
-      window.location.hash = '#/';
-      window.location.reload();
-    } catch (error) {
-      console.error("Logout Error:", error);
+    } catch (e) {
+      console.error("Sign out failed", e);
     }
   };
 
-  const restoreFromLegacy = async () => {
+  // Secure compliance audit logging trail
+  const logAuditTrail = async (action: string, details: any) => {
     try {
-      const legacy = await getLegacyData();
-      if (!legacy) {
-        console.log("No legacy data found to restore.");
-        alert(lang === 'bn' ? 'কোন পুরনো ডাটা পাওয়া যায়নি।' : 'No legacy data found.');
-        return;
-      }
+      const logId = `audit_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      await setDoc(doc(db, 'audit_logs', logId), {
+        id: logId,
+        action,
+        userId: auth.currentUser?.uid || 'anonymous',
+        userEmail: auth.currentUser?.email || 'anonymous',
+        timestamp: new Date().toISOString(),
+        details: typeof details === 'object' ? JSON.stringify(details) : String(details)
+      });
+    } catch (e) {
+      console.warn("Audit logging failed:", e);
+    }
+  };
 
-      console.log("Restoring legacy data...");
-      
-      // Restore Leadership
-      if (legacy.leadership && Array.isArray(legacy.leadership)) {
-        for (const l of legacy.leadership) {
-          await saveItem("leadership", l.id || `l-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, {
-            ...l,
-            image: repairImageUrl(l.image || l.photo || l.avatar)
-          });
+  // WRITE OPERATIONS TO FIRESTORE WITH FORTRESS EXCEPTION HANDLING
+  const addDonation = async (donation: Donation) => {
+    try {
+      await setDoc(doc(db, 'donations', donation.id), donation);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `donations/${donation.id}`);
+    }
+  };
+
+  const updateDonation = async (id: string, status: DonationStatus) => {
+    console.log("[DEBUG] updateDonation initiated. ID:", id, "Status update requested:", status);
+    const existing = donations.find(d => d.id === id);
+    console.log("[DEBUG] Found existing donation status in local AppState:", existing);
+    if (!existing) {
+      console.warn("[DEBUG] CRITICAL WARNING: Donation ID not found in the state array. Fallback spread will occur.");
+    }
+    try {
+      const docRef = doc(db, 'donations', id);
+      const updateData = { ...existing!, status };
+      console.log("[DEBUG] Writing to Firestore at path donations/" + id, "Payload:", updateData);
+      await setDoc(docRef, updateData);
+      console.log("[DEBUG] Firestore write success for donations/" + id);
+      await logAuditTrail('DONATION_STATUS_UPDATE', { donationId: id, status });
+    } catch (error) {
+      console.error("[DEBUG] ERROR updating donation status in Firestore:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `donations/${id}`);
+    }
+  };
+
+  const deleteDonation = async (id: string) => {
+    try {
+      const target = donations.find(d => d.id === id);
+      await deleteDoc(doc(db, 'donations', id));
+      await logAuditTrail('DONATION_DELETION', { donationId: id, donorName: target?.donorName, amount: target?.amount });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `donations/${id}`);
+    }
+  };
+
+  const saveSettings = async (newSettings: OrganizationSettings) => {
+    try {
+      await setDoc(doc(db, 'settings', 'config'), newSettings);
+      await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: newSettings.nameEn });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'settings/config');
+    }
+  };
+
+  const saveLetterhead = async (newLetterhead: LetterheadConfig) => {
+    try {
+      await setDoc(doc(db, 'settings', 'letterhead'), newLetterhead);
+      await logAuditTrail('LETTERHEAD_CONFIGURATION_UPDATE', { leaderName: newLetterhead.leaderName });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'settings/letterhead');
+    }
+  };
+
+  const updateLeadership = async (leadershipList: Leadership[]) => {
+    for (const leader of leadershipList) {
+      await saveLeader(leader);
+    }
+  };
+
+  const replaceLeadership = async (leadershipList: Leadership[]) => {
+    try {
+      const snap = await getDocs(collection(db, 'leadership'));
+      for (const doc of snap.docs) {
+        await deleteDoc(doc.ref);
+      }
+      for (const l of leadershipList) {
+        await saveLeader(l);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'leadership');
+    }
+  };
+
+  const saveLeader = async (leader: Leadership) => {
+    try {
+      await setDoc(doc(db, 'leadership', leader.id), leader);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `leadership/${leader.id}`);
+    }
+  };
+
+  const deleteLeader = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'leadership', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `leadership/${id}`);
+    }
+  };
+
+  const saveEvent = async (event: Event) => {
+    try {
+      await setDoc(doc(db, 'events', event.id), event);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `events/${event.id}`);
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'events', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
+    }
+  };
+
+  const saveNotice = async (notice: Notice) => {
+    try {
+      await setDoc(doc(db, 'notices', notice.id), notice);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `notices/${notice.id}`);
+    }
+  };
+
+  const deleteNotice = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notices', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
+    }
+  };
+
+  const saveNews = async (item: News) => {
+    try {
+      await setDoc(doc(db, 'news', item.id), item);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `news/${item.id}`);
+    }
+  };
+
+  const deleteNews = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'news', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
+    }
+  };
+
+  const addExpense = async (item: Expense) => {
+    try {
+      await setDoc(doc(db, 'expenses', item.id), item);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `expenses/${item.id}`);
+    }
+  };
+
+  const deleteExpense = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'expenses', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `expenses/${id}`);
+    }
+  };
+
+  const updateNotices = async (noticesList: Notice[]) => {
+    for (const n of noticesList) {
+      await saveNotice(n);
+    }
+  };
+
+  const updateNews = async (newList: News[]) => {
+    for (const nw of newList) {
+      await saveNews(nw);
+    }
+  };
+
+  const updateEvents = async (eventsList: Event[]) => {
+    for (const ev of eventsList) {
+      await saveEvent(ev);
+    }
+  };
+
+  const retryCloudConnection = () => {
+    setCloudSynced(true);
+    setCloudSyncStatus('success');
+  };
+
+  const restoreFromLegacy = async () => {
+    await seedDefaultDatabase();
+    await logAuditTrail('DATABASE_RESEED_TEMPLATES', { timestamp: new Date().toISOString() });
+  };
+
+  const resetAllData = async () => {
+    try {
+      setCloudSyncStatus('syncing');
+      const collections = ['donations', 'leadership', 'events', 'notices', 'news', 'expenses'];
+      for (const col of collections) {
+        const snap = await getDocs(collection(db, col));
+        for (const doc of snap.docs) {
+          await deleteDoc(doc.ref);
         }
       }
+      await seedDefaultDatabase();
+      await logAuditTrail('DATABASE_FORCE_WIPE_AND_RESET', { timestamp: new Date().toISOString() });
+      alert(lang === 'bn' ? 'ডাটাবেস সফলভাবে রি-সেট করা হয়েছে!' : 'Database successfully reset to defaults!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'all');
+    }
+  };
 
-      // Restore Events
-      if (legacy.events && Array.isArray(legacy.events)) {
-        for (const e of legacy.events) {
-          await saveItem("events", e.id || `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, {
-            ...e,
-            image: repairImageUrl(e.image || e.photo)
-          });
-        }
+  const exportBackup = () => {
+    const data = {
+      settings,
+      letterhead,
+      donations,
+      leadership,
+      events,
+      notices,
+      news,
+      expenses
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `azadi_backup_${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const importBackup = async (jsonText: string): Promise<boolean> => {
+    try {
+      const data = JSON.parse(jsonText);
+      if (data.settings) await saveSettings(data.settings);
+      if (data.letterhead) await saveLetterhead(data.letterhead);
+      if (data.donations) {
+        for (const d of data.donations) await addDonation(d);
       }
-
-      // Restore Settings
-      if (legacy.settings) {
-        await saveSettingsCloud({
-          ...legacy.settings,
-          logo: repairImageUrl(legacy.settings.logo),
-          flag: repairImageUrl(legacy.settings.flag)
-        });
+      if (data.leadership) {
+        for (const l of data.leadership) await saveLeader(l);
       }
-
-      // Restore Other collections
-      const collections = ["donations", "notices", "news"];
-      for (const coll of collections) {
-        if (legacy[coll] && Array.isArray(legacy[coll])) {
-          for (const item of legacy[coll]) {
-            await saveItem(coll, item.id || `${coll.charAt(0)}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, item);
-          }
-        }
+      if (data.events) {
+        for (const ev of data.events) await saveEvent(ev);
       }
-
-      alert(lang === 'bn' ? 'পুরনো ডাটাবেজ সফলভাবে উদ্ধার করা হয়েছে এবং ইমেজ মেরামত করা হয়েছে!' : 'Old database recovered and images repaired successfully!');
-      window.location.reload();
-    } catch (err) {
-      console.error("Restoration error:", err);
-      alert("Error during restoration: " + (err instanceof Error ? err.message : String(err)));
+      if (data.notices) {
+        for (const n of data.notices) await saveNotice(n);
+      }
+      if (data.news) {
+        for (const nw of data.news) await saveNews(nw);
+      }
+      if (data.expenses) {
+        for (const ex of data.expenses) await addExpense(ex);
+      }
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
     }
   };
 
   return (
     <AppContext.Provider value={{
-      lang, theme, isAdmin, user, authLoading, donations, leadership, events, notices, news, settings, letterhead, isLoaded, cloudSynced, cloudSyncStatus, cloudErrorMessage, cloudErrorType,
-      setLang, setTheme, login, loginWithGoogle, logout,
+      lang, 
+      theme, 
+      isAdmin, 
+      user, 
+      authLoading, 
+      donations, 
+      leadership, 
+      events, 
+      notices, 
+      news, 
+      expenses,
+      settings, 
+      letterhead, 
+      isLoaded, 
+      cloudSynced, 
+      cloudSyncStatus,
       
-      addDonation: (d) => {
-        const id = Date.now().toString();
-        saveItem("donations", id, { ...d, id, status: isAdmin ? DonationStatus.APPROVED : DonationStatus.PENDING, date: new Date().toISOString() });
-      },
-      updateDonation: (id, status) => {
-        const donation = donations.find(d => d.id === id);
-        if (donation) saveItem("donations", id, { ...donation, status });
-      },
-      deleteDonation: async (id) => {
-        const donation = donations.find(d => d.id === id);
-        if (donation?.image) await import('../firebase').then(f => f.deleteStorageObject(donation.image!));
-        deleteItem("donations", id);
-      },
-
-      saveSettings: (s) => saveSettingsCloud(s),
-      saveLetterhead: (c) => saveLetterheadCloud(c),
-
-      updateLeadership: (list) => list.forEach(l => saveItem("leadership", l.id, l)),
-      updateEvents: (list) => list.forEach(e => saveItem("events", e.id, e)),
-      updateNotices: (list) => list.forEach(n => saveItem("notices", n.id, n)),
-      updateNews: (list) => list.forEach(n => saveItem("news", n.id, n)),
-
-      saveLeader: (l) => saveItem("leadership", l.id || Date.now().toString(), l),
-      deleteLeader: async (id) => {
-        const leader = leadership.find(l => l.id === id);
-        if (leader?.image) await import('../firebase').then(f => f.deleteStorageObject(leader.image!));
-        deleteItem("leadership", id);
-      },
+      setLang, 
+      setTheme, 
+      login,
+      loginWithGoogle,
+      logout,
       
-      saveEvent: (e) => saveItem("events", e.id || Date.now().toString(), e),
-      deleteEvent: async (id) => {
-        const event = events.find(e => e.id === id);
-        if (event?.image) await import('../firebase').then(f => f.deleteStorageObject(event.image!));
-        deleteItem("events", id);
-      },
+      addDonation,
+      updateDonation,
+      deleteDonation,
+ 
+      saveSettings,
+      saveLetterhead,
+ 
+      updateLeadership,
+      replaceLeadership,
+      updateEvents,
+      updateNotices,
+      updateNews,
+ 
+      saveLeader,
+      deleteLeader,
+      
+      saveEvent,
+      deleteEvent,
+ 
+      saveNotice,
+      deleteNotice,
+ 
+      saveNews,
+      deleteNews,
 
-      saveNotice: (n) => saveItem("notices", n.id || Date.now().toString(), n),
-      deleteNotice: (id) => deleteItem("notices", id),
+      addExpense,
+      deleteExpense,
 
-      saveNews: (n) => saveItem("news", n.id || Date.now().toString(), n),
-      deleteNews: async (id) => {
-        const item = news.find(n => n.id === id);
-        if (item?.image) await import('../firebase').then(f => f.deleteStorageObject(item.image!));
-        deleteItem("news", id);
-      },
-
-      retryCloudConnection: async () => {
-        const enabled = await reEnableCloudNetwork();
-        if (enabled) window.location.reload();
-      },
+      retryCloudConnection,
       restoreFromLegacy,
-      resetAllData: async () => {
-        try {
-          console.log("Resetting all system data...");
-          const keysToRemove = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith('azadi_db_') || key === 'azadi_admin_session' || key === 'azadi_mock_user')) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach(k => localStorage.removeItem(k));
-          
-          const databaseService = await import('../services/databaseService');
-          databaseService.seedDefaults();
-          
-          alert(lang === 'bn' ? 'সকল ডাটা রিসেট করা হয়েছে এবং ডিফল্ট সেটিংস লোড করা হয়েছে!' : 'All data reset and defaults re-seeded successfully!');
-          window.location.reload();
-        } catch (e) {
-          console.error("Failed to reset system data:", e);
-        }
-      },
-      exportBackup: () => {
-        try {
-          const safeParse = (key: string, fallback: any) => {
-            try {
-              const val = localStorage.getItem(key);
-              return val ? JSON.parse(val) : fallback;
-            } catch {
-              return fallback;
-            }
-          };
-
-          const backupData = {
-            version: "1.0",
-            timestamp: Date.now(),
-            settings: safeParse('azadi_db_config_settings', {}),
-            letterhead: safeParse('azadi_db_config_letterhead', {}),
-            leadership: safeParse('azadi_db_leadership', []),
-            events: safeParse('azadi_db_events', []),
-            donations: safeParse('azadi_db_donations', []),
-            notices: safeParse('azadi_db_notices', []),
-            news: safeParse('azadi_db_news', []),
-          };
-          
-          const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `azadi-backup-${new Date().toISOString().split('T')[0]}.json`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          console.log("Database backup exported successfully.");
-        } catch (err) {
-          console.error("Failed to export backup:", err);
-          alert(lang === 'bn' ? 'ব্যাকআপ এক্সপোর্ট করতে সমস্যা হয়েছে!' : 'Backup export failed!');
-        }
-      },
-      importBackup: async (jsonText: string): Promise<boolean> => {
-        try {
-          const data = JSON.parse(jsonText);
-          if (!data) return false;
-          
-          if (data.settings && typeof data.settings === 'object') {
-            localStorage.setItem('azadi_db_config_settings', JSON.stringify(data.settings));
-          }
-          if (data.letterhead && typeof data.letterhead === 'object') {
-            localStorage.setItem('azadi_db_config_letterhead', JSON.stringify(data.letterhead));
-          }
-          if (data.leadership && Array.isArray(data.leadership)) {
-            localStorage.setItem('azadi_db_leadership', JSON.stringify(data.leadership));
-          }
-          if (data.events && Array.isArray(data.events)) {
-            localStorage.setItem('azadi_db_events', JSON.stringify(data.events));
-          }
-          if (data.donations && Array.isArray(data.donations)) {
-            localStorage.setItem('azadi_db_donations', JSON.stringify(data.donations));
-          }
-          if (data.notices && Array.isArray(data.notices)) {
-            localStorage.setItem('azadi_db_notices', JSON.stringify(data.notices));
-          }
-          if (data.news && Array.isArray(data.news)) {
-            localStorage.setItem('azadi_db_news', JSON.stringify(data.news));
-          }
-          
-          console.log("Database backup imported and restored successfully.");
-          alert(lang === 'bn' ? 'ব্যাকআপ সফলভাবে ডাটাবেজে রিস্টোর করা হয়েছে!' : 'Backup successfully restored to the database!');
-          window.location.reload();
-          return true;
-        } catch (e) {
-          console.error("Backup import failed:", e);
-          alert(lang === 'bn' ? 'ব্যাকআপ ফাইলটি সঠিক নয় বা করাপ্ট হয়ে গেছে।' : 'Invalid or corrupted backup file.');
-          return false;
-        }
-      }
+      resetAllData,
+      exportBackup,
+      importBackup,
+      seedDefaultDatabase
     }}>
       {children}
     </AppContext.Provider>

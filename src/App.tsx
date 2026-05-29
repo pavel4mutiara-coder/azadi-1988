@@ -23,6 +23,7 @@ const EventManager = lazy(() => import('./pages/admin/EventManager').then(m => (
 const LeadershipManager = lazy(() => import('./pages/admin/LeadershipManager').then(m => ({ default: m.LeadershipManager })));
 const NoticeManager = lazy(() => import('./pages/admin/NoticeManager').then(m => ({ default: m.NoticeManager })));
 const NewsManager = lazy(() => import('./pages/admin/NewsManager').then(m => ({ default: m.NewsManager })));
+const TestimonialManager = lazy(() => import('./pages/admin/TestimonialManager').then(m => ({ default: m.TestimonialManager })));
 
 const LoadingSpinner = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -31,112 +32,68 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const AdminLogin: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [pass, setPass] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, loginWithGoogle, lang } = useApp();
-  const t = TRANSLATIONS[lang];
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    try {
-      if (!await login(username, pass)) {
-        alert(lang === 'bn' ? 'ভুল ইউজারনেম বা পাসওয়ার্ড!' : 'Invalid Username or Password!');
-      }
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setIsLoggingIn(true);
-    try {
-      await loginWithGoogle();
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  return (
-    <div className="max-w-md mx-auto my-10 md:my-20 bg-white dark:bg-slate-900 p-10 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-heavy text-center space-y-8 animate-in slide-in-from-bottom-8 duration-700 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-2 bg-emerald-600"></div>
-      
-      <div className="space-y-4">
-        <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner ring-4 ring-emerald-500/5">
-          <Lock size={36} />
-        </div>
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">{t.adminLogin}</h1>
-          <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mt-2">{lang === 'bn' ? 'শুধুমাত্র অনুমোদিত ব্যক্তিদের জন্য' : 'Authorized Personnel Only'}</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <button 
-          onClick={handleGoogleLogin}
-          disabled={isLoggingIn}
-          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-black py-4 px-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm group active:scale-95 disabled:opacity-50"
-        >
-          {isLoggingIn ? <Loader2 className="animate-spin text-emerald-600" size={20} /> : <img src="https://www.google.com/favicon.ico" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google" />}
-          <span className="text-[12px] uppercase tracking-wide">{lang === 'bn' ? 'গুগল দিয়ে লগইন করুন' : 'Sign in with Google'}</span>
-        </button>
-        
-        <div className="flex items-center gap-4 py-2">
-          <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
-          <span className="text-[10px] font-black uppercase text-slate-300 dark:text-slate-600 tracking-widest">SECURE PORTAL</span>
-          <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-1.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-          {lang === 'bn' ? 'ইউজারনেম' : 'Username'}
-        </div>
-        <input 
-          type="text" 
-          placeholder="admin..."
-          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-emerald-500 focus:ring-2 font-black transition-all"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-        />
-        <div className="space-y-1.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-          {t.password as string}
-        </div>
-        <input 
-          type="password" 
-          placeholder="••••••••"
-          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-emerald-500 focus:ring-2 font-black tracking-[0.5em] transition-all"
-          value={pass}
-          onChange={e => setPass(e.target.value)}
-        />
-        <button 
-          type="submit" 
-          disabled={isLoggingIn}
-          className="w-full bg-emerald-600 text-white font-black py-5 rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 text-xs uppercase tracking-[0.2em] mt-2 flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          {isLoggingIn && <Loader2 className="animate-spin" size={18} />}
-          {isLoggingIn ? (lang === 'bn' ? 'প্রক্রিয়া হচ্ছে...' : 'Processing...') : t.login}
-        </button>
-      </form>
-    </div>
-  );
-};
-
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAdmin, authLoading } = useApp();
+  const { isAdmin, authLoading, loginWithGoogle, lang } = useApp();
+
+  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
 
   if (authLoading) {
     return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-emerald-600" size={48} />
-        <p className="text-slate-500 font-black text-[10px] uppercase tracking-widest animate-pulse">Verifying Access...</p>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-[9px]">
+          {lang === 'bn' ? 'অপেক্ষা করুন...' : 'Authenticating admin...'}
+        </p>
       </div>
     );
   }
 
-  if (!isAdmin) return <AdminLogin />;
+  if (!isAdmin) {
+    return (
+      <div className="max-w-md mx-auto p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl text-center space-y-8 relative overflow-hidden my-12 bengali z-10">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full"></div>
+        <div className="w-20 h-20 bg-emerald-50 dark:bg-slate-950 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 dark:border-slate-800 shadow-inner rotate-3">
+          <Lock size={36} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            {lang === 'bn' ? 'প্রশাসক লগইন' : 'Admin Gateway'}
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 font-bold text-xs max-w-xs mx-auto leading-relaxed">
+            {lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘের পোর্টাল পরিচালনা করতে লগইন করুন।' : 'Access restricted to authorized personnel only. Please verify your credentials.'}
+          </p>
+        </div>
+
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-5 rounded-2xl text-left space-y-1.5 animate-pulse">
+          <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+            <Lock size={14} /> {lang === 'bn' ? 'ইউজার গাইড' : 'Database Rules'}
+          </h4>
+          <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
+            {lang === 'bn' ? (
+              <>
+                প্রবেশাধিকার পেতে আপনার অনুমোদিত মেইল <code className="font-mono bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded text-amber-900 font-black">{superAdminEmail}</code> দিয়ে সাইন-ইন সম্পন্ন করুন।
+              </>
+            ) : (
+              <>
+                Sign in with authorized developer email <code className="font-mono bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded text-amber-900 font-black">{superAdminEmail}</code> to grant administrative Firestore rules.
+              </>
+            )}
+          </p>
+        </div>
+
+        <button 
+          onClick={loginWithGoogle}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl hover:-translate-y-0.5 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 relative cursor-pointer font-sans"
+        >
+          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M12.24 10.285V14.4h6.887C18.2 16.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.71 0 3.275.61 4.5 1.625l3.09-3.09C17.944 1.139 15.27 0 12.24 0 6.033 0 1 5.033 1 11.24s5.033 11.24 11.24 11.24c5.895 0 10.11-4.14 10.11-10.24 0-.69-.06-1.355-.175-1.955H12.24z"/>
+          </svg>
+          {lang === 'bn' ? 'Google দিয়ে সাইন-ইন' : 'Sign in with Google'}
+        </button>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 };
 
@@ -158,10 +115,12 @@ const AppRoutes: React.FC = () => {
         <Route path="/admin/leadership" element={<ProtectedRoute><LeadershipManager /></ProtectedRoute>} />
         <Route path="/admin/letterhead" element={<ProtectedRoute><LetterheadManager /></ProtectedRoute>} />
         <Route path="/admin/donations" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/expenses" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute><SettingsManager /></ProtectedRoute>} />
         <Route path="/admin/events" element={<ProtectedRoute><EventManager /></ProtectedRoute>} />
         <Route path="/admin/notices" element={<ProtectedRoute><NoticeManager /></ProtectedRoute>} />
         <Route path="/admin/news" element={<ProtectedRoute><NewsManager /></ProtectedRoute>} />
+        <Route path="/admin/testimonials" element={<ProtectedRoute><TestimonialManager /></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

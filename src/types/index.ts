@@ -34,6 +34,7 @@ export interface Leadership {
   phone: string;
   image: string; // URL or Base64
   order: number;
+  category?: 'leader' | 'executive' | 'advisor' | 'volunteer' | 'member';
   status?: 'active' | 'inactive';
   createdAt?: string;
 }
@@ -48,6 +49,7 @@ export interface Event {
   locationBn: string;
   date: string;
   image: string; // Base64 encoded
+  meetUrl?: string; // Optional Google Meet URL
 }
 
 export interface Notice {
@@ -99,3 +101,28 @@ export interface LetterheadConfig {
   stampText: string;
   bodyText: string; // Document content
 }
+
+export interface Testimonial {
+  id: string;
+  nameEn: string;
+  nameBn: string;
+  roleEn: string;
+  roleBn: string;
+  locationEn: string;
+  locationBn: string;
+  quoteEn: string;
+  quoteBn: string;
+  image: string;
+  createdAt: string;
+  status: 'PENDING' | 'APPROVED';
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  descriptionEn: string;
+  descriptionBn: string;
+  date: string;
+}
+
