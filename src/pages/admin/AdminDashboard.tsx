@@ -109,6 +109,8 @@ export const AdminDashboard: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
+  const [deletingDonation, setDeletingDonation] = useState<Donation | null>(null);
+  const [deleteConfirmationWord, setDeleteConfirmationWord] = useState('');
 
   const pendingDonations = donations.filter(d => d.status === DonationStatus.PENDING);
   const approvedDonations = donations.filter(d => d.status === DonationStatus.APPROVED);
@@ -681,12 +683,11 @@ export const AdminDashboard: React.FC = () => {
                           )}
                           <button 
                             onClick={() => {
-                              if (confirm(lang === 'bn' ? 'আপনি কি আসলেই এই এন্ট্রিটি মুছে ফেলতে চান?' : 'Are you sure you want to permanently delete this donation entry?')) {
-                                deleteDonation(d.id);
-                              }
+                              setDeletingDonation(d);
+                              setDeleteConfirmationWord('');
                             }} 
-                            title={lang === 'bn' ? 'муше ফেলুন' : 'Delete'}
-                            className="p-2 text-slate-300 hover:text-red-500 transition-colors inline-flex"
+                            title={lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
+                            className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg transition-all inline-flex"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -1221,10 +1222,9 @@ export const AdminDashboard: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(lang === 'bn' ? 'আপনি কি আসলেই এই এন্ট্রিটি মুছে ফেলতে চান?' : 'Are you sure you want to permanently delete this donation entry?')) {
-                      deleteDonation(selectedDonationDetails.id);
-                      setSelectedDonationDetails(null);
-                    }
+                    setDeletingDonation(selectedDonationDetails);
+                    setDeleteConfirmationWord('');
+                    setSelectedDonationDetails(null);
                   }}
                   className="px-4 py-3 bg-rose-50 hover:bg-rose-600 hover:text-white dark:bg-slate-900 text-rose-600 rounded-xl font-bold text-xs uppercase transition-all flex items-center gap-2"
                 >
@@ -1287,6 +1287,147 @@ export const AdminDashboard: React.FC = () => {
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE DONATION MODAL */}
+      {deletingDonation && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            onClick={() => {
+              setDeletingDonation(null);
+              setDeleteConfirmationWord('');
+            }} 
+            className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+          ></div>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-100 dark:border-slate-800 p-6 md:p-8 shadow-heavy relative z-[101] animate-in zoom-in-95 duration-200 bengali max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => {
+                setDeletingDonation(null);
+                setDeleteConfirmationWord('');
+              }} 
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 mb-4">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-2xl">
+                <AlertCircle size={24} />
+              </div>
+              <h3 className="text-lg md:text-xl font-black uppercase tracking-tight font-sans">
+                {lang === 'bn' ? 'স্থায়ীভাবে ডিলিট নিশ্চিতকরণ' : 'Confirm Deletion'}
+              </h3>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 font-semibold font-sans">
+              {lang === 'bn' 
+                ? 'অনুদান এন্ট্রিটি চিরতরে মুছে ফেলা হবে। এই কাজটি আর ফিরিয়ে আনা সম্ভব নয়।' 
+                : 'This action cannot be undone. The selected donation entry will be permanently deleted.'}
+            </p>
+
+            {/* Donation Summary Details */}
+            <div className="bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 mb-6 space-y-3.5 text-xs font-sans">
+              <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+                <span className="text-slate-400 font-bold">{lang === 'bn' ? 'দাতার নাম' : 'Donor Name'}:</span>
+                <span className="text-slate-800 dark:text-slate-200 font-black">
+                  {deletingDonation.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : deletingDonation.donorName}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+                <span className="text-slate-400 font-bold">{lang === 'bn' ? 'পরিমাণ (টাকা)' : 'Amount (BDT)'}:</span>
+                <span className="text-rose-600 dark:text-rose-400 font-black">
+                  ৳{deletingDonation.amount.toLocaleString()} BDT
+                </span>
+              </div>
+              {deletingDonation.paymentMethod && (
+                <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+                  <span className="text-slate-400 font-bold">{lang === 'bn' ? 'মাধ্যম' : 'Payment Method'}:</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-black">{deletingDonation.paymentMethod}</span>
+                </div>
+              )}
+              {deletingDonation.transactionId && (
+                <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+                  <span className="text-slate-400 font-bold">{lang === 'bn' ? 'ট্রানজেকশন আইডি' : 'Transaction ID'}:</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-mono font-bold tracking-wider">{deletingDonation.transactionId}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">{lang === 'bn' ? 'আবেদনের অবস্থা' : 'Status'}:</span>
+                <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                  deletingDonation.status === DonationStatus.APPROVED 
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' 
+                    : deletingDonation.status === DonationStatus.REJECTED 
+                      ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400' 
+                      : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
+                }`}>
+                  {deletingDonation.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Warning when deleting APPROVED donations */}
+            {deletingDonation.status === DonationStatus.APPROVED && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl p-4 mb-6 font-sans">
+                <div className="flex gap-2.5 items-start">
+                  <div className="text-amber-600 dark:text-amber-400 mt-0.5">
+                    <Lock size={15} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-tight">
+                      {lang === 'bn' ? 'অনুমোদিত অনুদান ডিলিট সুরক্ষাবোধ' : 'Approved Ledger Deletion Policy'}
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-amber-700 dark:text-amber-400 font-semibold">
+                      {lang === 'bn' 
+                        ? 'সতর্কতা: এটি একটি অনুমোদিত বা প্রাপ্ত অনুদান, যা আপনার অডিট ট্রেইল ও ব্য্যালেন্সকে প্রভাবিত করবে। এটি ডিলিট করতে নিচে "DELETE" শব্দটি টাইপ করুন।' 
+                        : 'Caution: This is an APPROVED donation. Deleting it directly alters the historical ledger totals and financial statement logic. Please type "DELETE" below to finalize.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <input 
+                    type="text"
+                    placeholder={lang === 'bn' ? 'ডিলিট সম্পন্ন করতে "DELETE" লিখুন' : 'Type "DELETE" to confirm'}
+                    value={deleteConfirmationWord}
+                    onChange={(e) => setDeleteConfirmationWord(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-950 border border-amber-200 dark:border-amber-900/55 px-4 py-2.5 rounded-xl font-mono text-center text-xs font-black placeholder:text-slate-300 dark:placeholder:text-slate-700 uppercase tracking-widest text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/50 transition-all font-sans"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Deletion confirmation button controls */}
+            <div className="flex gap-3 font-sans">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeletingDonation(null);
+                  setDeleteConfirmationWord('');
+                }}
+                className="flex-1 px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-xs uppercase cursor-pointer transition-all active:scale-95"
+              >
+                {lang === 'bn' ? 'বাতিল করুন' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={deletingDonation.status === DonationStatus.APPROVED && deleteConfirmationWord.trim().toUpperCase() !== 'DELETE'}
+                onClick={() => {
+                  deleteDonation(deletingDonation.id);
+                  setDeletingDonation(null);
+                  setDeleteConfirmationWord('');
+                }}
+                className={`flex-1 px-4 py-3 rounded-xl font-black text-xs uppercase cursor-pointer transition-all flex items-center justify-center gap-2 active:scale-95 text-white ${
+                  deletingDonation.status === DonationStatus.APPROVED && deleteConfirmationWord.trim().toUpperCase() !== 'DELETE'
+                    ? 'bg-slate-100 dark:bg-slate-850 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-100 dark:border-slate-800/80'
+                    : 'bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20'
+                }`}
+              >
+                <Trash2 size={13} />
+                {lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

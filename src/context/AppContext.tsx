@@ -88,6 +88,8 @@ interface AppState {
   exportBackup: () => void;
   importBackup: (jsonText: string) => Promise<boolean>;
   seedDefaultDatabase: () => Promise<void>;
+  googleAccessToken: string | null;
+  setGoogleAccessToken: (token: string | null) => void;
 }
 
 const STATIC_SETTINGS: OrganizationSettings = {
@@ -109,7 +111,12 @@ const STATIC_SETTINGS: OrganizationSettings = {
   roket: "01711975488",
   facebook: "https://www.facebook.com/profile.php?id=61585193438030",
   youtube: "https://youtube.com/@azadisocialwelfareorganization?si=gD7Akj6EdMYjHuFe",
-  whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k"
+  whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k",
+  googleChatSpace: "",
+  googleChatEnabled: false,
+  googleChatNotifyOnReceipt: true,
+  googleChatNotifyOnApproval: true,
+  googleChatNotifyOnExpense: true
 };
 
 const STATIC_DONATIONS: Donation[] = [
@@ -286,6 +293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
 
   // Firestore states (fallback initialized to mock content)
   const [donations, setDonations] = useState<Donation[]>(STATIC_DONATIONS);
@@ -322,8 +330,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error) {
-        if(error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
+        const errMsg = error instanceof Error ? error.message : String(error);
+        if (errMsg.toLowerCase().includes('offline')) {
+          console.warn("Firebase is offline. Relying on local cache/capabilities.");
+        } else {
+          console.warn("Firebase connection test notice:", errMsg);
         }
       }
     }
@@ -336,8 +347,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser(currentUser);
       if (currentUser) {
         // Evaluate if user is admin
-        const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
-        const isSuperAdminEmail = currentUser.email === superAdminEmail;
+        const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com').toLowerCase();
+        const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
         
         try {
           const adminRef = doc(db, 'admins', currentUser.uid);
@@ -394,8 +405,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         setDonations(list);
       } else {
-        console.log("[DEBUG] Donations snapshot is empty. Applying STATIC_DONATIONS fallback.");
-        setDonations(STATIC_DONATIONS);
+        console.log("[DEBUG] Donations snapshot is empty. Applying empty array.");
+        setDonations([]);
       }
     }, (error) => {
       console.error("[DEBUG] ERROR on snapshot donations fetch:", error);
@@ -412,7 +423,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLeadership(STATIC_LEADERSHIP);
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'leadership');
+      console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
+      setLeadership(STATIC_LEADERSHIP);
     });
 
     // 5. Events listener
@@ -422,7 +434,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         snap.forEach(d => list.push(d.data() as Event));
         setEvents(list);
       } else {
-        setEvents(STATIC_EVENTS);
+        setEvents([]);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'events');
@@ -435,7 +447,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         snap.forEach(d => list.push(d.data() as Notice));
         setNotices(list);
       } else {
-        setNotices(STATIC_NOTICES);
+        setNotices([]);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'notices');
@@ -448,7 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         snap.forEach(d => list.push(d.data() as News));
         setNews(list);
       } else {
-        setNews(STATIC_NEWS);
+        setNews([]);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'news');
@@ -461,7 +473,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         snap.forEach(d => list.push(d.data() as Expense));
         setExpenses(list);
       } else {
-        setExpenses(STATIC_EXPENSES);
+        setExpenses([]);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'expenses');
@@ -515,19 +527,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (isAdmin && settings.nameBn === STATIC_SETTINGS.nameBn) {
       // Check if document exists on server
-      getDoc(doc(db, 'settings', 'config')).then((snap) => {
-        if (!snap.exists()) {
-          console.log("Seeding newly-discovered database with default structures...");
-          seedDefaultDatabase();
-        }
-      });
+      getDoc(doc(db, 'settings', 'config'))
+        .then((snap) => {
+          if (!snap.exists()) {
+            console.log("Seeding newly-discovered database with default structures...");
+            seedDefaultDatabase();
+          }
+        })
+        .catch((error) => {
+          console.warn("Failed to retrieve database configuration (possibly offline):", error);
+        });
     }
   }, [isAdmin, settings]);
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/chat');
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        console.log("[DEBUG] Captured Google Chat scoped OAuth token.");
+        setGoogleAccessToken(credential.accessToken);
+      }
     } catch (error) {
       console.error("Authentication popup failed:", error);
     }
@@ -548,6 +570,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = async () => {
     try {
       await signOut(auth);
+      setGoogleAccessToken(null);
     } catch (e) {
       console.error("Sign out failed", e);
     }
@@ -570,12 +593,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Send Google Chat Notification helper
+  const triggerGoogleChatNotification = async (text: string) => {
+    if (!settings.googleChatEnabled || !settings.googleChatSpace || !googleAccessToken) {
+      return;
+    }
+    try {
+      const { sendGoogleChatMessage } = await import('../utils/googleChat');
+      await sendGoogleChatMessage(googleAccessToken, settings.googleChatSpace, text);
+      console.log("[DEBUG] Google Chat notification sent successfully.");
+    } catch (error) {
+      console.warn("[DEBUG] Google Chat auto-notification failed:", error);
+    }
+  };
+
   // WRITE OPERATIONS TO FIRESTORE WITH FORTRESS EXCEPTION HANDLING
   const addDonation = async (donation: Donation) => {
+    // Optimistic UI update
+    setDonations(prev => {
+      if (prev.some(d => d.id === donation.id)) {
+        return prev.map(d => d.id === donation.id ? donation : d);
+      }
+      return [donation, ...prev];
+    });
+
     try {
-      await setDoc(doc(db, 'donations', donation.id), donation);
+      if (auth.currentUser) {
+        await setDoc(doc(db, 'donations', donation.id), donation);
+      }
+
+      // Google Chat auto-trigger on new donation request submission
+      if (settings.googleChatNotifyOnReceipt) {
+        const donorLabel = donation.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : donation.donorName;
+        const text = `📢 *${lang === 'bn' ? 'নতুন অনুদান জমা হয়েছে!' : 'New Donation Submitted!'}*\n` +
+                     `• ${lang === 'bn' ? 'দাতা' : 'Donor'}: ${donorLabel}\n` +
+                     `• ${lang === 'bn' ? 'পরিমাণ' : 'Amount'}: ৳${donation.amount.toLocaleString()} BDT\n` +
+                     `• ${lang === 'bn' ? 'মাধ্যম' : 'Method'}: ${donation.paymentMethod || 'N/A'}\n` +
+                     `• ${lang === 'bn' ? 'খাত' : 'Purpose'}: ${donation.purpose}\n` +
+                     `• ${lang === 'bn' ? 'স্ট্যাটাস' : 'Status'}: ${donation.status}`;
+        triggerGoogleChatNotification(text);
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `donations/${donation.id}`);
+      console.warn("Firestore error adding donation (might be offline or fallback):", error);
+      if (auth.currentUser) {
+        handleFirestoreError(error, OperationType.WRITE, `donations/${donation.id}`);
+      }
     }
   };
 
@@ -586,26 +648,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!existing) {
       console.warn("[DEBUG] CRITICAL WARNING: Donation ID not found in the state array. Fallback spread will occur.");
     }
+
+    // Optimistic update
+    setDonations(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+
     try {
-      const docRef = doc(db, 'donations', id);
-      const updateData = { ...existing!, status };
-      console.log("[DEBUG] Writing to Firestore at path donations/" + id, "Payload:", updateData);
-      await setDoc(docRef, updateData);
-      console.log("[DEBUG] Firestore write success for donations/" + id);
-      await logAuditTrail('DONATION_STATUS_UPDATE', { donationId: id, status });
+      if (auth.currentUser) {
+        const docRef = doc(db, 'donations', id);
+        const updateData = { ...existing!, status };
+        console.log("[DEBUG] Writing to Firestore at path donations/" + id, "Payload:", updateData);
+        await setDoc(docRef, updateData);
+        console.log("[DEBUG] Firestore write success for donations/" + id);
+        await logAuditTrail('DONATION_STATUS_UPDATE', { donationId: id, status });
+      }
+
+      // Google Chat auto-trigger when an admin approves a donation
+      if (settings.googleChatNotifyOnApproval && status === DonationStatus.APPROVED) {
+        const donorLabel = existing?.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : (existing?.donorName || 'N/A');
+        const text = `✅ *${lang === 'bn' ? 'অনুদান অনুমোদিত হয়েছে!' : 'Donation Approved & Recorded!'}*\n` +
+                     `• ${lang === 'bn' ? 'দাতা' : 'Donor'}: ${donorLabel}\n` +
+                     `• ${lang === 'bn' ? 'পরিমাণ' : 'Amount'}: ৳${existing?.amount.toLocaleString()} BDT\n` +
+                     `• ${lang === 'bn' ? 'মাধ্যম' : 'Method'}: ${existing?.paymentMethod || 'N/A'}\n` +
+                     `• ${lang === 'bn' ? 'খাত' : 'Purpose'}: ${existing?.purpose || 'N/A'}\n` +
+                     `• ${lang === 'bn' ? 'ট্রানজেকশন আইডি' : 'TxID'}: \`${existing?.transactionId || 'N/A'}\``;
+        triggerGoogleChatNotification(text);
+      }
     } catch (error) {
       console.error("[DEBUG] ERROR updating donation status in Firestore:", error);
-      handleFirestoreError(error, OperationType.UPDATE, `donations/${id}`);
+      if (auth.currentUser) {
+        handleFirestoreError(error, OperationType.UPDATE, `donations/${id}`);
+      }
     }
   };
 
   const deleteDonation = async (id: string) => {
+    const backupDonations = [...donations];
     try {
       const target = donations.find(d => d.id === id);
-      await deleteDoc(doc(db, 'donations', id));
-      await logAuditTrail('DONATION_DELETION', { donationId: id, donorName: target?.donorName, amount: target?.amount });
+      // Immediately remove from state to guarantee crisp, instant deletion in the UI
+      setDonations(prev => prev.filter(d => d.id !== id));
+
+      if (auth.currentUser) {
+        await deleteDoc(doc(db, 'donations', id));
+        await logAuditTrail('DONATION_DELETION', { donationId: id, donorName: target?.donorName, amount: target?.amount });
+      }
+      
+      // Let the user know deletion was successful
+      alert(lang === 'bn' ? 'অনুদান এন্ট্রিটি সফলভাবে মুছে ফেলা হয়েছে!' : 'Donation entry has been successfully deleted!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `donations/${id}`);
+      console.warn("Firestore delete failed, reverting state:", error);
+      // Rollback immediately to original donations list
+      setDonations(backupDonations);
+      
+      alert(lang === 'bn' 
+        ? 'অনুদানটি মুছে ফেলা সম্ভব হয়নি! দয়া করে ইন্টারনেট কানেকশন চেক করুন অথবা পুনরায় লগইন করুন।' 
+        : 'Could not delete the donation! Please check your internet connection and try again.'
+      );
     }
   };
 
@@ -634,16 +732,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const replaceLeadership = async (leadershipList: Leadership[]) => {
+    const listToSave = leadershipList.length === 0 ? STATIC_LEADERSHIP : leadershipList;
     try {
+      // Optimistic local state update
+      setLeadership(listToSave);
       const snap = await getDocs(collection(db, 'leadership'));
       for (const doc of snap.docs) {
         await deleteDoc(doc.ref);
       }
-      for (const l of leadershipList) {
+      for (const l of listToSave) {
         await saveLeader(l);
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'leadership');
+      console.warn("Failed to replace leadership on server. Keeping local fallback state:", error);
+      setLeadership(listToSave);
     }
   };
 
@@ -714,6 +816,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addExpense = async (item: Expense) => {
     try {
       await setDoc(doc(db, 'expenses', item.id), item);
+      
+      // Google Chat trigger on new expense entry
+      if (settings.googleChatNotifyOnExpense) {
+        const text = `💸 *${lang === 'bn' ? 'নতুন খরচ (ব্যয়) রেকর্ড করা হয়েছে!' : 'New Expense Recorded!'}*\n` +
+                     `• ${lang === 'bn' ? 'বিবরণ' : 'Description'}: ${lang === 'bn' ? item.descriptionBn : item.descriptionEn}\n` +
+                     `• ${lang === 'bn' ? 'পরিমাণ' : 'Amount'}: ৳${item.amount.toLocaleString()} BDT\n` +
+                     `• ${lang === 'bn' ? 'তারিখ' : 'Date'}: ${item.date}\n` +
+                     `• ${lang === 'bn' ? 'ক্যাটাগরি' : 'Category'}: ${item.category}`;
+        triggerGoogleChatNotification(text);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `expenses/${item.id}`);
     }
@@ -882,7 +994,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       resetAllData,
       exportBackup,
       importBackup,
-      seedDefaultDatabase
+      seedDefaultDatabase,
+      googleAccessToken,
+      setGoogleAccessToken
     }}>
       {children}
     </AppContext.Provider>

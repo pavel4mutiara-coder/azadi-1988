@@ -92,6 +92,11 @@ export interface OrganizationSettings {
   facebook: string;
   youtube: string;
   whatsappChannel: string;
+  googleChatSpace?: string;
+  googleChatEnabled?: boolean;
+  googleChatNotifyOnReceipt?: boolean;
+  googleChatNotifyOnApproval?: boolean;
+  googleChatNotifyOnExpense?: boolean;
 }
 
 export interface LetterheadConfig {

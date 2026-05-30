@@ -19,7 +19,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == "pavel4mutiara@gmail.com"
+        request.auth.token.email.matches('(?i)^pavel4mutiara@gmail\\.com$')
       );
     }
 
@@ -213,7 +213,7 @@ service cloud.firestore {
     // Admins path
     match /admins/{adminId} {
       allow read: if isSignedIn() && (adminId == request.auth.uid || isAdmin());
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (isSignedIn() && request.auth.token.email.matches('(?i)^pavel4mutiara@gmail\\.com$'));
     }
 
     // Testimonials path

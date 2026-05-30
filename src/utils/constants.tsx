@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, 
 
 export const ISLAMIC_QUOTES = [
   {
-    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّাসِ",
+    arabic: "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّاسِ",
     en: "The best of people are those who are most beneficial to people.",
     bn: "মানুষের মধ্যে সেই সর্বোত্তম, যে মানুষের জন্য সবচেয়ে বেশি উপকারী।"
   },

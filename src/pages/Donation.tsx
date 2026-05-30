@@ -198,7 +198,9 @@ export const Donation: React.FC = () => {
                 dir="rtl" 
                 className="text-4xl sm:text-5xl md:text-7xl text-emerald-300 font-arabic-amiri tracking-wide select-none leading-relaxed drop-shadow-[0_2px_15px_rgba(52,211,153,0.45)]"
               >
+                <span className="text-amber-400 opacity-80 mr-2">﴿</span>
                 وَمَا تُنْفِقُوا مِنْ خَيْرٍ فَلِأَنْفُسِكُمْ
+                <span className="text-amber-400 opacity-80 ml-2">﴾</span>
               </div>
             </div>
             

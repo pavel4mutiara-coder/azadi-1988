@@ -251,12 +251,40 @@ export const ReceiptView: React.FC<Props> = ({
 
             {/* Bottom Section - Tightly optimized for visibility */}
             <div className="space-y-8 pb-4">
-              {/* Islamic Quote Card - Ensure this is fully visible */}
-              <div className="text-center">
-                <div className="space-y-2 px-8 py-5 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/40 relative">
-                   <Heart className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-rose-500 bg-white p-1 rounded-full shadow-sm" size={20} fill="currentColor" />
-                   <div className="text-2xl text-emerald-900 font-serif italic bengali leading-tight">{selectedQuote.arabic}</div>
-                   <div className="text-[11px] font-black text-slate-700 bengali leading-snug">{selectedQuote.bn}</div>
+              {/* Islamic Quote Card - Ensure this is fully visible with a beautiful, high-class calligraphy design */}
+              <div className="text-center mx-4">
+                <div className="space-y-3 px-8 py-5 bg-gradient-to-br from-emerald-50/20 to-teal-50/20 rounded-[2.5rem] border border-emerald-900/10 relative shadow-sm">
+                  {/* Absolute Badge style decor */}
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1.5 text-emerald-800 text-[9px] font-black tracking-widest uppercase shadow-sm">
+                    <Heart className="text-rose-500 animate-pulse" size={10} fill="currentColor" />
+                    <span>{lang === 'bn' ? 'প্রেরণা বাণী' : 'Words of Wisdom'}</span>
+                    <Heart className="text-rose-500 animate-pulse" size={10} fill="currentColor" />
+                  </div>
+
+                  {/* Gorgeous Arabic Calligraphy */}
+                  <div 
+                    className="text-3xl text-emerald-950 font-normal leading-loose text-center pt-2 select-none tracking-wide"
+                    style={{ 
+                      fontFamily: '"Amiri", serif',
+                      direction: 'rtl'
+                    }}
+                  >
+                    <span className="text-amber-600/80 mr-1.5 pb-1 inline-block">﴿</span>
+                    {selectedQuote.arabic}
+                    <span className="text-amber-600/80 ml-1.5 pb-1 inline-block">﴾</span>
+                  </div>
+
+                  {/* Exquisite Floral/Geometric Divider */}
+                  <div className="flex items-center justify-center gap-3 py-1 select-none">
+                    <div className="w-14 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-amber-500/50"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                    <div className="w-14 h-px bg-gradient-to-l from-transparent via-amber-500/30 to-amber-500/50"></div>
+                  </div>
+
+                  {/* Bengali Translation */}
+                  <div className="text-xs font-bold text-slate-800 leading-relaxed max-w-xl mx-auto tracking-normal">
+                    {selectedQuote.bn}
+                  </div>
                 </div>
               </div>
 

@@ -29,6 +29,7 @@ export const LeadershipManager: React.FC = () => {
   const handleRestoreDefaults = async () => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি পূর্ণাঙ্গ কমিটির কাঠামো লোড করতে চান?' : 'Load full committee structure?')) {
       await replaceLeadership([]); // Will trigger read-only notice
+      resetForm();
     }
   };
 
