@@ -44,9 +44,15 @@ export const AdminDashboard: React.FC = () => {
     addDonation, 
     logout, 
     isAdmin, 
+    login,
     loginWithGoogle, 
     authLoading 
   } = useApp();
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const t = TRANSLATIONS[lang];
   const location = useLocation();
@@ -365,14 +371,29 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    if (!username.trim() || !password.trim()) {
+      setErrorMsg(lang === 'bn' ? 'ইউজারনেম এবং পাসওয়ার্ড দুটিই প্রয়োজন!' : 'Both Username and Password are required!');
+      return;
+    }
+    setLoading(true);
+    const success = await login(username, password);
+    setLoading(false);
+    if (!success) {
+      setErrorMsg(lang === 'bn' ? 'ভুল ইউজারনেম অথবা পাসওয়ার্ড!' : 'Incorrect username or password!');
+    }
+  };
+
   if (!isAdmin) {
     return (
-      <div className="max-w-md mx-auto p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl text-center space-y-8 relative overflow-hidden my-12 bengali">
+      <div className="max-w-md mx-auto p-10 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl space-y-8 relative overflow-hidden my-12 bengali z-10">
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full"></div>
         <div className="w-20 h-20 bg-emerald-50 dark:bg-slate-950 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 dark:border-slate-800 shadow-inner rotate-3">
           <Lock size={36} />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 text-center">
           <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {lang === 'bn' ? 'প্রশাসক লগইন' : 'Admin Gateway'}
           </h2>
@@ -381,28 +402,65 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-5 rounded-2xl text-left space-y-1.5 animate-pulse">
-          <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-            <Info size={14} /> {lang === 'bn' ? 'ইউজার গাইড' : 'Database Rules'}
-          </h4>
-          <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
-            {lang === 'bn' ? (
-              <>
-                প্রবেশাধিকার পেতে আপনার অনুমোদিত মেইল <code className="font-mono bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded text-amber-900 font-black">{superAdminEmail}</code> দিয়ে সাইন-ইন সম্পন্ন করুন।
-              </>
+        <form onSubmit={handleLogin} className="space-y-4 text-left">
+          <div>
+            <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              {lang === 'bn' ? 'ইউজারনেম' : 'Username'}
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={lang === 'bn' ? 'যেমন: Azadi' : 'e.g., Azadi'}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              {lang === 'bn' ? 'পাসওয়ার্ড' : 'Password'}
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={lang === 'bn' ? 'পাসওয়ার্ড দিন' : 'Enter password'}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 dark:text-white"
+            />
+          </div>
+
+          {errorMsg && (
+            <p className="text-xs font-black text-red-500 text-center">
+              ⚠️ {errorMsg}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl hover:-translate-y-0.5 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer text-sm"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin" size={18} />
             ) : (
-              <>
-                Sign in with authorized developer email <code className="font-mono bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded text-amber-900 font-black">{superAdminEmail}</code> to grant administrative Firestore rules.
-              </>
+              lang === 'bn' ? 'লগইন করুন' : 'Login'
             )}
-          </p>
+          </button>
+        </form>
+
+        <div className="relative my-6 flex py-1 items-center">
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+          <span className="flex-shrink mx-4 text-slate-450 font-bold text-[10px] uppercase tracking-wider">
+            {lang === 'bn' ? 'অথবা' : 'OR'}
+          </span>
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
         </div>
 
         <button 
+          type="button"
           onClick={loginWithGoogle}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl hover:-translate-y-0.5 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 relative cursor-pointer"
+          className="w-full bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-black py-4 rounded-2xl hover:-translate-y-0.5 active:scale-95 transition-all shadow-md flex items-center justify-center gap-3 border border-slate-200 dark:border-slate-800 relative cursor-pointer font-sans text-sm"
         >
-          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 fill-current text-emerald-600" viewBox="0 0 24 24">
             <path d="M12.24 10.285V14.4h6.887C18.2 16.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.71 0 3.275.61 4.5 1.625l3.09-3.09C17.944 1.139 15.27 0 12.24 0 6.033 0 1 5.033 1 11.24s5.033 11.24 11.24 11.24c5.895 0 10.11-4.14 10.11-10.24 0-.69-.06-1.355-.175-1.955H12.24z"/>
           </svg>
           {lang === 'bn' ? 'Google দিয়ে সাইন-ইন' : 'Sign in with Google'}

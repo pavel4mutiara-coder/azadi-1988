@@ -12,6 +12,7 @@ export const LeadershipManager: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   
   const [formData, setFormData] = useState<Omit<Leadership, 'id'>>({
     nameEn: '', nameBn: '',
@@ -26,11 +27,14 @@ export const LeadershipManager: React.FC = () => {
     createdAt: new Date().toISOString()
   });
 
-  const handleRestoreDefaults = async () => {
-    if (window.confirm(lang === 'bn' ? 'আপনি কি পূর্ণাঙ্গ কমিটির কাঠামো লোড করতে চান?' : 'Load full committee structure?')) {
-      await replaceLeadership([]); // Will trigger read-only notice
-      resetForm();
-    }
+  const handleRestoreDefaults = () => {
+    setShowRestoreConfirm(true);
+  };
+
+  const handleConfirmRestore = async () => {
+    await replaceLeadership([]);
+    setShowRestoreConfirm(false);
+    resetForm();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -437,6 +441,35 @@ export const LeadershipManager: React.FC = () => {
             <div className="flex gap-3">
               <button type="button" onClick={handleConfirmDelete} className="flex-1 bg-rose-600 text-white font-black py-4 rounded-xl hover:bg-rose-700 transition-colors">Delete</button>
               <button type="button" onClick={() => setDeleteConfirmId(null)} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black py-4 rounded-xl">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRestoreConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800/80 max-w-md w-full shadow-heavy text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black">{lang === 'bn' ? 'কমিটি তালিকা রিস্টোর করবেন?' : 'Restore Committee List?'}</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm leading-relaxed px-2">
+              {lang === 'bn' 
+                ? 'আপনি কি নিশ্চিতভাবে পূর্ণাঙ্গ কমিটির মূল কাঠামো পুনরায় লোড করতে চান? এর ফলে বর্তমান তালিকা পরিবর্তিত হয়ে যাবে।' 
+                : 'Are you sure you want to reload the full default committee structure? This will replace your current active list.'}
+            </p>
+            <div className="flex gap-3">
+              <button 
+                type="button" 
+                onClick={handleConfirmRestore} 
+                className="flex-1 bg-amber-600 text-white font-black py-4 rounded-xl hover:bg-amber-750 transition-colors"
+              >
+                {lang === 'bn' ? 'রিস্টোর করুন' : 'Restore'}
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setShowRestoreConfirm(false)} 
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black py-4 rounded-xl"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
             </div>
           </div>
         </div>

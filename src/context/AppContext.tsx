@@ -22,7 +22,8 @@ import {
   orderBy, 
   getDoc,
   getDocs,
-  getDocFromServer
+  getDocFromServer,
+  writeBatch
 } from 'firebase/firestore';
 import { 
   auth, 
@@ -343,6 +344,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Listen for Authentication state
   useEffect(() => {
+    const checkCustomAdmin = () => {
+      return localStorage.getItem('azadi_custom_admin') === 'true';
+    };
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -364,13 +369,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
             setIsAdmin(true);
           } else {
-            setIsAdmin(false);
+            if (checkCustomAdmin()) {
+              setIsAdmin(true);
+            } else {
+              setIsAdmin(false);
+            }
           }
         } catch (e) {
-          setIsAdmin(isSuperAdminEmail);
+          if (isSuperAdminEmail || checkCustomAdmin()) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
         }
       } else {
-        setIsAdmin(false);
+        if (checkCustomAdmin()) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
       }
       setAuthLoading(false);
     });
@@ -556,19 +573,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const login = async (username?: string, password?: string): Promise<boolean> => {
-    // Standard mock credentials bypass for convenience alongside direct Google Auth
-    if (username === 'admin' && password === 'admin') {
-      // Prompt user to sign in with their Google account to acquire actual authenticated uid
-      alert(lang === 'bn' 
-        ? 'আসল এডমিন ক্ষমতা প্রয়োগ করার জন্য অনুগ্রহ করে নীচে Google Sign-in ব্যবহার করুন!' 
-        : 'Please sign in with Google to acquire real authenticated database permissions!');
-      return false;
+    if (username === 'Azadi' && password === 'Azadi@88') {
+      localStorage.setItem('azadi_custom_admin', 'true');
+      setIsAdmin(true);
+      return true;
     }
     return false;
   };
 
   const logout = async () => {
     try {
+      localStorage.removeItem('azadi_custom_admin');
+      setIsAdmin(false);
       await signOut(auth);
       setGoogleAccessToken(null);
     } catch (e) {
@@ -594,13 +610,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Send Google Chat Notification helper
-  const triggerGoogleChatNotification = async (text: string) => {
+  const triggerGoogleChatNotification = async (text: string, cardsV2?: any[]) => {
     if (!settings.googleChatEnabled || !settings.googleChatSpace || !googleAccessToken) {
       return;
     }
     try {
       const { sendGoogleChatMessage } = await import('../utils/googleChat');
-      await sendGoogleChatMessage(googleAccessToken, settings.googleChatSpace, text);
+      await sendGoogleChatMessage(googleAccessToken, settings.googleChatSpace, text, cardsV2);
       console.log("[DEBUG] Google Chat notification sent successfully.");
     } catch (error) {
       console.warn("[DEBUG] Google Chat auto-notification failed:", error);
@@ -671,7 +687,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                      `• ${lang === 'bn' ? 'মাধ্যম' : 'Method'}: ${existing?.paymentMethod || 'N/A'}\n` +
                      `• ${lang === 'bn' ? 'খাত' : 'Purpose'}: ${existing?.purpose || 'N/A'}\n` +
                      `• ${lang === 'bn' ? 'ট্রানজেকশন আইডি' : 'TxID'}: \`${existing?.transactionId || 'N/A'}\``;
-        triggerGoogleChatNotification(text);
+
+        try {
+          const { createChatCard } = await import('../utils/googleChat');
+          const cardsV2 = createChatCard(
+            lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Society',
+            lang === 'bn' ? 'অনুদান অনুমোদন বিজ্ঞপ্তি' : 'Donation Approval Notification',
+            [
+              {
+                header: lang === 'bn' ? 'অনুমোদনের বিবরণ' : 'Approval Details',
+                widgets: [
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'দাতার নাম' : 'Donor',
+                      text: donorLabel,
+                      startIcon: { knownIcon: 'PERSON' }
+                    }
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'পরিমাণ' : 'Amount',
+                      text: `৳${existing?.amount?.toLocaleString() || '0'} BDT`,
+                      startIcon: { knownIcon: 'TICKET' }
+                    }
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'উদ্দেশ্য / খাত' : 'Purpose',
+                      text: existing?.purpose || 'General',
+                      startIcon: { knownIcon: 'DESCRIPTION' }
+                    }
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'পদ্ধতি ও ট্রানজেকশন আইডি' : 'Method & TxID',
+                      text: `${existing?.paymentMethod || 'N/A'} - ${existing?.transactionId || 'N/A'}`,
+                      startIcon: { knownIcon: 'STAR' }
+                    }
+                  }
+                ]
+              }
+            ]
+          );
+          triggerGoogleChatNotification(text, cardsV2);
+        } catch {
+          triggerGoogleChatNotification(text);
+        }
       }
     } catch (error) {
       console.error("[DEBUG] ERROR updating donation status in Firestore:", error);
@@ -736,13 +797,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       // Optimistic local state update
       setLeadership(listToSave);
+      
+      const batch = writeBatch(db);
       const snap = await getDocs(collection(db, 'leadership'));
-      for (const doc of snap.docs) {
-        await deleteDoc(doc.ref);
+      
+      // Delete existing documents
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
       }
+      
+      // Add or rewrite new default documents
       for (const l of listToSave) {
-        await saveLeader(l);
+        batch.set(doc(db, 'leadership', l.id), l);
       }
+      
+      // Atomically commit batch to Firestore
+      await batch.commit();
     } catch (error) {
       console.warn("Failed to replace leadership on server. Keeping local fallback state:", error);
       setLeadership(listToSave);
@@ -824,7 +894,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                      `• ${lang === 'bn' ? 'পরিমাণ' : 'Amount'}: ৳${item.amount.toLocaleString()} BDT\n` +
                      `• ${lang === 'bn' ? 'তারিখ' : 'Date'}: ${item.date}\n` +
                      `• ${lang === 'bn' ? 'ক্যাটাগরি' : 'Category'}: ${item.category}`;
-        triggerGoogleChatNotification(text);
+
+        try {
+          const { createChatCard } = await import('../utils/googleChat');
+          const cardsV2 = createChatCard(
+            lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Society',
+            lang === 'bn' ? 'খরচের এন্ট্রি রেকর্ড' : 'Expense Record Notification',
+            [
+              {
+                header: lang === 'bn' ? 'খরচের বিবরণ' : 'Expense Details',
+                widgets: [
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'বিবরণ' : 'Description',
+                      text: lang === 'bn' ? item.descriptionBn : item.descriptionEn,
+                      startIcon: { knownIcon: 'DESCRIPTION' }
+                    }
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'পরিমাণ' : 'Amount',
+                      text: `৳${item.amount?.toLocaleString() || '0'} BDT`,
+                      startIcon: { knownIcon: 'TICKET' }
+                    }
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: lang === 'bn' ? 'তারিখ ও ক্যাটাগরি' : 'Date & Category',
+                      text: `${item.date} (${item.category})`,
+                      startIcon: { knownIcon: 'CLOCK' }
+                    }
+                  }
+                ]
+              }
+            ]
+          );
+          triggerGoogleChatNotification(text, cardsV2);
+        } catch {
+          triggerGoogleChatNotification(text);
+        }
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `expenses/${item.id}`);

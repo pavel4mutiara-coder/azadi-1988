@@ -34,7 +34,7 @@ service cloud.firestore {
     // Settings Validation Block
     function isValidSettings(data) {
       return data.keys().hasAll(['nameBn', 'nameEn', 'sloganBn', 'sloganEn', 'addressBn', 'addressEn', 'phone', 'email', 'establishedBn', 'establishedEn', 'logo', 'flag', 'adminWhatsApp', 'bkash', 'nagad', 'roket', 'facebook', 'youtube', 'whatsappChannel'])
-        && data.keys().size() == 19
+        && (data.keys().size() >= 19 && data.keys().size() <= 24)
         && data.nameBn is string && data.nameBn.size() <= 300
         && data.nameEn is string && data.nameEn.size() <= 300
         && data.sloganBn is string && data.sloganBn.size() <= 500
@@ -53,7 +53,12 @@ service cloud.firestore {
         && data.roket is string && data.roket.size() <= 50
         && data.facebook is string
         && data.youtube is string
-        && data.whatsappChannel is string;
+        && data.whatsappChannel is string
+        && (!data.keys().hasAny(['googleChatSpace']) || (data.googleChatSpace is string && data.googleChatSpace.size() <= 500))
+        && (!data.keys().hasAny(['googleChatEnabled']) || data.googleChatEnabled is bool)
+        && (!data.keys().hasAny(['googleChatNotifyOnReceipt']) || data.googleChatNotifyOnReceipt is bool)
+        && (!data.keys().hasAny(['googleChatNotifyOnApproval']) || data.googleChatNotifyOnApproval is bool)
+        && (!data.keys().hasAny(['googleChatNotifyOnExpense']) || data.googleChatNotifyOnExpense is bool);
     }
 
     function isValidLetterhead(data) {
