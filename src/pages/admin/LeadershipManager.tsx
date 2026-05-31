@@ -425,9 +425,9 @@ export const LeadershipManager: React.FC = () => {
                 {leader.category || 'executive'}
               </div>
             </div>
-            <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button type="button" onClick={() => handleEdit(leader)} className="p-2 bg-slate-50 dark:bg-slate-850 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Edit2 size={12} /></button>
-              <button type="button" onClick={() => setDeleteConfirmId(leader.id)} className="p-2 bg-slate-50 dark:bg-slate-850 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={12} /></button>
+            <div className="flex gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
+              <button type="button" onClick={() => handleEdit(leader)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl transition-all border border-slate-100 dark:border-slate-800" title={lang === 'bn' ? 'সম্পাদনা করুন' : 'Edit'}><Edit2 size={14} /></button>
+              <button type="button" onClick={() => setDeleteConfirmId(leader.id)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all border border-slate-100 dark:border-slate-800" title={lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}><Trash2 size={14} /></button>
             </div>
           </div>
         ))}

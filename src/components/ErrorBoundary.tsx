@@ -23,6 +23,25 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    
+    // Auto-recovery for chunk-load/failed dynamic imports
+    const errorMessage = error?.message || '';
+    const isChunkError = 
+      errorMessage.includes('Failed to fetch dynamically imported module') ||
+      errorMessage.includes('ChunkLoadError') ||
+      errorMessage.toLowerCase().includes('dynamically imported');
+
+    if (isChunkError) {
+      console.warn('Dynamic import chunk error detected in ErrorBoundary. Attempting auto-recovery...');
+      const recoveryKey = 'chunk_error_reload_count';
+      const reloadVal = sessionStorage.getItem(recoveryKey);
+      const reloadCount = reloadVal ? parseInt(reloadVal, 10) : 0;
+      
+      if (reloadCount < 2) {
+        sessionStorage.setItem(recoveryKey, String(reloadCount + 1));
+        window.location.reload();
+      }
+    }
   }
 
   public render() {

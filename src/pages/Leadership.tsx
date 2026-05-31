@@ -172,7 +172,7 @@ export const Leadership: React.FC = () => {
                   initial="hidden"
                   whileInView="show"
                   viewport={{ once: true, margin: "-100px" }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 equal-heights"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8 equal-heights w-full max-w-full overflow-hidden sm:overflow-visible"
                 >
                   {sectionMembers.map((leader) => {
                     const isVacant = getIsVacant(leader);
@@ -187,7 +187,7 @@ export const Leadership: React.FC = () => {
                       <motion.div
                         key={leader.id}
                         variants={itemVariants}
-                        className={`bg-white dark:bg-slate-900 rounded-3xl sm:rounded-[2rem] border border-slate-100 dark:border-slate-800 p-6 md:p-8 shadow-soft hover:-translate-y-2 hover:shadow-heavy transition-all duration-500 relative overflow-hidden flex flex-col items-center text-center ${isVacant ? 'opacity-50 saturate-50 bg-slate-50/50 dark:bg-slate-950/20' : ''}`}
+                        className={`bg-white dark:bg-slate-900 rounded-3xl sm:rounded-[2rem] border border-slate-100 dark:border-slate-800 p-5 sm:p-6 md:p-8 shadow-soft hover:-translate-y-2 hover:shadow-heavy transition-all duration-500 relative overflow-hidden flex flex-col items-center text-center w-full max-w-full ${isVacant ? 'opacity-50 saturate-50 bg-slate-50/50 dark:bg-slate-950/20' : ''}`}
                       >
                         {/* Dynamic decorative backdrop circles to avoid layout shifts */}
                         <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-[2rem]"></div>
@@ -211,17 +211,17 @@ export const Leadership: React.FC = () => {
                         </div>
                         
                         {/* Text details (Flex-1 to force same card height grids easily) */}
-                        <div className="space-y-2.5 mb-5 flex-1 w-full flex flex-col">
-                          <h3 className={`text-base sm:text-lg font-black ${isVacant ? 'text-slate-400' : 'text-slate-900 dark:text-white'} leading-tight`}>
+                        <div className="space-y-2.5 mb-5 flex-1 w-full flex flex-col items-center">
+                          <h3 className={`text-base sm:text-lg font-black ${isVacant ? 'text-slate-400' : 'text-slate-900 dark:text-white'} leading-tight break-words max-w-full`}>
                             {name}
                           </h3>
                           
                           <div className="space-y-1 w-full shrink-0">
-                            <div className={`inline-block px-3 py-1 rounded-xl ${isVacant ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400'} font-black text-[8.5px] uppercase tracking-wider border ${isVacant ? 'border-slate-200 dark:border-slate-800' : 'border-emerald-100/60 dark:border-emerald-800/60'}`}>
+                            <div className={`inline-block px-3 py-1 rounded-xl ${isVacant ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400'} font-black text-[8.5px] uppercase tracking-wider border ${isVacant ? 'border-slate-200 dark:border-slate-800' : 'border-emerald-100/60 dark:border-emerald-800/60'} break-words max-w-full`}>
                               {designation}
                             </div>
                             {subDesignation && (
-                              <div className="text-[10px] font-bold text-slate-400 italic">
+                              <div className="text-[10px] font-bold text-slate-400 italic break-words max-w-full">
                                 {subDesignation}
                               </div>
                             )}
@@ -229,7 +229,7 @@ export const Leadership: React.FC = () => {
 
                           {/* Message / Quote block with correct dynamic layout constraints */}
                           {!isVacant && message && (
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold italic pt-3 border-t border-slate-50 dark:border-slate-850 w-full mt-auto">
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold italic pt-3 border-t border-slate-50 dark:border-slate-850 w-full mt-auto break-words">
                               <p className="line-clamp-3">
                                 "{message}"
                               </p>
@@ -242,10 +242,10 @@ export const Leadership: React.FC = () => {
                           <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 w-full flex justify-center shrink-0">
                             <a 
                               href={`tel:${leader.phone}`} 
-                              className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all font-mono font-black text-[11px] tracking-wide bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-150 dark:border-slate-800 hover:border-emerald-500"
+                              className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all font-mono font-black text-[11px] tracking-wide bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-150 dark:border-slate-800 hover:border-emerald-500 max-w-full truncate"
                             >
-                              <PhoneCall size={12} className="text-emerald-600" />
-                              {leader.phone}
+                              <PhoneCall size={12} className="text-emerald-600 shrink-0" />
+                              <span className="truncate">{leader.phone}</span>
                             </a>
                           </div>
                         )}

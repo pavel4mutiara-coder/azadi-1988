@@ -230,6 +230,21 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <Lock size={18} />
             </Link>
 
+            {isAdmin && (
+              <button 
+                onClick={async () => {
+                  if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to logout?')) {
+                    await logout();
+                    window.location.href = '/';
+                  }
+                }}
+                className="p-2.5 sm:p-3 rounded-xl transition-all border shadow-sm bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900 shadow-rose-500/10 cursor-pointer flex items-center justify-center shrink-0"
+                title={lang === 'bn' ? 'লগআউট' : 'Logout'}
+              >
+                <LogOut size={18} />
+              </button>
+            )}
+
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block"></div>
             <button 
               onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')} 

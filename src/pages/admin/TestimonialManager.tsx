@@ -229,7 +229,7 @@ export const TestimonialManager: React.FC = () => {
 
                     <div className="flex items-center gap-3 border-t border-slate-100 dark:border-slate-800/60 pt-4">
                       <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-150 p-0.5">
-                        <MemberImage src={tItem.image} alt={tItem.nameEn} />
+                        <MemberImage src={tItem.image} alt={tItem.nameEn} widthPreset="small" />
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">
@@ -312,7 +312,7 @@ export const TestimonialManager: React.FC = () => {
 
                     <div className="flex items-center gap-3 border-t border-slate-100 dark:border-slate-800/60 pt-4">
                       <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-150 p-0.5">
-                        <MemberImage src={tItem.image} alt={tItem.nameEn} />
+                        <MemberImage src={tItem.image} alt={tItem.nameEn} widthPreset="small" />
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">

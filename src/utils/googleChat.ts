@@ -41,10 +41,10 @@ export async function listGoogleChatSpaces(accessToken: string): Promise<GoogleC
 }
 
 /**
- * Send a message to a specific Google Chat space
+ * Send a message to a specific Google Chat space or webhook
  */
 export async function sendGoogleChatMessage(
-  accessToken: string,
+  accessToken: string | null,
   spaceName: string,
   text: string,
   cardsV2?: any[]
@@ -55,12 +55,20 @@ export async function sendGoogleChatMessage(
       payload.cardsV2 = cardsV2;
     }
 
-    const response = await fetch(`https://chat.googleapis.com/v1/${spaceName}/messages`, {
+    const isWebhook = spaceName.startsWith('http://') || spaceName.startsWith('https://');
+    const url = isWebhook ? spaceName : `https://chat.googleapis.com/v1/${spaceName}/messages`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json; charset=UTF-8'
+    };
+    
+    if (!isWebhook && accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8'
-      },
+      headers,
       body: JSON.stringify(payload)
     });
 

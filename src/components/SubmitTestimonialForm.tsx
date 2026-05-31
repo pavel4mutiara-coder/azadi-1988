@@ -6,6 +6,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Testimonial } from '../types';
 import { useApp } from '../context/AppContext';
+import { compressInputImage } from '../utils/imageOptimizer';
 
 interface SubmitTestimonialFormProps {
   onSuccess?: () => void;
@@ -36,7 +37,7 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMsg('');
     const files = e.target.files;
     if (files && files[0]) {
@@ -53,12 +54,23 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
         return;
       }
 
-      setImageBlob(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressInputImage(file, 350, 350, 0.75);
+        setImageBlob(compressed);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(compressed);
+      } catch (err) {
+        console.warn("Client-side image compression failed, using original file instead:", err);
+        setImageBlob(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -82,7 +94,18 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
           return;
         }
 
-        setImageBlob(blob);
+        try {
+          const compressed = await compressInputImage(blob, 350, 350, 0.75);
+          setImageBlob(compressed);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(compressed);
+        } catch (err) {
+          console.warn("Native capture compression failed:", err);
+          setImageBlob(blob);
+        }
       }
     } catch (err: any) {
       console.warn("Capacitor Native Camera unnavailable or rejected. Falling back to input file click.", err);
@@ -113,7 +136,18 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
           return;
         }
 
-        setImageBlob(blob);
+        try {
+          const compressed = await compressInputImage(blob, 350, 350, 0.75);
+          setImageBlob(compressed);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(compressed);
+        } catch (err) {
+          console.warn("Native gallery image compression failed:", err);
+          setImageBlob(blob);
+        }
       }
     } catch (err: any) {
       console.warn("Capacitor Photo Library unnavailable or rejected. Falling back to input file click.", err);

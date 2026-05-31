@@ -405,13 +405,13 @@ export const AdminDashboard: React.FC = () => {
         <form onSubmit={handleLogin} className="space-y-4 text-left">
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              {lang === 'bn' ? 'ইউজারনেম' : 'Username'}
+              {lang === 'bn' ? 'ইমেল অথবা ইউজারনেম' : 'Email / Username'}
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder={lang === 'bn' ? 'যেমন: Azadi' : 'e.g., Azadi'}
+              placeholder={lang === 'bn' ? 'যেমন: admin@azadi.org' : 'e.g., admin@azadi.org'}
               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 dark:text-white"
             />
           </div>
@@ -445,26 +445,25 @@ export const AdminDashboard: React.FC = () => {
               lang === 'bn' ? 'লগইন করুন' : 'Login'
             )}
           </button>
+
+          <div className="relative my-4 flex items-center justify-center">
+            <span className="absolute inset-x-0 h-px bg-slate-100 dark:bg-slate-800"></span>
+            <span className="relative bg-white dark:bg-slate-900 px-3 text-xs font-bold text-slate-400 capitalize">
+              {lang === 'bn' ? 'অথবা' : 'or'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={loginWithGoogle}
+            className="w-full border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 font-bold py-4 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
+          >
+            <svg className="w-4 h-4 text-slate-700 dark:text-slate-300" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M12.24 10.285V13.4h6.86c-.277 1.56-1.602 4.585-6.86 4.585-4.54 0-8.24-3.765-8.24-8.4s3.7-8.4 8.24-8.4c2.58 0 4.307 1.095 5.298 2.045l2.465-2.37C18.435 1.21 15.62 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.89 11.57-11.79 0-.795-.085-1.4-.195-1.925H12.24z"/>
+            </svg>
+            {lang === 'bn' ? 'গুগল দিয়ে লগইন করুন' : 'Sign in with Google'}
+          </button>
         </form>
-
-        <div className="relative my-6 flex py-1 items-center">
-          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-slate-450 font-bold text-[10px] uppercase tracking-wider">
-            {lang === 'bn' ? 'অথবা' : 'OR'}
-          </span>
-          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-        </div>
-
-        <button 
-          type="button"
-          onClick={loginWithGoogle}
-          className="w-full bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-black py-4 rounded-2xl hover:-translate-y-0.5 active:scale-95 transition-all shadow-md flex items-center justify-center gap-3 border border-slate-200 dark:border-slate-800 relative cursor-pointer font-sans text-sm"
-        >
-          <svg className="w-5 h-5 fill-current text-emerald-600" viewBox="0 0 24 24">
-            <path d="M12.24 10.285V14.4h6.887C18.2 16.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.71 0 3.275.61 4.5 1.625l3.09-3.09C17.944 1.139 15.27 0 12.24 0 6.033 0 1 5.033 1 11.24s5.033 11.24 11.24 11.24c5.895 0 10.11-4.14 10.11-10.24 0-.69-.06-1.355-.175-1.955H12.24z"/>
-          </svg>
-          {lang === 'bn' ? 'Google দিয়ে সাইন-ইন' : 'Sign in with Google'}
-        </button>
       </div>
     );
   }
@@ -567,23 +566,7 @@ export const AdminDashboard: React.FC = () => {
             );
           })}
 
-          {/* Logout Action Card */}
-          <button
-            onClick={() => {
-              if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to logout?')) {
-                logout();
-              }
-            }}
-            className="group relative bg-white dark:bg-slate-900 p-4 md:p-6 rounded-3xl border border-orange-100 dark:border-orange-950/30 shadow-md hover:border-orange-500 transition-all flex flex-col items-center text-center gap-2 md:gap-4 w-full"
-          >
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-400 group-hover:text-orange-600 flex items-center justify-center transition-all border border-orange-50 shadow-inner">
-              <LogOut size={18} className="md:w-6 md:h-6" />
-            </div>
-            <div className="min-w-0 w-full">
-              <div className="text-[7px] md:text-[9px] font-black uppercase tracking-wider text-slate-400 truncate">{lang === 'bn' ? 'Logout' : 'Sign Out'}</div>
-              <div className="text-[9px] md:text-xs font-black text-slate-900 dark:text-white truncate bengali">{t.logout}</div>
-            </div>
-          </button>
+
         </div>
       </div>
 
@@ -651,7 +634,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left min-w-[500px]">
                 <thead className="bg-slate-50 dark:bg-slate-950 text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800/80">
                   <tr>
@@ -745,7 +728,7 @@ export const AdminDashboard: React.FC = () => {
                               setDeleteConfirmationWord('');
                             }} 
                             title={lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
-                            className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg transition-all inline-flex"
+                            className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-605 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all inline-flex"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -755,6 +738,119 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile-optimized Card View */}
+            <div className="block md:hidden space-y-4">
+              {(activeTab === 'pending' ? filteredPending : activeTab === 'approved' ? filteredApproved : filteredRejected).length === 0 ? (
+                <div className="p-10 text-center bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl text-slate-400 dark:text-slate-500 font-bold text-xs uppercase tracking-wider">
+                  {lang === 'bn' ? 'কোনো অনুদান পাওয়া যায়নি' : 'No matched entries found'}
+                </div>
+              ) : (
+                (activeTab === 'pending' ? filteredPending : activeTab === 'approved' ? filteredApproved : filteredRejected).map(d => (
+                  <div key={d.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-black text-slate-900 dark:text-white text-sm bengali leading-tight">
+                          {d.isAnonymous ? (lang === 'bn' ? 'নাম প্রকাশে অনিচ্ছুক' : 'Anonymous') : d.donorName}
+                        </div>
+                        <div className="text-[10px] mt-1 font-bold text-slate-400 flex items-center gap-1">
+                          <Phone size={10} className="text-emerald-500" /> {d.phone}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[8px] mb-0.5">
+                          {lang === 'bn' ? 'পরিমাণ' : 'Amount'}
+                        </div>
+                        <div className="font-black text-slate-905 dark:text-white font-mono tracking-tight text-base text-emerald-600 dark:text-emerald-400">
+                          ৳{d.amount.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100/60 dark:border-slate-800/60 text-[11px] font-bold">
+                      <div>
+                        <span className="block text-[8px] uppercase text-slate-400 mb-0.5">{lang === 'bn' ? 'পেমেন্ট পদ্ধতি' : 'Method'}</span>
+                        <span className="font-extrabold text-slate-700 dark:text-slate-300">{d.paymentMethod}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] uppercase text-slate-400 mb-0.5">{lang === 'bn' ? 'লেনদেন আইডি' : 'TXID'}</span>
+                        <span className="font-mono bg-emerald-50/50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100/20 dark:border-emerald-950/20 truncate block max-w-full font-black text-[9px]">
+                          {d.transactionId}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-3 border-t border-slate-105 dark:border-slate-800/60 whitespace-nowrap print:hidden">
+                      <div className="flex gap-1.5">
+                        <button 
+                          onClick={() => setSelectedDonationDetails(d)} 
+                          title={lang === 'bn' ? 'বিস্তারিত দেখুন' : 'View Details'}
+                          className="px-3 py-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase flex items-center gap-1"
+                        >
+                          <Eye size={12} /> {lang === 'bn' ? 'বিস্তারিত' : 'View'}
+                        </button>
+                        <button 
+                          onClick={() => handleEditDonation(d)} 
+                          title={lang === 'bn' ? 'সম্পাদনা করুন' : 'Edit Donation'}
+                          className="px-3 py-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase flex items-center gap-1"
+                        >
+                          <Edit2 size={12} /> {lang === 'bn' ? 'সম্পাদনা' : 'Edit'}
+                        </button>
+                      </div>
+
+                      <div className="flex gap-1.5">
+                        {d.status === DonationStatus.PENDING && (
+                          <>
+                            <button 
+                              onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} 
+                              title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
+                              className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl transition-all"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button 
+                              onClick={() => updateDonation(d.id, DonationStatus.REJECTED)} 
+                              title={lang === 'bn' ? 'প্রত্যাখ্যান করুন' : 'Reject'}
+                              className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl transition-all"
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        )}
+                        {d.status === DonationStatus.APPROVED && (
+                          <button 
+                            onClick={() => setViewingReceipt(d)} 
+                            title={lang === 'bn' ? 'রসিদ প্রিন্ট' : 'Print Receipt'}
+                            className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-xl"
+                          >
+                            <FileText size={14} />
+                          </button>
+                        )}
+                        {d.status === DonationStatus.REJECTED && (
+                          <button 
+                            onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} 
+                            title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
+                            className="p-2 bg-emerald-50 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl"
+                          >
+                            <Check size={14} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setDeletingDonation(d);
+                            setDeleteConfirmationWord('');
+                          }} 
+                          title={lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
+                          className="p-2 bg-rose-50 dark:bg-rose-955/35 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

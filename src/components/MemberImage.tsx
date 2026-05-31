@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Loader2 } from 'lucide-react';
 import { normalizeGoogleDriveImage, getGoogleDriveThumbnailUrl, extractGoogleDriveId } from '../utils/normalizeGoogleDriveImage';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface MemberImageProps {
   src: string | null | undefined;
@@ -8,6 +9,7 @@ interface MemberImageProps {
   fallbackSrc?: string;
   className?: string;
   isVacant?: boolean;
+  widthPreset?: 'small' | 'medium' | 'large';
 }
 
 export const MemberImage: React.FC<MemberImageProps> = ({
@@ -16,6 +18,7 @@ export const MemberImage: React.FC<MemberImageProps> = ({
   fallbackSrc,
   className = '',
   isVacant = false,
+  widthPreset = 'medium',
 }) => {
   const [currentSrc, setCurrentSrc] = useState<string>('');
   const [loadState, setLoadState] = useState<'loading' | 'success' | 'error'>('loading');
@@ -57,7 +60,8 @@ export const MemberImage: React.FC<MemberImageProps> = ({
       return;
     }
 
-    const primaryUrl = normalizeGoogleDriveImage(src);
+    const targetWidth = widthPreset === 'small' ? 150 : widthPreset === 'large' ? 600 : 300;
+    const primaryUrl = getOptimizedImageUrl(src, targetWidth);
     if (!primaryUrl) {
       goToFallbackState();
     } else {
@@ -77,7 +81,7 @@ export const MemberImage: React.FC<MemberImageProps> = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [src, fallbackSrc, isVacant]);
+  }, [src, fallbackSrc, isVacant, widthPreset]);
 
   const goToFallbackState = (immediateError = false) => {
     if (fallbackSrc && !immediateError) {

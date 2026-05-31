@@ -14,16 +14,34 @@ export const NoticeManager: React.FC = () => {
     titleEn: '', titleBn: '',
     contentEn: '', contentBn: '',
     date: new Date().toISOString().split('T')[0],
-    isUrgent: false
+    isUrgent: true // Default to true since current date is within the last 24 hours
   });
+
+  const isDateWithin24Hours = (dateStr: string): boolean => {
+    if (!dateStr) return false;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const localDate = new Date(year, month, day);
+      const now = new Date();
+      const diffMs = Math.abs(now.getTime() - localDate.getTime());
+      return diffMs <= 24 * 60 * 60 * 1000;
+    }
+    return false;
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
+    const isUrgentAuto = formData.isUrgent || isDateWithin24Hours(formData.date);
+    const finalData = { ...formData, isUrgent: isUrgentAuto };
+
     if (editingId) {
-      saveNotice({ ...formData, id: editingId } as Notice);
+      saveNotice({ ...finalData, id: editingId } as Notice);
     } else {
       const newId = `notice_${Date.now()}`;
-      saveNotice({ ...formData, id: newId } as Notice);
+      saveNotice({ ...finalData, id: newId } as Notice);
     }
     resetForm();
   };
@@ -35,7 +53,7 @@ export const NoticeManager: React.FC = () => {
       titleEn: '', titleBn: '',
       contentEn: '', contentBn: '',
       date: new Date().toISOString().split('T')[0],
-      isUrgent: false
+      isUrgent: true // Current date is always within last 24 hours, so default to true
     });
   };
 
@@ -72,7 +90,14 @@ export const NoticeManager: React.FC = () => {
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">তারিখ / Date</label>
-                <input required type="date" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                <input required type="date" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.date} onChange={e => {
+                  const newDate = e.target.value;
+                  setFormData({
+                    ...formData,
+                    date: newDate,
+                    isUrgent: formData.isUrgent || isDateWithin24Hours(newDate)
+                  });
+                }} />
               </div>
               
               <label className="flex items-center gap-4 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/50 cursor-pointer select-none">

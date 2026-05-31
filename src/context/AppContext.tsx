@@ -36,6 +36,8 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   User as FirebaseUser
 } from 'firebase/auth';
 
@@ -286,6 +288,15 @@ const STATIC_LETTERHEAD: LetterheadConfig = {
   bodyText: ""
 };
 
+const getCachedData = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const cached = localStorage.getItem(key);
+    return cached ? JSON.parse(cached) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -296,15 +307,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authLoading, setAuthLoading] = useState(true);
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
 
-  // Firestore states (fallback initialized to mock content)
-  const [donations, setDonations] = useState<Donation[]>(STATIC_DONATIONS);
-  const [leadership, setLeadership] = useState<Leadership[]>(STATIC_LEADERSHIP);
-  const [events, setEvents] = useState<Event[]>(STATIC_EVENTS);
-  const [notices, setNotices] = useState<Notice[]>(STATIC_NOTICES);
-  const [news, setNews] = useState<News[]>(STATIC_NEWS);
-  const [expenses, setExpenses] = useState<Expense[]>(STATIC_EXPENSES);
-  const [settings, setSettings] = useState<OrganizationSettings>(STATIC_SETTINGS);
-  const [letterhead, setLetterhead] = useState<LetterheadConfig>(STATIC_LETTERHEAD);
+  // Firestore states (fallback initialized to cached/mock content for instant page load)
+  const [donations, setDonations] = useState<Donation[]>(() => getCachedData('azadi_donations', STATIC_DONATIONS));
+  const [leadership, setLeadership] = useState<Leadership[]>(() => getCachedData('azadi_leadership', STATIC_LEADERSHIP));
+  const [events, setEvents] = useState<Event[]>(() => getCachedData('azadi_events', STATIC_EVENTS));
+  const [notices, setNotices] = useState<Notice[]>(() => getCachedData('azadi_notices', STATIC_NOTICES));
+  const [news, setNews] = useState<News[]>(() => getCachedData('azadi_news', STATIC_NEWS));
+  const [expenses, setExpenses] = useState<Expense[]>(() => getCachedData('azadi_expenses', STATIC_EXPENSES));
+  const [settings, setSettings] = useState<OrganizationSettings>(() => getCachedData('azadi_settings', STATIC_SETTINGS));
+  const [letterhead, setLetterhead] = useState<LetterheadConfig>(() => getCachedData('azadi_letterhead', STATIC_LETTERHEAD));
   const [isLoaded, setIsLoaded] = useState(true);
 
   const [cloudSynced, setCloudSynced] = useState(true);
@@ -325,27 +336,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [theme]);
 
-  // Test connection on boot according to SKILL.md
+  // Test connection on boot according to SKILL.md (delayed to prevent blocking initial load)
   useEffect(() => {
-    async function testConnection() {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        if (errMsg.toLowerCase().includes('offline')) {
-          console.warn("Firebase is offline. Relying on local cache/capabilities.");
-        } else {
-          console.warn("Firebase connection test notice:", errMsg);
+    const timer = setTimeout(() => {
+      async function testConnection() {
+        try {
+          await getDocFromServer(doc(db, 'test', 'connection'));
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          if (errMsg.toLowerCase().includes('offline')) {
+            console.warn("Firebase is offline. Relying on local cache/capabilities.");
+          } else {
+            console.warn("Firebase connection test notice:", errMsg);
+          }
         }
       }
-    }
-    testConnection();
+      testConnection();
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // Listen for Authentication state
   useEffect(() => {
-    const checkCustomAdmin = () => {
-      return localStorage.getItem('azadi_custom_admin') === 'true';
+    const checkAdminPersistence = () => {
+      return sessionStorage.getItem('azadi_admin_session') === 'true' ||
+             localStorage.getItem('azadi_admin_session') === 'true' ||
+             localStorage.getItem('azadi_custom_admin') === 'true';
     };
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -369,21 +385,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
             setIsAdmin(true);
           } else {
-            if (checkCustomAdmin()) {
+            if (checkAdminPersistence()) {
               setIsAdmin(true);
             } else {
               setIsAdmin(false);
             }
           }
         } catch (e) {
-          if (isSuperAdminEmail || checkCustomAdmin()) {
+          if (isSuperAdminEmail || checkAdminPersistence()) {
             setIsAdmin(true);
           } else {
             setIsAdmin(false);
           }
         }
       } else {
-        if (checkCustomAdmin()) {
+        if (checkAdminPersistence()) {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
@@ -399,14 +415,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Settings listener
     const unsubSettings = onSnapshot(doc(db, 'settings', 'config'), (snap) => {
       if (snap.exists()) {
-        setSettings(snap.data() as OrganizationSettings);
+        const data = snap.data() as OrganizationSettings;
+        setSettings(data);
+        localStorage.setItem('azadi_settings', JSON.stringify(data));
       }
     }, () => {});
 
     // 2. Letterhead listener
     const unsubLetterhead = onSnapshot(doc(db, 'settings', 'letterhead'), (snap) => {
       if (snap.exists()) {
-        setLetterhead(snap.data() as LetterheadConfig);
+        const data = snap.data() as LetterheadConfig;
+        setLetterhead(data);
+        localStorage.setItem('azadi_letterhead', JSON.stringify(data));
       }
     }, () => {});
 
@@ -417,13 +437,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: Donation[] = [];
         snap.forEach(d => {
           const item = d.data();
-          console.log("[DEBUG] Donation fetched:", item.id, item.donorName, item.amount, item.status);
           list.push(item as Donation);
         });
         setDonations(list);
+        localStorage.setItem('azadi_donations', JSON.stringify(list));
       } else {
         console.log("[DEBUG] Donations snapshot is empty. Applying empty array.");
         setDonations([]);
+        localStorage.setItem('azadi_donations', JSON.stringify([]));
       }
     }, (error) => {
       console.error("[DEBUG] ERROR on snapshot donations fetch:", error);
@@ -436,8 +457,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: Leadership[] = [];
         snap.forEach(d => list.push(d.data() as Leadership));
         setLeadership(list);
+        localStorage.setItem('azadi_leadership', JSON.stringify(list));
       } else {
         setLeadership(STATIC_LEADERSHIP);
+        localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
       }
     }, (error) => {
       console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
@@ -450,8 +473,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: Event[] = [];
         snap.forEach(d => list.push(d.data() as Event));
         setEvents(list);
+        localStorage.setItem('azadi_events', JSON.stringify(list));
       } else {
         setEvents([]);
+        localStorage.setItem('azadi_events', JSON.stringify([]));
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'events');
@@ -463,8 +488,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: Notice[] = [];
         snap.forEach(d => list.push(d.data() as Notice));
         setNotices(list);
+        localStorage.setItem('azadi_notices', JSON.stringify(list));
       } else {
         setNotices([]);
+        localStorage.setItem('azadi_notices', JSON.stringify([]));
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'notices');
@@ -476,8 +503,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: News[] = [];
         snap.forEach(d => list.push(d.data() as News));
         setNews(list);
+        localStorage.setItem('azadi_news', JSON.stringify(list));
       } else {
         setNews([]);
+        localStorage.setItem('azadi_news', JSON.stringify([]));
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'news');
@@ -489,8 +518,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: Expense[] = [];
         snap.forEach(d => list.push(d.data() as Expense));
         setExpenses(list);
+        localStorage.setItem('azadi_expenses', JSON.stringify(list));
       } else {
         setExpenses([]);
+        localStorage.setItem('azadi_expenses', JSON.stringify([]));
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'expenses');
@@ -573,16 +604,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const login = async (username?: string, password?: string): Promise<boolean> => {
-    if (username === 'Azadi' && password === 'Azadi@88') {
-      localStorage.setItem('azadi_custom_admin', 'true');
-      setIsAdmin(true);
-      return true;
+    if (!username || !password) return false;
+    
+    // Support either direct email, or user typing 'admin' / other username (append @azadi.org if no @ symbol)
+    const email = username.includes('@') ? username.trim() : `${username.toLowerCase().trim()}@azadi.org`;
+
+    try {
+      // 1. Attempt Firebase Authentication
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const currentUser = userCredential.user;
+      
+      // Determine if they are authorized admins (either database check or superadmin email)
+      const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com').toLowerCase();
+      const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
+      
+      let isAuthorizedAdmin = false;
+      try {
+        const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
+        if (adminDoc.exists() || isSuperAdminEmail) {
+          isAuthorizedAdmin = true;
+          if (isSuperAdminEmail && !adminDoc.exists()) {
+            // Seed super admin dynamically if not seeded yet
+            await setDoc(doc(db, 'admins', currentUser.uid), {
+              email: currentUser.email,
+              role: 'superadmin',
+              createdAt: new Date().toISOString()
+            });
+          }
+        }
+      } catch (dbError) {
+        console.warn("Could not check Firestore admin collection (possibly offline). Fallback to superadmin check.", dbError);
+        // Fallback for sandboxes or initial offline boots
+        if (isSuperAdminEmail) {
+          isAuthorizedAdmin = true;
+        }
+      }
+
+      if (isAuthorizedAdmin) {
+        sessionStorage.setItem('azadi_admin_session', 'true');
+        localStorage.setItem('azadi_admin_session', 'true');
+        setIsAdmin(true);
+        return true;
+      } else {
+        // Not authorized as an admin in Firestore admins collection
+        await signOut(auth);
+        return false;
+      }
+    } catch (error: any) {
+      console.error("Firebase auth login failed:", error);
+      return false;
     }
-    return false;
   };
 
   const logout = async () => {
     try {
+      sessionStorage.removeItem('azadi_admin_session');
+      localStorage.removeItem('azadi_admin_session');
       localStorage.removeItem('azadi_custom_admin');
       setIsAdmin(false);
       await signOut(auth);
@@ -611,7 +688,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Send Google Chat Notification helper
   const triggerGoogleChatNotification = async (text: string, cardsV2?: any[]) => {
-    if (!settings.googleChatEnabled || !settings.googleChatSpace || !googleAccessToken) {
+    if (!settings.googleChatEnabled || !settings.googleChatSpace) {
+      return;
+    }
+    const isWebhook = settings.googleChatSpace.startsWith('http://') || settings.googleChatSpace.startsWith('https://');
+    if (!isWebhook && !googleAccessToken) {
       return;
     }
     try {
@@ -639,7 +720,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // Google Chat auto-trigger on new donation request submission
-      if (settings.googleChatNotifyOnReceipt) {
+      if (settings.googleChatEnabled && settings.googleChatNotifyOnReceipt !== false) {
+        console.log(`[DEBUG] Attempting to trigger Google Chat notification for donation: ${donation.id}, Donor: ${donation.donorName}, Amount: ৳${donation.amount}`);
         const donorLabel = donation.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : donation.donorName;
         const text = `📢 *${lang === 'bn' ? 'নতুন অনুদান জমা হয়েছে!' : 'New Donation Submitted!'}*\n` +
                      `• ${lang === 'bn' ? 'দাতা' : 'Donor'}: ${donorLabel}\n` +
