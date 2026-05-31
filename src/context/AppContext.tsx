@@ -606,6 +606,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = async (username?: string, password?: string): Promise<boolean> => {
     if (!username || !password) return false;
     
+    // Check local credential fallback to allow immediate login with provided credentials
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+    if ((cleanUser === 'azadi' || cleanUser === 'azadi@azadi.org') && cleanPass === 'Azadi@88') {
+      console.log("Local Admin Fallback credential authorized.");
+      sessionStorage.setItem('azadi_admin_session', 'true');
+      localStorage.setItem('azadi_admin_session', 'true');
+      localStorage.setItem('azadi_custom_admin', 'true');
+      setIsAdmin(true);
+      return true;
+    }
+    
     // Support either direct email, or user typing 'admin' / other username (append @azadi.org if no @ symbol)
     const email = username.includes('@') ? username.trim() : `${username.toLowerCase().trim()}@azadi.org`;
 
