@@ -1,12 +1,74 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
-import { BellRing, Clock, AlertTriangle, FileText, ChevronRight, Share2, Calendar } from 'lucide-react';
+import { BellRing, Clock, AlertTriangle, FileText, ChevronRight, Share2, Calendar, CheckCircle } from 'lucide-react';
 
 export const Notices: React.FC = () => {
-  const { lang, notices } = useApp();
+  const { lang, notices, settings } = useApp();
   const t = TRANSLATIONS[lang];
+  const [searchParams] = useSearchParams();
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+
+  // Scroll to active notice if referenced in URL search params
+  useEffect(() => {
+    const noticeId = searchParams.get('id');
+    if (noticeId && notices.length > 0) {
+      setTimeout(() => {
+        const element = document.getElementById(noticeId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-emerald-500/50', 'scale-[1.01]');
+          setTimeout(() => {
+            element.classList.remove('ring-4', 'ring-emerald-500/50', 'scale-[1.01]');
+          }, 3000);
+        }
+      }, 500);
+    }
+  }, [searchParams, notices]);
+
+  const handleShare = async (notice: any) => {
+    const shareTitle = lang === 'bn' ? notice.titleBn : notice.titleEn;
+    const dateStr = new Date(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US');
+    const shareText = `📢 *${shareTitle}*\n📅 ${dateStr}`;
+    const shareUrl = `${window.location.origin}/#/notices?id=${notice.id}`;
+    const descText = lang === 'bn' ? notice.contentBn : notice.contentEn;
+    const fullMessage = `${shareText}\n\n${descText?.slice(0, 150)}${descText?.length > 150 ? '...' : ''}\n\nRead full notice: ${shareUrl}\n— ${lang === 'bn' ? settings?.nameBn : settings?.nameEn}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: fullMessage,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Share failed:', err);
+        } else {
+          return; // Cancelled
+        }
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(fullMessage);
+      setCopyStatus(notice.id);
+      setTimeout(() => setCopyStatus(null), 3000);
+      
+      // Auto-open WhatsApp on mobile
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(fullMessage)}`;
+        window.open(waUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Copy fallback failed:', err);
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(fullMessage)}`;
+      window.open(waUrl, '_blank');
+    }
+  };
 
   // Sort notices by date (newest first)
   const sortedNotices = Array.isArray(notices) 
@@ -40,11 +102,12 @@ export const Notices: React.FC = () => {
             {sortedNotices.map((notice, index) => (
               <div 
                 key={notice.id} 
+                id={notice.id}
                 className={`group bg-white dark:bg-slate-900 rounded-[2.5rem] border ${
                   notice.isUrgent 
                     ? 'border-red-100 dark:border-red-900/40 bg-red-50/10 dark:bg-red-900/5' 
                     : 'border-slate-100 dark:border-slate-800'
-                } p-8 md:p-12 shadow-soft hover:shadow-heavy transition-all duration-500 relative overflow-hidden`}
+                } p-8 md:p-12 shadow-soft hover:shadow-heavy transition-all duration-500 relative overflow-hidden transition-[ring,transform]`}
               >
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -95,8 +158,25 @@ export const Notices: React.FC = () => {
                            <Clock size={14} className="text-emerald-500" />
                            {lang === 'bn' ? 'প্রকাশিত:' : 'Posted:'} {new Date(notice.date).toLocaleTimeString(lang === 'bn' ? 'bn-BD' : 'en-US')}
                          </div>
-                         <button className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-6 py-2.5 rounded-xl font-black text-[12px] uppercase hover:bg-emerald-600 hover:text-white transition-all">
-                            <Share2 size={16} /> {lang === 'bn' ? 'শেয়ার করুন' : 'Share'}
+                         <button 
+                           onClick={() => handleShare(notice)}
+                           className={`flex items-center gap-3 px-6 py-2.5 rounded-xl font-black text-[12px] uppercase transition-all ${
+                             copyStatus === notice.id 
+                               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' 
+                               : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white select-none'
+                           }`}
+                         >
+                            {copyStatus === notice.id ? (
+                              <>
+                                <CheckCircle size={16} />
+                                {lang === 'bn' ? 'কপি হয়েছে' : 'Copied'}
+                              </>
+                            ) : (
+                              <>
+                                <Share2 size={16} />
+                                {lang === 'bn' ? 'শেয়ার করুন' : 'Share'}
+                              </>
+                            )}
                          </button>
                       </div>
                    </div>
