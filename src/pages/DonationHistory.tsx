@@ -5,9 +5,10 @@ import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation } from '../types';
 import { Search, History, Calendar, Heart, FileText, CheckCircle2, Clock, Filter, Phone, Hash } from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
+import { SkeletonLoader } from '../components/SkeletonLoader';
 
 export const DonationHistory: React.FC = () => {
-  const { lang, donations, settings } = useApp();
+  const { lang, donations, settings, loadingDonations } = useApp();
   const t = TRANSLATIONS[lang];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
@@ -66,7 +67,9 @@ export const DonationHistory: React.FC = () => {
 
       {/* History List */}
       <div className="space-y-6">
-        {filteredDonations.length > 0 ? (
+        {loadingDonations ? (
+          <SkeletonLoader variant="list" count={3} />
+        ) : filteredDonations.length > 0 ? (
           filteredDonations.map((d) => (
             <div 
               key={d.id} 

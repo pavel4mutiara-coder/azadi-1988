@@ -3,9 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { BellRing, Clock, AlertTriangle, FileText, ChevronRight, Share2, Calendar, CheckCircle } from 'lucide-react';
+import { SkeletonLoader } from '../components/SkeletonLoader';
 
 export const Notices: React.FC = () => {
-  const { lang, notices, settings } = useApp();
+  const { lang, notices, settings, loadingNotices } = useApp();
   const t = TRANSLATIONS[lang];
   const [searchParams] = useSearchParams();
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
@@ -97,7 +98,9 @@ export const Notices: React.FC = () => {
 
       {/* Notices List */}
       <section className="container mx-auto px-4 max-w-5xl">
-        {sortedNotices.length > 0 ? (
+        {loadingNotices ? (
+          <SkeletonLoader variant="notice" count={3} />
+        ) : sortedNotices.length > 0 ? (
           <div className="grid grid-cols-1 gap-10">
             {sortedNotices.map((notice, index) => (
               <div 

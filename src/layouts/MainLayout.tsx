@@ -255,8 +255,11 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <span className="sm:hidden">{lang.toUpperCase()}</span>
             </button>
             <button 
+              id="theme-toggle-btn"
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
-              className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900 transition-all border border-slate-200 dark:border-slate-800 hover:border-emerald-500 shadow-sm"
+              className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900 transition-all border border-slate-200 dark:border-slate-800 hover:border-emerald-500 shadow-sm cursor-pointer"
+              title={theme === 'light' ? (t.themeDark as string) : (t.themeLight as string)}
+              aria-label={theme === 'light' ? (t.themeDark as string) : (t.themeLight as string)}
             >
               {theme === 'light' ? <Moon size={18} className="text-slate-600" /> : <Sun size={18} className="text-amber-400" />}
             </button>

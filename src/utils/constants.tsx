@@ -79,7 +79,10 @@ export const TRANSLATIONS = {
     milestonesTitle: "Major Milestones",
     devCredit: "Developed by Ahmad Hossain Pavel",
     whatsappNumber: "8801712782564",
-    testimonials: "Testimonials"
+    testimonials: "Testimonials",
+    themeLight: "Light Mode",
+    themeDark: "Dark Mode",
+    toggleTheme: "Toggle Theme"
   },
   bn: {
     home: "হোম",
@@ -134,7 +137,10 @@ export const TRANSLATIONS = {
     milestonesTitle: "উল্লেখযোগ্য মাইলফলক",
     devCredit: "Developed by Ahmad Hossain Pavel",
     whatsappNumber: "8801712782564",
-    testimonials: "টেস্টিমোনিয়াল"
+    testimonials: "টেস্টিমোনিয়াল",
+    themeLight: "লাইট মোড",
+    themeDark: "ডার্ক মোড",
+    toggleTheme: "থিম পরিবর্তন করুন"
   }
 };
 

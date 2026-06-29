@@ -60,6 +60,14 @@ interface AppState {
   cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
   cloudErrorMessage?: string;
   cloudErrorType?: 'auth' | 'network' | 'other';
+  loadingDonations: boolean;
+  loadingLeadership: boolean;
+  loadingEvents: boolean;
+  loadingNotices: boolean;
+  loadingNews: boolean;
+  loadingExpenses: boolean;
+  loadingSettings: boolean;
+  loadingLetterhead: boolean;
   setLang: (lang: Language) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   login: (username?: string, password?: string) => Promise<boolean>;
@@ -321,6 +329,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [letterhead, setLetterhead] = useState<LetterheadConfig>(() => getCachedData('azadi_letterhead', STATIC_LETTERHEAD));
   const [isLoaded, setIsLoaded] = useState(true);
 
+  const [loadingDonations, setLoadingDonations] = useState(true);
+  const [loadingLeadership, setLoadingLeadership] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingNotices, setLoadingNotices] = useState(true);
+  const [loadingNews, setLoadingNews] = useState(true);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [loadingLetterhead, setLoadingLetterhead] = useState(true);
+
   const [cloudSynced, setCloudSynced] = useState(true);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('success');
 
@@ -423,7 +440,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSettings(data);
         localStorage.setItem('azadi_settings', JSON.stringify(data));
       }
-    }, () => {});
+      setLoadingSettings(false);
+    }, () => {
+      setLoadingSettings(false);
+    });
 
     // 2. Letterhead listener
     const unsubLetterhead = onSnapshot(doc(db, 'settings', 'letterhead'), (snap) => {
@@ -432,7 +452,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLetterhead(data);
         localStorage.setItem('azadi_letterhead', JSON.stringify(data));
       }
-    }, () => {});
+      setLoadingLetterhead(false);
+    }, () => {
+      setLoadingLetterhead(false);
+    });
 
     // 3. Donations listener
     const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc')), (snap) => {
@@ -450,9 +473,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDonations([]);
         localStorage.setItem('azadi_donations', JSON.stringify([]));
       }
+      setLoadingDonations(false);
     }, (error) => {
       console.error("[DEBUG] ERROR on snapshot donations fetch:", error);
       handleFirestoreError(error, OperationType.LIST, 'donations');
+      setLoadingDonations(false);
     });
 
     // 4. Leadership listener
@@ -466,9 +491,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLeadership(STATIC_LEADERSHIP);
         localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
       }
+      setLoadingLeadership(false);
     }, (error) => {
       console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
       setLeadership(STATIC_LEADERSHIP);
+      setLoadingLeadership(false);
     });
 
     // 5. Events listener
@@ -482,8 +509,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setEvents([]);
         localStorage.setItem('azadi_events', JSON.stringify([]));
       }
+      setLoadingEvents(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'events');
+      setLoadingEvents(false);
     });
 
     // 6. Notices listener
@@ -497,8 +526,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNotices([]);
         localStorage.setItem('azadi_notices', JSON.stringify([]));
       }
+      setLoadingNotices(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'notices');
+      setLoadingNotices(false);
     });
 
     // 7. News listener
@@ -512,8 +543,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNews([]);
         localStorage.setItem('azadi_news', JSON.stringify([]));
       }
+      setLoadingNews(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'news');
+      setLoadingNews(false);
     });
 
     // 8. Expenses listener
@@ -527,8 +560,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setExpenses([]);
         localStorage.setItem('azadi_expenses', JSON.stringify([]));
       }
+      setLoadingExpenses(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'expenses');
+      setLoadingExpenses(false);
     });
 
     return () => {
@@ -1160,6 +1195,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isLoaded, 
       cloudSynced, 
       cloudSyncStatus,
+      loadingDonations,
+      loadingLeadership,
+      loadingEvents,
+      loadingNotices,
+      loadingNews,
+      loadingExpenses,
+      loadingSettings,
+      loadingLetterhead,
       
       setLang, 
       setTheme, 

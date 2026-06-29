@@ -4,6 +4,7 @@ import { TRANSLATIONS } from '../utils/constants';
 import { Shield, PhoneCall, MessageCircle, User, Users, Heart, Award } from 'lucide-react';
 import { MemberImage } from '../components/MemberImage';
 import { motion } from 'framer-motion';
+import { SkeletonLoader } from '../components/SkeletonLoader';
 
 // Staggered Entry Animation Variants for Sections
 const containerVariants = {
@@ -30,7 +31,7 @@ const itemVariants = {
 };
 
 export const Leadership: React.FC = () => {
-  const { lang, leadership, settings } = useApp();
+  const { lang, leadership, settings, loadingLeadership } = useApp();
   const t = TRANSLATIONS[lang];
 
   // Helper to determine the effective category (handles backward-compatibility gracefully)
@@ -128,7 +129,15 @@ export const Leadership: React.FC = () => {
         </p>
       </div>
 
-      {isPageEmpty ? (
+      {loadingLeadership ? (
+        <div className="space-y-16">
+          <div className="space-y-4">
+            <div className="h-4 w-40 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+            <div className="h-8 w-64 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+          </div>
+          <SkeletonLoader variant="profile" count={4} />
+        </div>
+      ) : isPageEmpty ? (
         <div className="text-center py-20 bg-slate-50 dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 space-y-4">
           <Users size={48} className="mx-auto text-slate-300 dark:text-slate-700 animate-pulse" />
           <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">

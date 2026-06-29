@@ -4,6 +4,7 @@ import { TRANSLATIONS, ADMIN_NAV_ITEMS } from '../../utils/constants';
 import { DonationStatus, Donation, Expense } from '../../types';
 import { ReceiptView } from './ReceiptView';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { 
   Check, 
   X, 
@@ -46,7 +47,9 @@ export const AdminDashboard: React.FC = () => {
     isAdmin, 
     login,
     loginWithGoogle, 
-    authLoading 
+    authLoading,
+    loadingDonations,
+    loadingExpenses
   } = useApp();
 
   const [username, setUsername] = useState('');
@@ -522,17 +525,21 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-        {stats.map((stat, i) => (
-          <div key={i} className="p-6 md:p-8 bg-white dark:bg-slate-900 rounded-4xl border border-slate-100 dark:border-slate-800 shadow-soft flex flex-col items-center text-center gap-4 group hover:-translate-y-1 transition-all">
-            <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-inner ${getStatColors(stat.color)}`}>
-              {stat.icon}
+        {loadingDonations || loadingExpenses ? (
+          <SkeletonLoader variant="stats" count={4} className="col-span-full" />
+        ) : (
+          stats.map((stat, i) => (
+            <div key={i} className="p-6 md:p-8 bg-white dark:bg-slate-900 rounded-4xl border border-slate-100 dark:border-slate-800 shadow-soft flex flex-col items-center text-center gap-4 group hover:-translate-y-1 transition-all">
+              <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-inner ${getStatColors(stat.color)}`}>
+                {stat.icon}
+              </div>
+              <div className="min-w-0 w-full space-y-1">
+                <div className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 truncate">{stat.label}</div>
+                <div className="text-lg md:text-2xl font-black text-slate-900 dark:text-white truncate tracking-tighter">{stat.val}</div>
+              </div>
             </div>
-            <div className="min-w-0 w-full space-y-1">
-              <div className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 truncate">{stat.label}</div>
-              <div className="text-lg md:text-2xl font-black text-slate-900 dark:text-white truncate tracking-tighter">{stat.val}</div>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Navigation Modules Section (Hidden on Print) */}
@@ -645,7 +652,13 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-805">
-                  {(activeTab === 'pending' ? filteredPending : activeTab === 'approved' ? filteredApproved : filteredRejected).length === 0 ? (
+                  {loadingDonations ? (
+                    <tr>
+                      <td colSpan={4} className="p-4">
+                        <SkeletonLoader variant="table" count={4} />
+                      </td>
+                    </tr>
+                  ) : (activeTab === 'pending' ? filteredPending : activeTab === 'approved' ? filteredApproved : filteredRejected).length === 0 ? (
                     <tr>
                       <td colSpan={4} className="p-10 text-center text-slate-400 dark:text-slate-500 font-bold text-xs uppercase tracking-wider">
                         {lang === 'bn' ? 'কোনো অনুদান পাওয়া যায়নি' : 'No matched entries found'}
@@ -742,7 +755,11 @@ export const AdminDashboard: React.FC = () => {
 
             {/* Mobile-optimized Card View */}
             <div className="block md:hidden space-y-4">
-              {(activeTab === 'pending' ? filteredPending : activeTab === 'approved' ? filteredApproved : filteredRejected).length === 0 ? (
+              {loadingDonations ? (
+                <div className="p-4">
+                  <SkeletonLoader variant="list" count={4} />
+                </div>
+              ) : (activeTab === 'pending' ? filteredPending : activeTab === 'approved' ? filteredApproved : filteredRejected).length === 0 ? (
                 <div className="p-10 text-center bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl text-slate-400 dark:text-slate-500 font-bold text-xs uppercase tracking-wider">
                   {lang === 'bn' ? 'কোনো অনুদান পাওয়া যায়নি' : 'No matched entries found'}
                 </div>
@@ -962,7 +979,13 @@ export const AdminDashboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-805">
-                      {filteredExpenses.length === 0 ? (
+                      {loadingExpenses ? (
+                        <tr>
+                          <td colSpan={5} className="p-4">
+                            <SkeletonLoader variant="table" count={4} />
+                          </td>
+                        </tr>
+                      ) : filteredExpenses.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="p-10 text-center text-slate-400 font-bold text-xs uppercase">
                             No matched spending found

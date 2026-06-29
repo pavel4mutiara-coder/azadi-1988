@@ -18,9 +18,10 @@ import {
   Video,
 } from "lucide-react";
 import { Event } from "../types";
+import { SkeletonLoader } from "../components/SkeletonLoader";
 
 export const Events: React.FC = () => {
-  const { lang, events, settings } = useApp();
+  const { lang, events, settings, loadingEvents } = useApp();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const t = TRANSLATIONS[lang];
@@ -131,7 +132,11 @@ export const Events: React.FC = () => {
 
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 px-4">
-        {sortedEvents.length > 0 ? (
+        {loadingEvents ? (
+          <div className="col-span-full">
+            <SkeletonLoader variant="card" count={4} />
+          </div>
+        ) : sortedEvents.length > 0 ? (
           sortedEvents.map((event) => (
             <div
               key={event.id}
