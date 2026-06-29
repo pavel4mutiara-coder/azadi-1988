@@ -6,7 +6,7 @@ import {
   query, 
   getDocs, 
   doc, 
-  updateDoc, 
+  setDoc, 
   deleteDoc 
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -67,8 +67,13 @@ export const TestimonialManager: React.FC = () => {
     if (!editingTestimonialId) return;
     setActionLoadingId(editingTestimonialId);
     try {
+      const existing = testimonials.find(item => item.id === editingTestimonialId);
+      if (!existing) {
+        throw new Error("Testimonial not found in local list.");
+      }
       const docRef = doc(db, 'testimonials', editingTestimonialId);
-      const updateData = {
+      const fullUpdate: Testimonial = {
+        ...existing,
         nameEn: testimonialForm.nameEn,
         nameBn: testimonialForm.nameBn,
         roleEn: testimonialForm.roleEn,
@@ -77,13 +82,13 @@ export const TestimonialManager: React.FC = () => {
         locationBn: testimonialForm.locationBn,
         quoteEn: testimonialForm.quoteEn,
         quoteBn: testimonialForm.quoteBn,
-        status: testimonialForm.status
+        status: testimonialForm.status as 'PENDING' | 'APPROVED'
       };
-      await updateDoc(docRef, updateData);
+      await setDoc(docRef, fullUpdate);
       
       // Update local state
       setTestimonials(prev => 
-        prev.map(item => item.id === editingTestimonialId ? { ...item, ...updateData } : item)
+        prev.map(item => item.id === editingTestimonialId ? fullUpdate : item)
       );
 
       alert(lang === 'bn' ? 'টেস্টিমোনিয়াল সফলভাবে আপডেট করা হয়েছে!' : 'Testimonial successfully updated!');
@@ -124,12 +129,17 @@ export const TestimonialManager: React.FC = () => {
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);
     try {
+      const existing = testimonials.find(item => item.id === id);
+      if (!existing) {
+        throw new Error("Testimonial not found in local list.");
+      }
       const docRef = doc(db, 'testimonials', id);
-      await updateDoc(docRef, { status: 'APPROVED' });
+      const fullUpdate: Testimonial = { ...existing, status: 'APPROVED' };
+      await setDoc(docRef, fullUpdate);
       
       // Update local state
       setTestimonials(prev => 
-        prev.map(item => item.id === id ? { ...item, status: 'APPROVED' } : item)
+        prev.map(item => item.id === id ? fullUpdate : item)
       );
     } catch (err) {
       console.error("Error approving testimonial:", err);

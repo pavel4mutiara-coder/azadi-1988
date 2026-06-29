@@ -766,9 +766,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     try {
-      if (auth.currentUser) {
-        await setDoc(doc(db, 'donations', donation.id), donation);
-      }
+      await setDoc(doc(db, 'donations', donation.id), donation);
 
       // Google Chat auto-trigger on new donation request submission
       if (settings.googleChatEnabled && settings.googleChatNotifyOnReceipt !== false) {
@@ -784,9 +782,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (error) {
       console.warn("Firestore error adding donation (might be offline or fallback):", error);
-      if (auth.currentUser) {
-        handleFirestoreError(error, OperationType.WRITE, `donations/${donation.id}`);
-      }
+      handleFirestoreError(error, OperationType.WRITE, `donations/${donation.id}`);
     }
   };
 
