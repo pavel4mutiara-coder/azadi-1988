@@ -7,11 +7,23 @@ import {
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
   ShieldAlert, DownloadCloud, X, Share, BellRing, ChevronRight,
-  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles, Lock, LogOut
+  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles, Lock, LogOut,
+  Cloud, CloudOff, RefreshCw
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { lang, setLang, theme, setTheme, isAdmin, settings, isLoaded, logout } = useApp();
+  const { 
+    lang, 
+    setLang, 
+    theme, 
+    setTheme, 
+    isAdmin, 
+    settings, 
+    isLoaded, 
+    logout,
+    cloudSyncStatus,
+    cloudSynced
+  } = useApp();
   const location = useLocation();
   const t = TRANSLATIONS[lang];
   const isPublicPage = !location.pathname.startsWith('/admin');
@@ -60,6 +72,48 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     setShowInstallBanner(false);
     setShowIOSInstructions(false);
     setIsDismissed(true);
+  };
+
+  const renderSyncIndicator = () => {
+    switch (cloudSyncStatus) {
+      case 'syncing':
+        return (
+          <div 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-400/20 rounded-xl"
+            title={lang === 'bn' ? 'ডাটাবেজ সেভ করা হচ্ছে...' : 'Saving to Firestore...'}
+          >
+            <RefreshCw size={14} className="animate-spin text-amber-500" />
+            <span className="text-[10px] font-black uppercase tracking-wider hidden xs:inline bengali">
+              {lang === 'bn' ? 'সেভ হচ্ছে' : 'Saving'}
+            </span>
+          </div>
+        );
+      case 'error':
+        return (
+          <div 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 dark:bg-rose-400/10 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-400/20 rounded-xl animate-pulse"
+            title={lang === 'bn' ? 'ডাটা সেভ করতে ব্যর্থ হয়েছে!' : 'Database Sync Error!'}
+          >
+            <CloudOff size={14} className="text-rose-500" />
+            <span className="text-[10px] font-black uppercase tracking-wider hidden xs:inline bengali">
+              {lang === 'bn' ? 'ব্যর্থ' : 'Sync Error'}
+            </span>
+          </div>
+        );
+      case 'success':
+      default:
+        return (
+          <div 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-400/20 rounded-xl"
+            title={lang === 'bn' ? 'ডাটাবেজ সম্পূর্ণ সিঙ্কড' : 'Database fully synced'}
+          >
+            <Cloud size={14} className="text-emerald-500 animate-pulse duration-1000" />
+            <span className="text-[10px] font-black uppercase tracking-wider hidden xs:inline bengali">
+              {lang === 'bn' ? 'সংরক্ষিত' : 'Synced'}
+            </span>
+          </div>
+        );
+    }
   };
 
   const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
@@ -218,6 +272,8 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
+            {renderSyncIndicator()}
+
             <Link 
               to="/admin" 
               className={`p-2.5 sm:p-3 rounded-xl transition-all border shadow-sm ${

@@ -105,6 +105,17 @@ export interface LetterheadConfig {
   signature: string;
   stampText: string;
   bodyText: string; // Document content
+  signatureWidth?: number;
+  signatureYOffset?: number;
+  signatureXOffset?: number;
+  signatureRotation?: number;
+  signatureOpacity?: number;
+  qrEnabled?: boolean;
+  qrSize?: number;
+  qrPosition?: 'bottom-left' | 'top-right' | 'bottom-right' | 'footer-center';
+  qrCustomText?: string;
+  qrXOffset?: number;
+  qrYOffset?: number;
 }
 
 export interface Testimonial {

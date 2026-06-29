@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { News } from '../../types';
-import { Newspaper, Plus, Trash2, Edit2, Clock } from 'lucide-react';
+import { Newspaper, Plus, Trash2, Edit2, Clock, UploadCloud, Image, Loader2, X } from 'lucide-react';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../lib/firebase';
 
 export const NewsManager: React.FC = () => {
   const { lang, news, saveNews, deleteNews } = useApp();
@@ -16,6 +18,79 @@ export const NewsManager: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     image: ''
   });
+
+  // Storage Upload States
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleImageUpload(e.target.files[0]);
+    }
+  };
+
+  const handleImageUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
+      return;
+    }
+    
+    setUploading(true);
+    setUploadProgress(0);
+    
+    const fileId = `news_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+    const storageRef = ref(storage, `news/${fileId}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        setUploadProgress(progress);
+      }, 
+      (error) => {
+        console.error("Storage upload error:", error);
+        alert(lang === 'bn' ? 'ছবি আপলোড করতে ব্যর্থ হয়েছে!' : 'Failed to upload image!');
+        setUploading(false);
+        setUploadProgress(null);
+      }, 
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          setFormData(prev => ({ ...prev, image: downloadUrl }));
+        } catch (err) {
+          console.error("Error getting download URL:", err);
+        } finally {
+          setUploading(false);
+          setUploadProgress(null);
+        }
+      }
+    );
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, image: '' }));
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,9 +149,89 @@ export const NewsManager: React.FC = () => {
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">তারিখ / Date</label>
                 <input required type="date" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
               </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">Photo Image URL</label>
-                <input type="text" placeholder="https://images.unsplash.com/..." className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-medium" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} />
+              {/* Custom Image Upload Drag-Drop with Progress bar */}
+              <div className="space-y-3">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">
+                  {lang === 'bn' ? 'সংবাদ কভার ছবি' : 'News Cover Image'}
+                </label>
+                
+                <div 
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[160px] relative overflow-hidden ${
+                    dragActive 
+                      ? 'border-emerald-500 bg-emerald-500/10' 
+                      : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 bg-slate-50/50 dark:bg-slate-950/50'
+                  }`}
+                >
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    className="hidden" 
+                  />
+
+                  {formData.image ? (
+                    <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                        <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
+                        <button 
+                          type="button" 
+                          onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
+                          title={lang === 'bn' ? 'ছবি মুছে ফেলুন' : 'Remove Image'}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-bold truncate px-2">{formData.image}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pointer-events-none">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-full w-fit mx-auto shadow-sm border border-slate-100 dark:border-slate-800">
+                        <UploadCloud className="text-emerald-500 animate-pulse" size={24} />
+                      </div>
+                      <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                        {lang === 'bn' ? 'ছবি ড্র্যাগ করে ছাড়ুন অথবা ব্রাউজ করুন' : 'Drag & drop image here, or browse'}
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB</p>
+                    </div>
+                  )}
+
+                  {/* Upload Progress Overlay */}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-white/90 dark:bg-slate-950/90 flex flex-col items-center justify-center p-4 z-20 space-y-3">
+                      <Loader2 className="animate-spin text-emerald-500" size={24} />
+                      <div className="w-full max-w-[150px] bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div 
+                          className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                        {uploadProgress}% {lang === 'bn' ? 'আপলোড হচ্ছে...' : 'Uploading...'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Backwards Compatibility / Manual URL Overriding */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 ml-1 block">
+                    {lang === 'bn' ? 'অথবা সরাসরি ইমেজ লিংক বসান (ঐচ্ছিক)' : 'Or manual photo image URL (Optional)'}
+                  </span>
+                  <input 
+                    type="text" 
+                    placeholder="https://images.unsplash.com/..." 
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl font-mono text-xs" 
+                    value={formData.image} 
+                    onChange={e => setFormData({...formData, image: e.target.value})} 
+                  />
+                </div>
               </div>
             </div>
 

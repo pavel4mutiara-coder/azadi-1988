@@ -756,6 +756,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // WRITE OPERATIONS TO FIRESTORE WITH FORTRESS EXCEPTION HANDLING
+  const withSync = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    setCloudSyncStatus('syncing');
+    setCloudSynced(false);
+    try {
+      const result = await operation();
+      setCloudSyncStatus('success');
+      setCloudSynced(true);
+      return result;
+    } catch (error) {
+      setCloudSyncStatus('error');
+      setCloudSynced(false);
+      throw error;
+    }
+  };
+
   const addDonation = async (donation: Donation) => {
     // Optimistic UI update
     setDonations(prev => {
@@ -766,7 +781,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     try {
-      await setDoc(doc(db, 'donations', donation.id), donation);
+      await withSync(() => setDoc(doc(db, 'donations', donation.id), donation));
 
       // Google Chat auto-trigger on new donation request submission
       if (settings.googleChatEnabled && settings.googleChatNotifyOnReceipt !== false) {
@@ -802,7 +817,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const docRef = doc(db, 'donations', id);
         const updateData = { ...existing!, status };
         console.log("[DEBUG] Writing to Firestore at path donations/" + id, "Payload:", updateData);
-        await setDoc(docRef, updateData);
+        await withSync(() => setDoc(docRef, updateData));
         console.log("[DEBUG] Firestore write success for donations/" + id);
         await logAuditTrail('DONATION_STATUS_UPDATE', { donationId: id, status });
       }
@@ -879,7 +894,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDonations(prev => prev.filter(d => d.id !== id));
 
       if (auth.currentUser) {
-        await deleteDoc(doc(db, 'donations', id));
+        await withSync(() => deleteDoc(doc(db, 'donations', id)));
         await logAuditTrail('DONATION_DELETION', { donationId: id, donorName: target?.donorName, amount: target?.amount });
       }
       
@@ -899,7 +914,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveSettings = async (newSettings: OrganizationSettings) => {
     try {
-      await setDoc(doc(db, 'settings', 'config'), newSettings);
+      await withSync(() => setDoc(doc(db, 'settings', 'config'), newSettings));
       await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: newSettings.nameEn });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/config');
@@ -908,7 +923,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveLetterhead = async (newLetterhead: LetterheadConfig) => {
     try {
-      await setDoc(doc(db, 'settings', 'letterhead'), newLetterhead);
+      await withSync(() => setDoc(doc(db, 'settings', 'letterhead'), newLetterhead));
       await logAuditTrail('LETTERHEAD_CONFIGURATION_UPDATE', { leaderName: newLetterhead.leaderName });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/letterhead');
@@ -941,7 +956,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       
       // Atomically commit batch to Firestore
-      await batch.commit();
+      await withSync(() => batch.commit());
     } catch (error) {
       console.warn("Failed to replace leadership on server. Keeping local fallback state:", error);
       setLeadership(listToSave);
@@ -950,7 +965,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveLeader = async (leader: Leadership) => {
     try {
-      await setDoc(doc(db, 'leadership', leader.id), leader);
+      await withSync(() => setDoc(doc(db, 'leadership', leader.id), leader));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `leadership/${leader.id}`);
     }
@@ -958,7 +973,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteLeader = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'leadership', id));
+      await withSync(() => deleteDoc(doc(db, 'leadership', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `leadership/${id}`);
     }
@@ -966,7 +981,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveEvent = async (event: Event) => {
     try {
-      await setDoc(doc(db, 'events', event.id), event);
+      await withSync(() => setDoc(doc(db, 'events', event.id), event));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `events/${event.id}`);
     }
@@ -974,7 +989,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteEvent = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'events', id));
+      await withSync(() => deleteDoc(doc(db, 'events', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
     }
@@ -982,7 +997,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveNotice = async (notice: Notice) => {
     try {
-      await setDoc(doc(db, 'notices', notice.id), notice);
+      await withSync(() => setDoc(doc(db, 'notices', notice.id), notice));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `notices/${notice.id}`);
     }
@@ -990,7 +1005,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteNotice = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'notices', id));
+      await withSync(() => deleteDoc(doc(db, 'notices', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
     }
@@ -998,7 +1013,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveNews = async (item: News) => {
     try {
-      await setDoc(doc(db, 'news', item.id), item);
+      await withSync(() => setDoc(doc(db, 'news', item.id), item));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `news/${item.id}`);
     }
@@ -1006,7 +1021,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteNews = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'news', id));
+      await withSync(() => deleteDoc(doc(db, 'news', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
     }
@@ -1014,7 +1029,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addExpense = async (item: Expense) => {
     try {
-      await setDoc(doc(db, 'expenses', item.id), item);
+      await withSync(() => setDoc(doc(db, 'expenses', item.id), item));
       
       // Google Chat trigger on new expense entry
       if (settings.googleChatNotifyOnExpense) {
@@ -1070,7 +1085,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteExpense = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'expenses', id));
+      await withSync(() => deleteDoc(doc(db, 'expenses', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `expenses/${id}`);
     }
