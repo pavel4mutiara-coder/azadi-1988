@@ -625,7 +625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.warn("Failed to retrieve database configuration (possibly offline):", error);
         });
     }
-  }, [isAdmin, settings]);
+  }, [isAdmin, settings.nameBn]);
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();

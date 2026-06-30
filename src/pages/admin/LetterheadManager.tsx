@@ -9,26 +9,49 @@ import {
   AlertTriangle, Upload, Sliders, Eye, EyeOff, QrCode
 } from 'lucide-react';
 import QRCode from 'qrcode';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 const LetterheadStyles = () => (
   <style>{`
     @media print {
-      body {
+      /* Hide absolutely everything in the document body */
+      body * {
+        visibility: hidden !important;
+      }
+      /* Ensure that the print area and ALL its descendants are visible */
+      #print-area, #print-area * {
+        visibility: visible !important;
+      }
+      /* Position the print area at the absolute top left, with natural flow across page breaks */
+      #print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 210mm !important;
+        height: auto !important; /* Let height be auto for natural page breaks */
+        min-height: 297mm !important;
+        padding: 15mm 20mm 20mm 20mm !important; /* Standard official document margins */
+        margin: 0 !important;
+        box-shadow: none !important;
         background: white !important;
         color: black !important;
-      }
-      .no-print {
-        display: none !important;
-      }
-      /* Ensure A4 printed page matches standard sizes */
-      @page {
-        size: A4 portrait;
-        margin: 0;
+        font-family: "Noto Sans Bengali", sans-serif !important;
       }
       .editor-body {
         overflow: visible !important;
         max-height: none !important;
         min-height: none !important;
+        height: auto !important;
+      }
+      /* Hide elements with 'no-print' class completely */
+      .no-print {
+        display: none !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 0;
       }
     }
     
@@ -92,9 +115,12 @@ export const LetterheadManager: React.FC = () => {
   const [signatureTab, setSignatureTab] = useState<'draw' | 'upload'>('draw');
   const [dragActive, setDragActive] = useState(false);
   const [isPrintPreview, setIsPrintPreview] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isOverlayModalOpen, setIsOverlayModalOpen] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'signature' | 'qr'>('signature');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [scale, setScale] = useState(1);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
  
   // Track if a restored local draft currently differs from the base DB config
   const [hasRestoredDraft, setHasRestoredDraft] = useState(() => {
@@ -248,6 +274,26 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
     }
   }, [qrVerificationText, localConfig.qrEnabled]);
 
+  // Handle auto-scaling for mobile viewports
+  useEffect(() => {
+    if (!previewContainerRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width;
+        // 210mm in pixels at 96 DPI is roughly 794px
+        const targetWidth = 794;
+        if (containerWidth < targetWidth) {
+          setScale(containerWidth / targetWidth);
+        } else {
+          setScale(1);
+        }
+      }
+    });
+    
+    resizeObserver.observe(previewContainerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   const getQrStyle = (): React.CSSProperties => {
     const size = localConfig.qrSize ?? 64;
     const xOffset = localConfig.qrXOffset ?? 0;
@@ -387,19 +433,161 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
     }
   };
 
-  const handleDownloadPDF = () => {
-    if (typeof (window as any).html2pdf !== 'undefined') {
+  const handleDownloadPDF = async () => {
+    const isAndroid = Capacitor.getPlatform() === 'android';
+    const isNative = Capacitor.isNativePlatform();
+    let sandbox: HTMLDivElement | null = null;
+
+    try {
+      setIsGeneratingPDF(true);
       const element = letterheadRef.current;
+      if (!element) return;
+
+      // Load html2pdf script dynamically if not present
+      let html2pdfLib = (window as any).html2pdf;
+      if (!html2pdfLib) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.onload = () => {
+            html2pdfLib = (window as any).html2pdf;
+            resolve();
+          };
+          script.onerror = () => {
+            reject(new Error("Failed to load html2pdf script"));
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      if (!html2pdfLib) {
+        alert(lang === 'bn' ? 'পিডিএফ লাইব্রেরি লোড করতে ব্যর্থ হয়েছে।' : 'Failed to load PDF library.');
+        return;
+      }
+
+      // Clone the element to render a perfect print-quality copy offscreen
+      const clone = element.cloneNode(true) as HTMLDivElement;
+      
+      // Prevent scrollbars, fixed heights, and let content expand naturally
+      clone.style.width = '210mm';
+      clone.style.height = 'auto';
+      clone.style.minHeight = '315mm'; // Perfect proportional fit for standard A4 margins when scaled by 0.857
+      clone.style.transform = 'none';
+      clone.style.position = 'relative';
+      clone.style.left = '0';
+      clone.style.top = '0';
+      clone.style.background = 'white';
+      clone.style.boxSizing = 'border-box';
+      clone.style.padding = '0'; // Margin handled natively by html2pdf config
+      clone.style.margin = '0';
+      clone.style.display = 'flex';
+      clone.style.flexDirection = 'column';
+
+      // Ensure full text formatting is preserved inside the cloned editor
+      const clonedEditor = clone.querySelector('.editor-body') as HTMLElement;
+      if (clonedEditor) {
+        clonedEditor.style.height = 'auto';
+        clonedEditor.style.minHeight = '180mm';
+        clonedEditor.style.maxHeight = 'none';
+        clonedEditor.style.overflow = 'visible';
+        clonedEditor.style.padding = '0 16px';
+      }
+
+      // Avoid splitting paragraphs, list items, and signatures across pages
+      clone.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, .signature-block').forEach((el) => {
+        (el as HTMLElement).style.pageBreakInside = 'avoid';
+        (el as HTMLElement).style.breakInside = 'avoid';
+      });
+
+      // Strip unwanted interface elements (with .no-print class)
+      clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+      // Create a dedicated rendering sandbox in the DOM (on-screen but layered behind the viewport)
+      sandbox = document.createElement('div');
+      sandbox.style.position = 'fixed';
+      sandbox.style.top = '0';
+      sandbox.style.left = '0';
+      sandbox.style.width = '210mm';
+      sandbox.style.height = 'auto';
+      sandbox.style.zIndex = '-9999';
+      sandbox.style.pointerEvents = 'none';
+      sandbox.style.overflow = 'visible';
+      sandbox.style.background = 'white';
+      
+      sandbox.appendChild(clone);
+      document.body.appendChild(sandbox);
+
+      const fileName = `official_pad_${Date.now()}.pdf`;
       const opt = {
-        margin: 0,
-        filename: `official_pad_${Date.now()}.pdf`,
+        margin: [12, 15, 15, 15], // Perfect top, left, bottom, right margins in mm
+        filename: fileName,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          allowTaint: false, // Extremely important: must be false to avoid SecurityError on toDataURL
+          logging: false,
+          letterRendering: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 794,
+          windowHeight: 1123
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
-      (window as any).html2pdf().from(element).set(opt).save();
-    } else {
-      window.print();
+
+      if (isNative) {
+        // Generate PDF as data URI string
+        const pdfBase64DataUrl = await html2pdfLib().from(clone).set(opt).output('datauristring');
+        
+        // Remove sandbox immediately after rendering completes
+        if (sandbox && document.body.contains(sandbox)) {
+          document.body.removeChild(sandbox);
+          sandbox = null;
+        }
+
+        const base64Content = pdfBase64DataUrl.split(',')[1];
+
+        // On Android, request permission if required
+        if (isAndroid) {
+          try {
+            const status = await Filesystem.checkPermissions();
+            if (status.publicStorage !== 'granted') {
+              await Filesystem.requestPermissions();
+            }
+          } catch (e) {
+            console.warn("Storage permissions check/request failed", e);
+          }
+        }
+
+        // Save file to Capacitor's Cache directory
+        const fileWriteResult = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Content,
+          directory: Directory.Cache,
+        });
+
+        // Trigger Android's native share sheet to share/save/open the PDF
+        await Share.share({
+          title: lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড' : 'Official Letterhead Pad',
+          text: lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ থেকে ভেরিফাইড ডকুমেন্ট' : 'Official verified document from Azadi Social Welfare Organization',
+          url: fileWriteResult.uri,
+          dialogTitle: lang === 'bn' ? 'পিডিএফ ফাইলটি সংরক্ষণ বা শেয়ার করুন' : 'Save or Share PDF',
+        });
+      } else {
+        // Standard Web browser download
+        await html2pdfLib().from(clone).set(opt).save();
+        alert(lang === 'bn' ? 'পিডিএফ ডাউনলোড সম্পন্ন হয়েছে!' : 'PDF download complete!');
+      }
+    } catch (error) {
+      console.error("PDF download/generation failed", error);
+      alert(lang === 'bn' ? 'পিডিএফ তৈরি করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।' : 'Failed to generate PDF. Please try again.');
+    } finally {
+      if (sandbox && document.body.contains(sandbox)) {
+        document.body.removeChild(sandbox);
+      }
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -684,11 +872,44 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       const cleanHTML = cleanPastedHTML(doc.body);
       document.execCommand('insertHTML', false, cleanHTML);
     } else if (text) {
-      const paragraphs = text.split(/\r?\n\r?\n/);
-      const htmlParts = paragraphs.map(p => {
-        const lines = p.split(/\r?\n/);
-        return `<p style="margin-bottom: 8px; line-height: 1.5;">${lines.join('<br />')}</p>`;
-      });
+      const lines = text.split(/\r?\n/);
+      let htmlParts: string[] = [];
+      let inList: 'ul' | 'ol' | null = null;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const bulletMatch = trimmed.match(/^[\-\*•+]\s+(.*)$/);
+        const numberMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+
+        if (bulletMatch) {
+          if (inList !== 'ul') {
+            if (inList) htmlParts.push(`</${inList}>`);
+            htmlParts.push('<ul style="margin-bottom: 8px; padding-left: 24px; list-style-type: disc;">');
+            inList = 'ul';
+          }
+          htmlParts.push(`<li style="line-height: 1.5;">${bulletMatch[1]}</li>`);
+        } else if (numberMatch) {
+          if (inList !== 'ol') {
+            if (inList) htmlParts.push(`</${inList}>`);
+            htmlParts.push('<ol style="margin-bottom: 8px; padding-left: 24px; list-style-type: decimal;">');
+            inList = 'ol';
+          }
+          htmlParts.push(`<li style="line-height: 1.5;">${numberMatch[2]}</li>`);
+        } else {
+          if (inList) {
+            htmlParts.push(`</${inList}>`);
+            inList = null;
+          }
+          if (trimmed === '') {
+            htmlParts.push('<p style="margin-bottom: 8px; line-height: 1.5;"><br></p>');
+          } else {
+            htmlParts.push(`<p style="margin-bottom: 8px; line-height: 1.5;">${line}</p>`);
+          }
+        }
+      }
+      if (inList) {
+        htmlParts.push(`</${inList}>`);
+      }
       const formattedText = htmlParts.join('');
       document.execCommand('insertHTML', false, formattedText);
     }
@@ -768,9 +989,10 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
 
             <button 
               onClick={handleDownloadPDF} 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+              disabled={isGeneratingPDF}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer ${isGeneratingPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <Download size={14} /> {lang === 'bn' ? 'PDF ডাউনলোড' : 'Download PDF'}
+              <Download size={14} /> {isGeneratingPDF ? (lang === 'bn' ? 'পিডিএফ ডাউনলোড হচ্ছে...' : 'Downloading PDF...') : (lang === 'bn' ? 'PDF ডাউনলোড' : 'Download PDF')}
             </button>
             
             <button 
@@ -844,8 +1066,12 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           <button onClick={handleSave} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 active:scale-98 cursor-pointer">
             <Save size={16} /> {lang === 'bn' ? 'সেভ করুন' : 'Save Config'}
           </button>
-          <button onClick={handleDownloadPDF} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 active:scale-98 cursor-pointer">
-            <Download size={16} /> {lang === 'bn' ? 'PDF ডাউনলোড' : 'Download PDF'}
+          <button 
+            onClick={handleDownloadPDF} 
+            disabled={isGeneratingPDF}
+            className={`flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 active:scale-98 cursor-pointer ${isGeneratingPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Download size={16} /> {isGeneratingPDF ? (lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...') : (lang === 'bn' ? 'PDF ডাউনলোড' : 'Download PDF')}
           </button>
           <button onClick={handlePrint} className="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 active:scale-98 cursor-pointer">
             <Printer size={16} /> Print
@@ -1566,166 +1792,192 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           </div>
 
           {/* Actual Letterhead Preview Area */}
-          <div className="overflow-x-auto pb-4">
+          <div 
+            ref={previewContainerRef} 
+            className="w-full flex items-start justify-center overflow-hidden pb-4 px-2 sm:px-4"
+          >
             <div 
-              ref={letterheadRef} 
-              className="bg-white shadow-2xl relative flex flex-col mx-auto origin-top" 
               style={{ 
-                width: '210mm', 
-                height: '297mm', 
-                padding: '12mm 15mm 15mm 15mm', 
-                boxSizing: 'border-box',
-                color: '#000000',
-                fontFamily: '"Noto Sans Bengali", sans-serif'
+                width: scale < 1 ? '100%' : '210mm', 
+                height: `calc(297mm * ${scale})`,
+                position: 'relative',
+                overflow: 'visible',
               }}
             >
-              {/* Pad Slogan Slat Header */}
-              <div className="text-center mb-4 select-none pointer-events-none">
-                <div className="inline-block px-10 py-1.5 border-b border-emerald-950/10 text-[13px] text-emerald-950 uppercase" style={{ ...BENGALI_STYLE }}>
-                  {viewMode === 'bn' ? settings.sloganBn : settings.sloganEn}
-                </div>
-              </div>
-
-              {/* Main Pad Letter Header */}
-              <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
-                     <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
-                  </div>
-                  <div className="flex-1 px-4">
-                    <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1" style={{ fontSize: '32px', ...BENGALI_STYLE }}>{viewMode === 'bn' ? settings.nameBn : settings.nameEn}</h1>
-                    <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}</p>
-                  </div>
-                  <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
-                    <img src={settings.flag} className="w-full h-full object-cover" alt="Flag" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Date & Reference Row */}
-              <div className="flex items-center justify-between text-xs text-slate-700 font-bold mb-4 px-4 select-none pointer-events-none">
-                <div className="font-mono">REF: ASWO/PAD/{new Date().getFullYear()}/{(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}</div>
-                <div>{lang === 'bn' ? 'তারিখ: ' : 'Date: '} <span className="underline decoration-slate-300 underline-offset-4">{today}</span></div>
-              </div>
-
-              {/* REAL-TIME WYSIWYG DOCUMENT EDITING BODY AREA */}
               <div 
-                ref={editorRef}
-                contentEditable={!isPrintPreview}
-                onInput={handleEditorInput}
-                onPaste={handlePaste}
-                className="editor-body flex-1 px-4 text-[14px] leading-relaxed outline-none overflow-y-auto text-slate-800"
+                ref={letterheadRef} 
+                id="print-area"
+                className="bg-white shadow-2xl relative flex flex-col mx-auto" 
                 style={{ 
-                  ...BENGALI_STYLE, 
-                  fontWeight: 500,
-                  minHeight: '160mm',
-                  maxHeight: '190mm',
+                  width: '210mm', 
+                  height: '297mm', 
+                  padding: '12mm 15mm 15mm 15mm', 
+                  boxSizing: 'border-box',
+                  color: '#000000',
+                  fontFamily: '"Noto Sans Bengali", sans-serif',
+                  transform: `scale(${scale})`,
+                  transformOrigin: scale < 1 ? 'top left' : 'top center',
+                  position: 'absolute',
+                  top: 0,
+                  left: scale < 1 ? 0 : '50%',
+                  marginLeft: scale < 1 ? 0 : '-105mm', // Centers the A4 page on desktop when scale is 1
                 }}
-                placeholder={viewMode === 'bn' ? 'পত্রের মূল বিষয়বস্তু এখানে সরাসরি টাইপ বা পেস্ট করুন...' : 'Type or paste the official letter content directly here...'}
-              />
-
-              {/* Editor Stats Indicator (Character and Word Counts) */}
-              <div className="no-print mt-2 mx-4 py-1.5 border-t border-dashed border-slate-200 flex items-center justify-between text-[11px] font-black uppercase text-slate-400 select-none">
-                <div className="flex items-center gap-4">
-                  <span>
-                    {lang === 'bn' ? 'শব্দ সংখ্যা: ' : 'Words: '}
-                    <span className="text-emerald-600 dark:text-emerald-500 font-mono text-xs ml-1">{wordCount}</span>
-                  </span>
-                  <span>
-                    {lang === 'bn' ? 'অক্ষর সংখ্যা: ' : 'Characters: '}
-                    <span className="text-emerald-600 dark:text-emerald-500 font-mono text-xs ml-1">{charCount}</span>
-                  </span>
-                </div>
-                <div className="hidden sm:block text-[10px] text-slate-300 font-bold">
-                  {lang === 'bn' ? 'প্রস্তাবিত দৈর্ঘ্য: ৩০০ শব্দ' : 'Recommended: < 300 words'}
-                </div>
-              </div>
-
-              {/* Pad Official Signatory Footer Area */}
-              <div className="pt-6 border-t border-emerald-900/5 mt-4 flex justify-between items-end select-none">
-                {/* Visual Stamp Block */}
-                <div className="w-24 h-24 border-4 border-double border-emerald-900/10 rounded-full flex items-center justify-center text-[8px] font-black opacity-40 select-none">STAMP</div>
-                
-                {/* Leader Signatory Block */}
-                <div className="text-center w-52 space-y-1 relative">
-                  {/* Drawn/Uploaded Signature overlay */}
-                  {localConfig.signature && (
-                    <div 
-                      className={`absolute mix-blend-multiply select-none flex items-center justify-center h-16 transition-all ${
-                        isPrintPreview 
-                          ? 'pointer-events-none' 
-                          : 'cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 hover:bg-emerald-50/20 rounded px-1 group'
-                      }`}
-                      style={{
-                        width: `${localConfig.signatureWidth ?? 112}px`,
-                        top: `${localConfig.signatureYOffset ?? -48}px`,
-                        left: '50%',
-                        transform: `translateX(calc(-50% + ${localConfig.signatureXOffset ?? 0}px)) rotate(${localConfig.signatureRotation ?? 0}deg)`,
-                        opacity: (localConfig.signatureOpacity ?? 100) / 100,
-                      }}
-                      onClick={() => {
-                        if (!isPrintPreview) {
-                          setIsOverlayModalOpen(true);
-                        }
-                      }}
-                      title={isPrintPreview ? undefined : (lang === 'bn' ? 'স্বাক্ষর সেটিংস পরিবর্তন করতে ক্লিক করুন' : 'Click to adjust signature overlay')}
-                    >
-                      <img 
-                        src={localConfig.signature} 
-                        className="w-full h-full object-contain" 
-                        alt="Signature" 
-                        crossOrigin="anonymous"
-                      />
-                      {!isPrintPreview && (
-                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                          {lang === 'bn' ? 'এডজাস্ট করুন' : 'Click to adjust'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="h-[1.5px] bg-slate-950 w-full mb-1"></div>
-                  <div className="text-lg font-black text-slate-950 leading-none" style={{ ...BENGALI_STYLE }}>{localConfig.leaderName}</div>
-                  <div className="text-[11px] font-bold text-emerald-900" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{localConfig.designation}</div>
-                </div>
-              </div>
-
-              {/* Document Verification QR Code Overlay */}
-              {(localConfig.qrEnabled ?? true) && qrCodeDataUrl && (
-                <div 
-                  className={`select-none transition-all flex flex-col items-center justify-center ${
-                    isPrintPreview 
-                      ? 'pointer-events-none' 
-                      : 'cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 hover:bg-emerald-50/20 rounded p-1 group'
-                  }`}
-                  style={getQrStyle()}
-                  onClick={() => {
-                    if (!isPrintPreview) {
-                      setIsOverlayModalOpen(true);
-                    }
-                  }}
-                  title={isPrintPreview ? undefined : (lang === 'bn' ? 'কিউআর কোড সেটিংস পরিবর্তন করতে ক্লিক করুন' : 'Click to adjust QR Code')}
-                >
-                  <img 
-                    src={qrCodeDataUrl} 
-                    className="w-full h-full object-contain mix-blend-multiply" 
-                    alt="Verification QR Code" 
-                  />
-                  <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap">
-                    ASWO VERIFIED
+              >
+                {/* Pad Slogan Slat Header */}
+                <div className="text-center mb-4 select-none pointer-events-none">
+                  <div className="inline-block px-10 py-1.5 border-b border-emerald-950/10 text-[13px] text-emerald-950 uppercase" style={{ ...BENGALI_STYLE }}>
+                    {viewMode === 'bn' ? settings.sloganBn : settings.sloganEn}
                   </div>
-                  {!isPrintPreview && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                      {lang === 'bn' ? 'এডজাস্ট করুন' : 'Click to adjust'}
-                    </div>
-                  )}
                 </div>
-              )}
+
+                {/* Main Pad Letter Header */}
+                <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                       <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" crossOrigin="anonymous" />
+                    </div>
+                    <div className="flex-1 px-4">
+                      <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1" style={{ fontSize: '32px', ...BENGALI_STYLE }}>{viewMode === 'bn' ? settings.nameBn : settings.nameEn}</h1>
+                      <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}</p>
+                    </div>
+                    <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
+                      <img src={settings.flag} className="w-full h-full object-cover" alt="Flag" crossOrigin="anonymous" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Date & Reference Row */}
+                <div className="flex items-center justify-between text-xs text-slate-700 font-bold mb-4 px-4 select-none pointer-events-none">
+                  <div className="font-mono">REF: ASWO/PAD/{new Date().getFullYear()}/{(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}</div>
+                  <div>{lang === 'bn' ? 'তারিখ: ' : 'Date: '} <span className="underline decoration-slate-300 underline-offset-4">{today}</span></div>
+                </div>
+
+                {/* REAL-TIME WYSIWYG DOCUMENT EDITING BODY AREA */}
+                <div 
+                  ref={editorRef}
+                  contentEditable={!isPrintPreview}
+                  onInput={handleEditorInput}
+                  onPaste={handlePaste}
+                  className="editor-body flex-1 px-4 text-[14px] leading-relaxed outline-none overflow-y-auto text-slate-800"
+                  style={{ 
+                    ...BENGALI_STYLE, 
+                    fontWeight: 500,
+                    minHeight: '160mm',
+                    maxHeight: '190mm',
+                  }}
+                  placeholder={viewMode === 'bn' ? 'পত্রের মূল বিষয়বস্তু এখানে সরাসরি টাইপ বা পেস্ট করুন...' : 'Type or paste the official letter content directly here...'}
+                />
+
+                {/* Editor Stats Indicator (Character and Word Counts) */}
+                <div className="no-print mt-2 mx-4 py-1.5 border-t border-dashed border-slate-200 flex items-center justify-between text-[11px] font-black uppercase text-slate-400 select-none">
+                  <div className="flex items-center gap-4">
+                    <span>
+                      {lang === 'bn' ? 'শব্দ সংখ্যা: ' : 'Words: '}
+                      <span className="text-emerald-600 dark:text-emerald-500 font-mono text-xs ml-1">{wordCount}</span>
+                    </span>
+                    <span>
+                      {lang === 'bn' ? 'অক্ষর সংখ্যা: ' : 'Characters: '}
+                      <span className="text-emerald-600 dark:text-emerald-500 font-mono text-xs ml-1">{charCount}</span>
+                    </span>
+                  </div>
+                  <div className="hidden sm:block text-[10px] text-slate-300 font-bold">
+                    {lang === 'bn' ? 'প্রস্তাবিত দৈর্ঘ্য: ৩০০ শব্দ' : 'Recommended: < 300 words'}
+                  </div>
+                </div>
+
+                {/* Pad Official Signatory Footer Area */}
+                <div className="pt-6 border-t border-emerald-900/5 mt-4 flex justify-between items-end select-none">
+                  {/* Visual Stamp Block */}
+                  <div className="w-24 h-24 border-4 border-double border-emerald-900/10 rounded-full flex items-center justify-center text-[8px] font-black opacity-40 select-none">STAMP</div>
+                  
+                  {/* Leader Signatory Block */}
+                  <div className="text-center w-52 space-y-1 relative">
+                    {/* Drawn/Uploaded Signature overlay */}
+                    {localConfig.signature && (
+                      <div 
+                        className={`absolute mix-blend-multiply select-none flex items-center justify-center h-16 transition-all ${
+                          isPrintPreview 
+                            ? 'pointer-events-none' 
+                            : 'cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 hover:bg-emerald-50/20 rounded px-1 group'
+                        }`}
+                        style={{
+                          width: `${localConfig.signatureWidth ?? 112}px`,
+                          top: `${localConfig.signatureYOffset ?? -48}px`,
+                          left: '50%',
+                          transform: `translateX(calc(-50% + ${localConfig.signatureXOffset ?? 0}px)) rotate(${localConfig.signatureRotation ?? 0}deg)`,
+                          opacity: (localConfig.signatureOpacity ?? 100) / 100,
+                        }}
+                        onClick={() => {
+                          if (!isPrintPreview) {
+                            setIsOverlayModalOpen(true);
+                          }
+                        }}
+                        title={isPrintPreview ? undefined : (lang === 'bn' ? 'স্বাক্ষর সেটিংস পরিবর্তন করতে ক্লিক করুন' : 'Click to adjust signature overlay')}
+                      >
+                        <img 
+                          src={localConfig.signature} 
+                          className="w-full h-full object-contain" 
+                          alt="Signature" 
+                          crossOrigin="anonymous"
+                        />
+                        {!isPrintPreview && (
+                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            {lang === 'bn' ? 'এডজাস্ট করুন' : 'Click to adjust'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="h-[1.5px] bg-slate-950 w-full mb-1"></div>
+                    <div className="text-lg font-black text-slate-950 leading-none" style={{ ...BENGALI_STYLE }}>{localConfig.leaderName}</div>
+                    <div className="text-[11px] font-bold text-emerald-900" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{localConfig.designation}</div>
+                  </div>
+                </div>
+
+                {/* Document Verification QR Code Overlay */}
+                {(localConfig.qrEnabled ?? true) && qrCodeDataUrl && (
+                  <div 
+                    className={`select-none transition-all flex flex-col items-center justify-center ${
+                      isPrintPreview 
+                        ? 'pointer-events-none' 
+                        : 'cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 hover:bg-emerald-50/20 rounded p-1 group'
+                    }`}
+                    style={getQrStyle()}
+                    onClick={() => {
+                      if (!isPrintPreview) {
+                        setIsOverlayModalOpen(true);
+                      }
+                    }}
+                    title={isPrintPreview ? undefined : (lang === 'bn' ? 'কিউআর কোড সেটিংস পরিবর্তন করতে ক্লিক করুন' : 'Click to adjust QR Code')}
+                  >
+                    <img 
+                      src={qrCodeDataUrl} 
+                      className="w-full h-full object-contain mix-blend-multiply" 
+                      alt="Verification QR Code" 
+                      crossOrigin="anonymous"
+                    />
+                    <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap">
+                      ASWO VERIFIED
+                    </div>
+                    {!isPrintPreview && (
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        {lang === 'bn' ? 'এডজাস্ট করুন' : 'Click to adjust'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
-          <p className="text-center text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest no-print">
-            {lang === 'bn' ? 'বাম থেকে ডানে স্ক্রল করে সম্পূর্ণ দেখুন' : 'Scroll left to right to see full preview'}
-          </p>
+          {scale < 1 ? (
+            <p className="text-center text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest no-print">
+              {lang === 'bn' ? 'মোবাইলে ফিট করার জন্য প্রিভিউ স্কেল করা হয়েছে' : 'Preview scaled to fit your mobile screen'}
+            </p>
+          ) : (
+            <p className="text-center text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest no-print">
+              {lang === 'bn' ? 'সম্পূর্ণ WYSIWYG মোড সক্রিয়' : 'Full WYSIWYG Mode active'}
+            </p>
+          )}
         </div>
       </div>
 
