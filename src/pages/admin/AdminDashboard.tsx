@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS, ADMIN_NAV_ITEMS } from '../../utils/constants';
+import { parseLocalDate } from '../../utils/parseLocalDate';
 import { DonationStatus, Donation, Expense } from '../../types';
 import { ReceiptView } from './ReceiptView';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -1369,7 +1370,7 @@ export const AdminDashboard: React.FC = () => {
                     {lang === 'bn' ? 'তারিখ ও সময়' : 'Submission Time'}
                   </div>
                   <div className="text-xs font-bold text-slate-900 dark:text-white">
-                    {new Date(selectedDonationDetails.date).toLocaleString()}
+                    {parseLocalDate(selectedDonationDetails.date).toLocaleString()}
                   </div>
                 </div>
               </div>

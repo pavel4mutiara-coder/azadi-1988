@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { BellRing, Plus, Trash2, Edit2, Clock } from 'lucide-react';
 import { Notice } from '../../types';
+import { parseLocalDate } from '../../utils/parseLocalDate';
 
 export const NoticeManager: React.FC = () => {
   const { lang, notices, saveNotice, deleteNotice } = useApp();
@@ -19,17 +20,10 @@ export const NoticeManager: React.FC = () => {
 
   const isDateWithin24Hours = (dateStr: string): boolean => {
     if (!dateStr) return false;
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const localDate = new Date(year, month, day);
-      const now = new Date();
-      const diffMs = Math.abs(now.getTime() - localDate.getTime());
-      return diffMs <= 24 * 60 * 60 * 1000;
-    }
-    return false;
+    const localDate = parseLocalDate(dateStr);
+    const now = new Date();
+    const diffMs = Math.abs(now.getTime() - localDate.getTime());
+    return diffMs <= 24 * 60 * 60 * 1000;
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -136,7 +130,7 @@ export const NoticeManager: React.FC = () => {
           <div key={notice.id} className={`bg-white dark:bg-slate-900 rounded-[2rem] border ${notice.isUrgent ? 'border-red-200 dark:border-red-900/50' : 'border-slate-200 dark:border-slate-800'} p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 group`}>
             <div className="flex-1 space-y-3 text-center md:text-left">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {new Date(notice.date).toLocaleDateString()}</span>
+                <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 {notice.isUrgent && <span className="px-3 py-1 bg-red-500 text-white text-[9px] font-black uppercase rounded-full">Urgent</span>}
               </div>
               <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight bengali">{lang === 'bn' ? notice.titleBn : notice.titleEn}</h3>

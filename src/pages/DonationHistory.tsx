@@ -6,6 +6,7 @@ import { DonationStatus, Donation } from '../types';
 import { Search, History, Calendar, Heart, FileText, CheckCircle2, Clock, Filter, Phone, Hash } from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
 import { SkeletonLoader } from '../components/SkeletonLoader';
+import { parseLocalDate } from '../utils/parseLocalDate';
 
 export const DonationHistory: React.FC = () => {
   const { lang, donations, settings, loadingDonations } = useApp();
@@ -20,7 +21,7 @@ export const DonationHistory: React.FC = () => {
       const phoneMatch = (d.phone || '').includes(query);
       const txMatch = (d.transactionId || '').toLowerCase().includes(query);
       return nameMatch || phoneMatch || txMatch;
-    }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    }).sort((a, b) => parseLocalDate(b.date || 0).getTime() - parseLocalDate(a.date || 0).getTime());
   }, [donations, searchQuery]);
 
   if (selectedDonation) {
@@ -96,7 +97,7 @@ export const DonationHistory: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-slate-400 font-bold text-[11px] uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5"><Calendar size={12}/> {new Date(d.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                  <div className="flex items-center gap-1.5"><Calendar size={12}/> {parseLocalDate(d.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                   <div className="flex items-center gap-1.5"><Hash size={12}/> {d.transactionId}</div>
                   <div className="flex items-center gap-1.5"><Filter size={12}/> {d.purpose}</div>
                 </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
+import { parseLocalDate } from '../../utils/parseLocalDate';
 import { 
   collection, 
   query, 
@@ -111,7 +112,7 @@ export const TestimonialManager: React.FC = () => {
         list.push(docSnap.data() as Testimonial);
       });
       // Sort by newest first
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      list.sort((a, b) => parseLocalDate(b.createdAt).getTime() - parseLocalDate(a.createdAt).getTime());
       setTestimonials(list);
     } catch (err) {
       console.error("Error retrieving testimonials:", err);

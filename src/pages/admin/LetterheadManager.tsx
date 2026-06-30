@@ -167,6 +167,9 @@ export const LetterheadManager: React.FC = () => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isEditingRef = useRef(false);
 
+  const letterheadString = JSON.stringify(letterhead);
+  const localConfigString = JSON.stringify(localConfig);
+
   // Synchronize state when letterhead config changes from DB (only if no active local draft is being edited)
   useEffect(() => {
     if (hasRestoredDraft) return;
@@ -176,10 +179,10 @@ export const LetterheadManager: React.FC = () => {
       const initialHTML = getInitialHtml(letterhead.bodyText);
       if (currentHTML !== initialHTML) {
         editorRef.current.innerHTML = initialHTML;
-        setLocalConfig(letterhead);
+        setLocalConfig(JSON.parse(letterheadString));
       }
     }
-  }, [letterhead, hasRestoredDraft]);
+  }, [letterheadString, hasRestoredDraft]);
 
   // Debounced auto-save effect to store current document state to localStorage
   useEffect(() => {
@@ -210,7 +213,7 @@ export const LetterheadManager: React.FC = () => {
 
     const timer = setTimeout(() => {
       try {
-        localStorage.setItem('azadi_letterhead_draft', JSON.stringify(localConfig));
+        localStorage.setItem('azadi_letterhead_draft', localConfigString);
         setHasRestoredDraft(true);
         setAutoSaveStatus('saved');
       } catch (e) {
@@ -220,7 +223,7 @@ export const LetterheadManager: React.FC = () => {
     }, 1500); // 1.5 seconds debounce
 
     return () => clearTimeout(timer);
-  }, [localConfig, letterhead]);
+  }, [localConfigString, letterheadString]);
 
   // Reset saved indicator back to idle after display duration
   useEffect(() => {
@@ -342,15 +345,31 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
   };
 
   // Signature Canvas Drawing Handlers
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => { setIsDrawing(true); draw(e); };
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDrawing(true);
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const clientX = 'touches' in e ? (e.touches[0]?.clientX ?? 0) : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? (e.touches[0]?.clientY ?? 0) : (e as React.MouseEvent).clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+      }
+    }
+  };
   const stopDrawing = () => { setIsDrawing(false); if (canvasRef.current) canvasRef.current.getContext('2d')?.beginPath(); };
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing || !canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = ('touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX) - rect.left;
-    const y = ('touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY) - rect.top;
+    const clientX = 'touches' in e ? (e.touches[0]?.clientX ?? 0) : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? (e.touches[0]?.clientY ?? 0) : (e as React.MouseEvent).clientY;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
     ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
   };

@@ -5,6 +5,7 @@ import { Calendar, Plus, Trash2, Edit2, MapPin, Loader2, Video, Clipboard, Uploa
 import { Event } from '../../types';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
+import { parseLocalDate } from '../../utils/parseLocalDate';
 
 export const EventManager: React.FC = () => {
   const { lang, events, saveEvent, deleteEvent } = useApp();
@@ -15,7 +16,7 @@ export const EventManager: React.FC = () => {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return lang === 'bn' ? 'তারিখ পাওয়া যায়নি' : 'Date not available';
     try {
-      const d = new Date(dateStr);
+      const d = parseLocalDate(dateStr);
       if (isNaN(d.getTime())) return dateStr;
       return d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { 
         day: 'numeric', 

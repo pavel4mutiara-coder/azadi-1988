@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 
 import { NoticeMarquee } from '../components/NoticeMarquee';
 import { MemberImage } from '../components/MemberImage';
+import { parseLocalDate } from '../utils/parseLocalDate';
 
 const FEATURE_ICONS = [<GraduationCap />, <Users />, <HeartHandshake />, <HandHelping />, <Trophy />];
 
@@ -18,7 +19,7 @@ export default function Home() {
   const features = slogan.split(' · ').filter(Boolean);
   const topLeaders = Array.isArray(leadership) ? [...leadership].sort((a, b) => (a.order || 99) - (b.order || 99)).slice(0, 4) : [];
   const recentEvents = Array.isArray(events) ? [...events].slice(0, 2) : [];
-  const recentNews = Array.isArray(news) ? [...news].sort((a, b) => new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime()).slice(0, 3) : [];
+  const recentNews = Array.isArray(news) ? [...news].sort((a, b) => parseLocalDate(b?.date || 0).getTime() - parseLocalDate(a?.date || 0).getTime()).slice(0, 3) : [];
   const allNotices = Array.isArray(notices) ? notices : [];
 
   return (
@@ -131,7 +132,7 @@ export default function Home() {
                 <div className="p-10 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                      <Calendar size={14} className="text-emerald-500" /> {n.date ? new Date(n.date).toLocaleDateString() : 'N/A'}
+                      <Calendar size={14} className="text-emerald-500" /> {n.date ? parseLocalDate(n.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                     </div>
                     <h3 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl leading-[1.3] line-clamp-2 bengali group-hover:text-emerald-600 transition-colors">{lang === 'bn' ? n.titleBn : n.titleEn}</h3>
                   </div>

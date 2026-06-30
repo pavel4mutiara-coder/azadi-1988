@@ -5,6 +5,7 @@ import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation as DonationType } from '../types';
 import { Copy, CheckCircle, Heart, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send, X, Loader2 } from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
+import { parseLocalDate } from '../utils/parseLocalDate';
 
 export const Donation: React.FC = () => {
   const { lang, settings, donations, addDonation } = useApp();
@@ -457,7 +458,7 @@ export const Donation: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/40 px-3 py-1 rounded-full">{d.purpose}</span>
-                        <span className="text-[9px] font-bold text-slate-400">{new Date(d.date).toLocaleDateString()}</span>
+                        <span className="text-[9px] font-bold text-slate-400">{parseLocalDate(d.date).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <div className="text-xl font-black text-emerald-700 dark:text-emerald-400 font-mono tracking-tighter">৳{d.amount.toLocaleString()}</div>

@@ -52,9 +52,10 @@ export const SettingsManager: React.FC = () => {
     }
   }, [googleAccessToken]);
 
+  const settingsString = JSON.stringify(settings);
   React.useEffect(() => {
-    setLocalSettings(settings);
-  }, [settings]);
+    setLocalSettings(JSON.parse(settingsString));
+  }, [settingsString]);
 
   const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
   const isSuperAdmin = user?.email === superAdminEmail;

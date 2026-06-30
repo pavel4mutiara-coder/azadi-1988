@@ -5,6 +5,7 @@ import { News } from '../../types';
 import { Newspaper, Plus, Trash2, Edit2, Clock, UploadCloud, Image, Loader2, X } from 'lucide-react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
+import { parseLocalDate } from '../../utils/parseLocalDate';
 
 export const NewsManager: React.FC = () => {
   const { lang, news, saveNews, deleteNews } = useApp();
@@ -268,7 +269,7 @@ export const NewsManager: React.FC = () => {
               </div>
             </div>
             <div className="p-6 space-y-3 flex-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {new Date(n.date).toLocaleDateString()}</div>
+              <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {parseLocalDate(n.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight line-clamp-2 bengali">{lang === 'bn' ? n.titleBn : n.titleEn}</h3>
               <p className="text-slate-500 dark:text-slate-400 font-bold text-xs line-clamp-2 bengali">{lang === 'bn' ? n.contentBn : n.contentEn}</p>
             </div>

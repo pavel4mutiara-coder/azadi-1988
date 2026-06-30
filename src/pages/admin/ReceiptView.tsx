@@ -4,6 +4,7 @@ import { Donation, OrganizationSettings, DonationStatus } from '../../types';
 import { Heart, Printer, ArrowLeft, Download, MessageCircle, Shield, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText } from 'lucide-react';
 import { ISLAMIC_QUOTES } from '../../utils/constants';
 import { useApp } from '../../context/AppContext';
+import { parseLocalDate } from '../../utils/parseLocalDate';
 
 declare var html2pdf: any;
 
@@ -34,19 +35,57 @@ export const ReceiptView: React.FC<Props> = ({
   const signatoryConfig = letterhead;
   const base64Logo = settings.logo;
 
-  const handleDownload = () => {
-    if (typeof html2pdf !== 'undefined') {
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setIsGeneratingPDF(true);
       const element = receiptRef.current;
+      if (!element) return;
+
+      let html2pdfLib = (window as any).html2pdf;
+      if (!html2pdfLib) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.onload = () => {
+            html2pdfLib = (window as any).html2pdf;
+            resolve();
+          };
+          script.onerror = () => {
+            reject(new Error("Failed to load html2pdf script"));
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      if (!html2pdfLib) {
+        // Fallback to window print if script failed to load
+        window.print();
+        return;
+      }
+
       const opt = {
         margin: 0,
         filename: `receipt_REC-${donation.id.slice(-8)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          allowTaint: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 794,
+          windowHeight: 1123
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      html2pdf().from(element).set(opt).save();
-    } else {
+      await html2pdfLib().from(element).set(opt).save();
+    } catch (err) {
+      console.error("Failed to generate Receipt PDF, falling back to window.print()", err);
       window.print();
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -141,10 +180,20 @@ export const ReceiptView: React.FC<Props> = ({
           <div className="flex gap-2">
             <button 
               onClick={handleDownload} 
-              className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase"
+              disabled={isGeneratingPDF}
+              className={`bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-2 shadow-md hover:bg-emerald-700 transition-all uppercase ${isGeneratingPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <Download size={14} /> 
-              {lang === 'bn' ? 'PDF ডাউনলোড' : 'PDF Download'}
+              {isGeneratingPDF ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {lang === 'bn' ? 'ডাউনলোড হচ্ছে...' : 'Downloading...'}
+                </>
+              ) : (
+                <>
+                  <Download size={14} /> 
+                  {lang === 'bn' ? 'PDF ডাউনলোড' : 'PDF Download'}
+                </>
+              )}
             </button>
             <button 
               onClick={handlePrint} 
@@ -218,7 +267,7 @@ export const ReceiptView: React.FC<Props> = ({
                   </div>
                   <div className="text-right space-y-0.5">
                     <div className="text-[8px] font-black uppercase tracking-widest text-slate-400">তারিখ / Date</div>
-                    <div className="font-black text-slate-900 text-sm">{new Date(donation.date).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                    <div className="font-black text-slate-900 text-sm">{parseLocalDate(donation.date).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
                   </div>
                 </div>
 

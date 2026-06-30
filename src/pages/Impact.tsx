@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
+import { parseLocalDate } from '../utils/parseLocalDate';
 import { Target, Users, Heart, Globe, PieChart, Sparkles, MessageSquarePlus } from 'lucide-react';
 import { MemberImage } from '../components/MemberImage';
 import { SubmitTestimonialForm } from '../components/SubmitTestimonialForm';
@@ -50,7 +51,7 @@ export const Impact: React.FC = () => {
           list.push(doc.data() as Testimonial);
         });
         // Sort by createdAt descending
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        list.sort((a, b) => parseLocalDate(b.createdAt).getTime() - parseLocalDate(a.createdAt).getTime());
         setDbTestimonials(list);
       } catch (err) {
         console.error("Error fetching testimonials from firestore:", err);

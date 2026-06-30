@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Event } from "../types";
 import { SkeletonLoader } from "../components/SkeletonLoader";
+import { parseLocalDate } from "../utils/parseLocalDate";
 
 export const Events: React.FC = () => {
   const { lang, events, settings, loadingEvents } = useApp();
@@ -47,8 +48,8 @@ export const Events: React.FC = () => {
   // Sorting with fallback to prevent crashes if date is missing or invalid
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      const dateA = a.date ? parseLocalDate(a.date).getTime() : 0;
+      const dateB = b.date ? parseLocalDate(b.date).getTime() : 0;
       return dateB - dateA;
     });
   }, [events]);
@@ -57,7 +58,7 @@ export const Events: React.FC = () => {
     if (!dateStr)
       return lang === "bn" ? "তারিখ পাওয়া যায়নি" : "Date not available";
     try {
-      const d = new Date(dateStr);
+      const d = parseLocalDate(dateStr);
       if (isNaN(d.getTime())) return dateStr;
       return d.toLocaleDateString(lang === "bn" ? "bn-BD" : "en-US", {
         day: "numeric",

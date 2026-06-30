@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BellRing, Clock, AlertTriangle } from 'lucide-react';
 import { Notice, Language } from '../types';
+import { parseLocalDate } from '../utils/parseLocalDate';
 
 interface NoticeMarqueeProps {
   notices: Notice[];
@@ -16,7 +17,7 @@ export const NoticeMarquee: React.FC<NoticeMarqueeProps> = ({ notices, lang }) =
 
   // Filter and sort notices (newest first)
   const activeNotices = [...notices].sort((a, b) => 
-    new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()
+    parseLocalDate(b.date || 0).getTime() - parseLocalDate(a.date || 0).getTime()
   );
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export const NoticeMarquee: React.FC<NoticeMarqueeProps> = ({ notices, lang }) =
       
       <div className="hidden xs:flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500">
         <Clock size={12} className="text-emerald-500/60" />
-        {notice.date ? new Date(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') : 'N/A'}
+        {notice.date ? parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') : 'N/A'}
       </div>
 
       <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-200 dark:via-slate-800 to-transparent mx-2 sm:mx-4"></div>

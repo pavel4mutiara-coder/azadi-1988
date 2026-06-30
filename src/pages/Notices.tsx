@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { BellRing, Clock, AlertTriangle, FileText, ChevronRight, Share2, Calendar, CheckCircle } from 'lucide-react';
 import { SkeletonLoader } from '../components/SkeletonLoader';
+import { parseLocalDate } from '../utils/parseLocalDate';
 
 export const Notices: React.FC = () => {
   const { lang, notices, settings, loadingNotices } = useApp();
@@ -30,7 +31,7 @@ export const Notices: React.FC = () => {
 
   const handleShare = async (notice: any) => {
     const shareTitle = lang === 'bn' ? notice.titleBn : notice.titleEn;
-    const dateStr = new Date(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US');
+    const dateStr = parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US');
     const shareText = `📢 *${shareTitle}*\n📅 ${dateStr}`;
     const shareUrl = `${window.location.origin}/#/notices?id=${notice.id}`;
     const descText = lang === 'bn' ? notice.contentBn : notice.contentEn;
@@ -73,7 +74,7 @@ export const Notices: React.FC = () => {
 
   // Sort notices by date (newest first)
   const sortedNotices = Array.isArray(notices) 
-    ? [...notices].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+    ? [...notices].sort((a, b) => parseLocalDate(b.date || 0).getTime() - parseLocalDate(a.date || 0).getTime())
     : [];
 
   return (
@@ -128,7 +129,7 @@ export const Notices: React.FC = () => {
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{lang === 'bn' ? 'তারিখ' : 'Date'}</div>
                         <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5 justify-center md:justify-start">
                           <Calendar size={14} className="text-emerald-500" />
-                          {new Date(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                          {parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </div>
                      </div>
                    </div>
@@ -159,7 +160,7 @@ export const Notices: React.FC = () => {
                       <div className="pt-4 flex flex-wrap gap-4 items-center justify-between border-t border-slate-100 dark:border-slate-800/50">
                          <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400">
                            <Clock size={14} className="text-emerald-500" />
-                           {lang === 'bn' ? 'প্রকাশিত:' : 'Posted:'} {new Date(notice.date).toLocaleTimeString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                           {lang === 'bn' ? 'প্রকাশিত:' : 'Posted:'} {parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                          </div>
                          <button 
                            onClick={() => handleShare(notice)}
