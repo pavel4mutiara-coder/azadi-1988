@@ -163,6 +163,22 @@
         "date": { "type": "string" }
       },
       "required": ["id", "amount", "category", "descriptionEn", "descriptionBn", "date"]
+    },
+    "VersionConfig": {
+      "title": "VersionConfig",
+      "description": "Centralized version and release configurations",
+      "type": "object",
+      "properties": {
+        "latestVersion": { "type": "string" },
+        "buildNumber": { "type": "number" },
+        "releaseDate": { "type": "string" },
+        "releaseNotes": { "type": "string" },
+        "forceUpdate": { "type": "boolean" },
+        "apkDownloadUrl": { "type": "string" },
+        "updateSize": { "type": "string" },
+        "playStoreUrl": { "type": "string" }
+      },
+      "required": ["latestVersion", "buildNumber", "releaseDate", "releaseNotes", "forceUpdate"]
     }
   },
   "firestore": {
@@ -173,6 +189,10 @@
     "settings/letterhead": {
       "schema": { "$ref": "#/entities/LetterheadConfig" },
       "description": "Single document holding the Letterhead Configurations"
+    },
+    "settings/version": {
+      "schema": { "$ref": "#/entities/VersionConfig" },
+      "description": "Single document holding the App Version and Update configurations"
     },
     "donations/{donationId}": {
       "schema": { "$ref": "#/entities/Donation" },

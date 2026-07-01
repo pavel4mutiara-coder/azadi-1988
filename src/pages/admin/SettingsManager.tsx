@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
+import { CURRENT_VERSION } from '../../utils/version';
 import { 
   Settings, Save, Globe, Mail, CheckCircle, 
   Facebook, Youtube, MessageCircle, RefreshCcw, 
   Image as ImageIcon, ExternalLink, Info, Database, 
   Shield, Copy, AlertCircle, Trash2, LogOut, Moon, Sun,
-  Loader2, MessageSquare, Send, Bell
+  Loader2, MessageSquare, Send, Bell, ArrowUpCircle,
+  Cloud, CloudOff, UploadCloud, Download
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
@@ -20,10 +22,42 @@ export const SettingsManager: React.FC = () => {
     resetAllData, 
     user,
     googleAccessToken,
-    loginWithGoogle
+    loginWithGoogle,
+    versionConfig,
+    saveVersionConfig,
+    logout,
+    cloudSyncStatus,
+    retryCloudConnection,
+    exportBackup,
+    importBackup
   } = useApp();
   const t = TRANSLATIONS[lang];
   const [localSettings, setLocalSettings] = useState(settings);
+  const [localVersion, setLocalVersion] = useState<any>(null);
+  const [savingVersion, setSavingVersion] = useState(false);
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target?.result as string;
+      if (!text) return;
+      const success = await importBackup(text);
+      if (success) {
+        alert(lang === 'bn' ? 'ব্যাকআপ সফলভাবে রিস্টোর করা হয়েছে!' : 'Backup restored successfully!');
+      } else {
+        alert(lang === 'bn' ? 'ব্যাকআপ রিস্টোর করতে ব্যর্থ হয়েছে!' : 'Failed to restore backup!');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  useEffect(() => {
+    if (versionConfig) {
+      setLocalVersion({ ...versionConfig });
+    }
+  }, [versionConfig]);
 
   const [spaces, setSpaces] = useState<any[]>([]);
   const [loadingSpaces, setLoadingSpaces] = useState(false);
@@ -66,6 +100,19 @@ export const SettingsManager: React.FC = () => {
       alert(lang === 'bn' ? 'সেটিংস সফলভাবে সেভ করা হয়েছে!' : 'Settings successfully saved to Firestore!');
     } catch (e) {
       alert(lang === 'bn' ? 'সেভ করতে ব্যর্থ হয়েছে।' : 'Failed to save settings.');
+    }
+  };
+
+  const handleSaveVersion = async () => {
+    if (!localVersion) return;
+    try {
+      setSavingVersion(true);
+      await saveVersionConfig(localVersion);
+      alert(lang === 'bn' ? 'সফটওয়্যার আপডেট সংস্করণ সফলভাবে ফায়ারবেসে পাবলিশ করা হয়েছে!' : 'Application update settings published to Firestore successfully!');
+    } catch (e) {
+      alert(lang === 'bn' ? 'সংরক্ষণ করতে ব্যর্থ হয়েছে।' : 'Failed to publish update configuration.');
+    } finally {
+      setSavingVersion(false);
     }
   };
 
@@ -512,40 +559,6 @@ export const SettingsManager: React.FC = () => {
             <div className="w-24 h-24 mx-auto bg-slate-50 dark:bg-slate-950 rounded-2xl p-2 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden">
               <img src={localSettings.logo} className="object-contain" alt="Logo Preview" />
             </div>
-          </section>
-
-          {/* Data Recovery System */}
-          <section className="bg-emerald-950 dark:bg-emerald-900/10 text-white rounded-[2.5rem] p-8 shadow-2xl space-y-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
-              <Database size={100} />
-            </div>
-            <div className="space-y-2 relative z-10">
-              <h3 className="text-xl font-black flex items-center gap-2">
-                <RefreshCcw size={20} />
-                ডাটা রিস্টোর (Restore)
-              </h3>
-              <p className="text-xs text-emerald-100/60 font-bold leading-relaxed">
-                আপনার ইভেন্ট বা নেতৃবৃন্দের লিস্ট ডেমোতে রিস্টোর করতে এই বাটনে ক্লিক করতে পারেন।
-              </p>
-            </div>
-            <button 
-              onClick={handleRestore}
-              className="w-full bg-white text-emerald-950 py-4 rounded-2xl font-black text-[11px] uppercase shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-2 relative z-10"
-            >
-              <Database size={14} />
-              {lang === 'bn' ? 'ডাটা রিস্টোর করুন' : 'Restore All Data'}
-            </button>
-          </section>
-
-          {/* Danger Zone */}
-          <section className="bg-rose-50 dark:bg-rose-950/20 rounded-[2.5rem] p-8 border border-rose-100 dark:border-rose-900/50 space-y-4 text-center">
-             <h3 className="text-xs font-black uppercase text-rose-600 flex items-center justify-center gap-2"><AlertCircle size={14} /> Danger Zone</h3>
-             <button 
-               onClick={handleWipe}
-               className="w-full text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 p-4 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
-             >
-               <Trash2 size={16} /> WIPE DATABASE SYSTEM
-             </button>
           </section>
 
           {/* Appearance Section */}

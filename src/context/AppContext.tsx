@@ -10,7 +10,9 @@ import {
   Notice, 
   News,
   Expense,
+  VersionConfig,
 } from '../types';
+import { CURRENT_VERSION } from '../utils/version';
 import { INITIAL_COMMITTEE } from '../utils/committee';
 import { 
   collection, 
@@ -23,7 +25,9 @@ import {
   getDoc,
   getDocs,
   getDocFromServer,
-  writeBatch
+  writeBatch,
+  updateDoc,
+  addDoc
 } from 'firebase/firestore';
 import { 
   auth, 
@@ -80,7 +84,7 @@ interface AppState {
   saveLetterhead: (config: LetterheadConfig) => Promise<void>;
   updateLeadership: (leadership: Leadership[]) => Promise<void>;
   replaceLeadership: (leadership: Leadership[]) => Promise<void>;
-  saveLeader: (leader: Leadership) => Promise<void>;
+  saveLeader: (leader: Leadership, originalLeader?: Leadership) => Promise<void>;
   deleteLeader: (id: string) => Promise<void>;
   saveEvent: (event: Event) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
@@ -101,6 +105,9 @@ interface AppState {
   seedDefaultDatabase: () => Promise<void>;
   googleAccessToken: string | null;
   setGoogleAccessToken: (token: string | null) => void;
+  versionConfig: VersionConfig | null;
+  saveVersionConfig: (config: VersionConfig) => Promise<void>;
+  loadingVersion: boolean;
 }
 
 const STATIC_SETTINGS: OrganizationSettings = {
@@ -327,6 +334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [expenses, setExpenses] = useState<Expense[]>(() => getCachedData('azadi_expenses', STATIC_EXPENSES));
   const [settings, setSettings] = useState<OrganizationSettings>(() => getCachedData('azadi_settings', STATIC_SETTINGS));
   const [letterhead, setLetterhead] = useState<LetterheadConfig>(() => getCachedData('azadi_letterhead', STATIC_LETTERHEAD));
+  const [versionConfig, setVersionConfig] = useState<VersionConfig | null>(() => getCachedData('azadi_version_config', CURRENT_VERSION));
   const [isLoaded, setIsLoaded] = useState(true);
 
   const [loadingDonations, setLoadingDonations] = useState(true);
@@ -337,6 +345,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loadingExpenses, setLoadingExpenses] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingLetterhead, setLoadingLetterhead] = useState(true);
+  const [loadingVersion, setLoadingVersion] = useState(true);
 
   const [cloudSynced, setCloudSynced] = useState(true);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('success');
@@ -457,6 +466,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingLetterhead(false);
     });
 
+    // Version listener
+    const unsubVersion = onSnapshot(doc(db, 'settings', 'version'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as VersionConfig;
+        setVersionConfig(data);
+        localStorage.setItem('azadi_version_config', JSON.stringify(data));
+      } else {
+        // If it doesn't exist yet, seed with CURRENT_VERSION
+        const seedVersion = async () => {
+          try {
+            await setDoc(doc(db, 'settings', 'version'), CURRENT_VERSION);
+          } catch (err) {
+            console.error("Failed to seed initial version settings:", err);
+          }
+        };
+        seedVersion();
+        setVersionConfig(CURRENT_VERSION);
+      }
+      setLoadingVersion(false);
+    }, () => {
+      setLoadingVersion(false);
+    });
+
     // 3. Donations listener
     const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc')), (snap) => {
       console.log("[DEBUG] Donations collection listener received snapshot. Size:", snap.size, "Is empty:", snap.empty);
@@ -482,15 +514,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 4. Leadership listener
     const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), orderBy('order', 'asc')), (snap) => {
-      if (!snap.empty) {
-        const list: Leadership[] = [];
-        snap.forEach(d => list.push(d.data() as Leadership));
-        setLeadership(list);
-        localStorage.setItem('azadi_leadership', JSON.stringify(list));
-      } else {
-        setLeadership(STATIC_LEADERSHIP);
-        localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
-      }
+      setLeadership((prev) => {
+        if (snap.empty) {
+          localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
+          return STATIC_LEADERSHIP;
+        }
+
+        let updatedList = [...prev];
+        const serverDocIds = new Set(snap.docs.map(d => d.id));
+
+        snap.docChanges().forEach((change) => {
+          const docData = { ...change.doc.data(), id: change.doc.id } as Leadership;
+          if (change.type === 'added') {
+            const index = updatedList.findIndex(item => item.id === docData.id);
+            if (index > -1) {
+              updatedList[index] = docData;
+            } else {
+              updatedList = updatedList.filter(item => item.id !== docData.id);
+              updatedList.push(docData);
+            }
+          } else if (change.type === 'modified') {
+            const index = updatedList.findIndex(item => item.id === docData.id);
+            if (index > -1) {
+              updatedList[index] = docData;
+            } else {
+              updatedList.push(docData);
+            }
+          } else if (change.type === 'removed') {
+            updatedList = updatedList.filter(item => item.id !== docData.id);
+          }
+        });
+
+        // Filter out any local fallback data or items that do not exist on server
+        updatedList = updatedList.filter(item => serverDocIds.has(item.id));
+
+        if (updatedList.length === 0) {
+          localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
+          return STATIC_LEADERSHIP;
+        }
+
+        updatedList.sort((a, b) => (a.order || 0) - (b.order || 0));
+        localStorage.setItem('azadi_leadership', JSON.stringify(updatedList));
+        return updatedList;
+      });
       setLoadingLeadership(false);
     }, (error) => {
       console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
@@ -569,6 +635,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       unsubSettings();
       unsubLetterhead();
+      unsubVersion();
       unsubDonations();
       unsubLeadership();
       unsubEvents();
@@ -589,7 +656,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await setDoc(doc(db, 'donations', d.id), d);
       }
       for (const l of STATIC_LEADERSHIP) {
-        await setDoc(doc(db, 'leadership', l.id), l);
+        const { id, ...businessData } = l;
+        await setDoc(doc(db, 'leadership', id), businessData);
       }
       for (const e of STATIC_EVENTS) {
         await setDoc(doc(db, 'events', e.id), e);
@@ -930,6 +998,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const saveVersionConfig = async (newVersionConfig: VersionConfig) => {
+    try {
+      await withSync(() => setDoc(doc(db, 'settings', 'version'), newVersionConfig));
+      await logAuditTrail('VERSION_CONFIGURATION_UPDATE', { latestVersion: newVersionConfig.latestVersion });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'settings/version');
+    }
+  };
+
   const updateLeadership = async (leadershipList: Leadership[]) => {
     for (const leader of leadershipList) {
       await saveLeader(leader);
@@ -952,7 +1029,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Add or rewrite new default documents
       for (const l of listToSave) {
-        batch.set(doc(db, 'leadership', l.id), l);
+        const { id, ...businessData } = l;
+        batch.set(doc(db, 'leadership', id), businessData);
       }
       
       // Atomically commit batch to Firestore
@@ -963,11 +1041,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const saveLeader = async (leader: Leadership) => {
+  const saveLeader = async (leader: Leadership, originalLeader?: Leadership) => {
     try {
-      await withSync(() => setDoc(doc(db, 'leadership', leader.id), leader));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `leadership/${leader.id}`);
+      if (leader.id) {
+        // This is an update (or a restore of an item with pre-defined ID)
+        const leaderRef = doc(db, 'leadership', leader.id);
+        const snap = await getDoc(leaderRef);
+        const { id, ...leaderData } = leader;
+        const updatedLeader = {
+          ...leaderData,
+          updatedAt: new Date().toISOString()
+        };
+
+        if (snap.exists()) {
+          const serverData = snap.data() as Leadership;
+          if (originalLeader) {
+            // Optimistic concurrency check (OCC)
+            const serverUpdatedAt = (serverData as any).updatedAt || serverData.createdAt || '';
+            const originalUpdatedAt = (originalLeader as any).updatedAt || originalLeader.createdAt || '';
+
+            const isModifiedOnServer = serverUpdatedAt !== originalUpdatedAt ||
+              serverData.nameEn !== originalLeader.nameEn ||
+              serverData.nameBn !== originalLeader.nameBn ||
+              serverData.designationEn !== originalLeader.designationEn ||
+              serverData.designationBn !== originalLeader.designationBn ||
+              serverData.category !== originalLeader.category ||
+              serverData.status !== originalLeader.status ||
+              serverData.order !== originalLeader.order ||
+              serverData.image !== originalLeader.image ||
+              serverData.phone !== originalLeader.phone ||
+              (serverData.subDesignationEn || '') !== (originalLeader.subDesignationEn || '') ||
+              (serverData.subDesignationBn || '') !== (originalLeader.subDesignationBn || '') ||
+              (serverData.messageEn || '') !== (originalLeader.messageEn || '') ||
+              (serverData.messageBn || '') !== (originalLeader.messageBn || '');
+
+            if (isModifiedOnServer) {
+              throw new Error('EDIT_CONFLICT');
+            }
+          }
+
+          // Single write update
+          await withSync(() => updateDoc(leaderRef, updatedLeader as any));
+        } else {
+          if (originalLeader) {
+            // This was an edit of an existing record, but it got deleted on server
+            throw new Error('DOCUMENT_NOT_FOUND');
+          } else {
+            // No original edit context exists; this is a backup restore or seeder, preserve ID
+            const newLeaderData = {
+              ...leaderData,
+              createdAt: leaderData.createdAt || new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            await withSync(() => setDoc(leaderRef, newLeaderData as any));
+          }
+        }
+      } else {
+        // Create a new document with Firestore's native auto-generated document ID (single write)
+        const { id, ...leaderData } = leader;
+        const newLeaderData = {
+          ...leaderData,
+          createdAt: leaderData.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await withSync(async () => {
+          await addDoc(collection(db, 'leadership'), newLeaderData);
+        });
+      }
+    } catch (error: any) {
+      if (error.message === 'EDIT_CONFLICT' || error.message === 'DOCUMENT_NOT_FOUND') {
+        throw error;
+      }
+      handleFirestoreError(error, OperationType.WRITE, `leadership/${leader.id || 'new'}`);
     }
   };
 
@@ -1203,6 +1348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       expenses,
       settings, 
       letterhead, 
+      versionConfig,
       isLoaded, 
       cloudSynced, 
       cloudSyncStatus,
@@ -1214,6 +1360,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadingExpenses,
       loadingSettings,
       loadingLetterhead,
+      loadingVersion,
       
       setLang, 
       setTheme, 
@@ -1227,6 +1374,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
  
       saveSettings,
       saveLetterhead,
+      saveVersionConfig,
  
       updateLeadership,
       replaceLeadership,

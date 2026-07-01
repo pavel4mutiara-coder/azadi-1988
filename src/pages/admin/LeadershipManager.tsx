@@ -13,6 +13,8 @@ export const LeadershipManager: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showConflict, setShowConflict] = useState(false);
   
   const [formData, setFormData] = useState<Omit<Leadership, 'id'>>({
     nameEn: '', nameBn: '',
@@ -37,20 +39,51 @@ export const LeadershipManager: React.FC = () => {
     resetForm();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      saveLeader({ ...formData, id: editingId } as Leadership);
-    } else {
-      const newId = `leader_${Date.now()}`;
-      saveLeader({ ...formData, id: newId } as Leadership);
+    setErrorMsg(null);
+    setShowConflict(false);
+    try {
+      if (editingId) {
+        const originalLeader = leadership.find(l => l.id === editingId);
+        await saveLeader({ ...formData, id: editingId } as Leadership, originalLeader);
+      } else {
+        await saveLeader({ ...formData, id: '' } as Leadership);
+      }
+      resetForm();
+    } catch (err: any) {
+      if (err.message === 'EDIT_CONFLICT') {
+        setShowConflict(true);
+        setErrorMsg(lang === 'bn' 
+          ? 'সংঘাত সনাক্ত হয়েছে: অন্য একজন প্রশাসক আপনার ফর্ম লোড করার পর থেকে এই সদস্যের তথ্য পরিবর্তন করেছেন।' 
+          : 'Conflict detected: Another administrator has modified this member\'s details since you loaded them.');
+      } else if (err.message === 'DOCUMENT_NOT_FOUND') {
+        setErrorMsg(lang === 'bn'
+          ? 'ত্রুটি: এই সদস্যটি অন্য একজন প্রশাসক দ্বারা মুছে ফেলা হয়েছে।'
+          : 'Error: This member has been deleted by another administrator.');
+      } else {
+        setErrorMsg(err.message || 'An error occurred while saving.');
+      }
     }
-    resetForm();
+  };
+
+  const handleForceOverwrite = async () => {
+    if (!editingId) return;
+    setErrorMsg(null);
+    setShowConflict(false);
+    try {
+      await saveLeader({ ...formData, id: editingId } as Leadership);
+      resetForm();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'An error occurred while forcing save.');
+    }
   };
 
   const resetForm = () => {
     setShowForm(false);
     setEditingId(null);
+    setErrorMsg(null);
+    setShowConflict(false);
     setFormData({ 
       nameEn: '', nameBn: '', 
       designationEn: '', designationBn: '', 
@@ -122,6 +155,24 @@ export const LeadershipManager: React.FC = () => {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 animate-in slide-in-from-top-4">
+          {errorMsg && (
+            <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-700 dark:text-rose-400 font-bold text-xs" id="leader-error-banner">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className="shrink-0 text-rose-500 animate-bounce" />
+                <span>{errorMsg}</span>
+              </div>
+              {showConflict && (
+                <button
+                  type="button"
+                  onClick={handleForceOverwrite}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider shrink-0 cursor-pointer"
+                  id="force-overwrite-btn"
+                >
+                  {lang === 'bn' ? 'জোরপূর্বক সংরক্ষণ করুন' : 'Force Overwrite'}
+                </button>
+              )}
+            </div>
+          )}
           <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
             
             {/* Form Inputs Column */}

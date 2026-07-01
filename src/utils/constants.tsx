@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare, Shield } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
@@ -58,6 +58,7 @@ export const TRANSLATIONS = {
     downloadReceipt: "Download Receipt",
     generateLetterhead: "Generate Letterhead",
     settings: "Settings",
+    system: "System Admin",
     syncData: "Sync Database",
     logout: "Logout",
     paymentInstructions: "Please send money to our mobile banking numbers and provide the Transaction ID below.",
@@ -80,6 +81,7 @@ export const TRANSLATIONS = {
     devCredit: "Developed by Ahmad Hossain Pavel",
     whatsappNumber: "8801712782564",
     testimonials: "Testimonials",
+    reports: "Reports & Audits",
     themeLight: "Light Mode",
     themeDark: "Dark Mode",
     toggleTheme: "Toggle Theme"
@@ -116,6 +118,7 @@ export const TRANSLATIONS = {
     downloadReceipt: "রসিদ ডাউনলোড",
     generateLetterhead: "লেটারহেড তৈরি",
     settings: "সেটিংস",
+    system: "সিস্টেম এডমিন",
     syncData: "ডাটাবেস সিঙ্ক",
     logout: "লগআউট",
     paymentInstructions: "অনুগ্রহ করে নিচের নাম্বারে টাকা পাঠিয়ে ট্রানজেকশন আইডিটি প্রদান করুন।",
@@ -138,6 +141,7 @@ export const TRANSLATIONS = {
     devCredit: "Developed by Ahmad Hossain Pavel",
     whatsappNumber: "8801712782564",
     testimonials: "টেস্টিমোনিয়াল",
+    reports: "প্রতিবেদন",
     themeLight: "লাইট মোড",
     themeDark: "ডার্ক মোড",
     toggleTheme: "থিম পরিবর্তন করুন"
@@ -161,5 +165,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'events', path: '/admin/events', icon: <Calendar size={20} /> },
   { label: 'letterhead', path: '/admin/letterhead', icon: <FileText size={20} /> },
   { label: 'testimonials', path: '/admin/testimonials', icon: <MessageSquare size={20} /> },
+  { label: 'reports', path: '/admin/reports', icon: <PieChart size={20} /> },
   { label: 'settings', path: '/admin/settings', icon: <Settings size={20} /> },
+  { label: 'system', path: '/admin/system', icon: <Shield size={20} /> },
 ];

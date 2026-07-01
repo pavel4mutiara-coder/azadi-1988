@@ -1,7 +1,9 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
+import { CURRENT_VERSION } from '../utils/version';
 import { History, Target, Eye, Star, Award, Shield, Heart, Users, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 
 export const AboutUs: React.FC = () => {
@@ -250,6 +252,32 @@ export const AboutUs: React.FC = () => {
                </a>
             </div>
           </div>
+        </div>
+
+        {/* Version & Technical Stack */}
+        <div className="pt-16 pb-12 text-center space-y-4 border-t border-slate-100 dark:border-slate-800/40 flex flex-col items-center justify-center">
+          <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 px-4 py-1.5 rounded-full text-xs font-bold font-mono">
+            <span>{lang === 'bn' ? 'সফটওয়্যার সংস্করণ:' : 'Application version:'}</span>
+            <span className="font-black text-emerald-600 dark:text-emerald-400">{CURRENT_VERSION.latestVersion}</span>
+            <span>•</span>
+            <span>Build #{CURRENT_VERSION.buildNumber}</span>
+          </div>
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold">
+            {lang === 'bn' 
+              ? `রিলিজের তারিখ: ${CURRENT_VERSION.releaseDate} | আজাদী ডেভেলপমেন্ট টিম` 
+              : `Release Date: ${CURRENT_VERSION.releaseDate} | Azadi Development Team`}
+          </div>
+
+          {/* Admin Control Panel Icon Link */}
+          <Link 
+            to="/admin" 
+            className="inline-flex items-center gap-2 mt-2 px-4 py-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900/60 text-xs font-black uppercase tracking-wider cursor-pointer"
+            title={lang === 'bn' ? 'প্রশাসক প্যানেল' : 'Admin Panel'}
+            id="about-admin-link"
+          >
+            <Shield size={14} className="animate-pulse text-emerald-500" />
+            <span>{lang === 'bn' ? 'প্রশাসন প্রবেশদ্বার' : 'Admin Portal'}</span>
+          </Link>
         </div>
       </section>
     </div>

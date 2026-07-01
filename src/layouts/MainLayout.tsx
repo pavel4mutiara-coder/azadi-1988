@@ -7,8 +7,7 @@ import {
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
   ShieldAlert, DownloadCloud, X, Share, BellRing, ChevronRight,
-  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles, Lock, LogOut,
-  Cloud, CloudOff, RefreshCw
+  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles, Lock
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -19,10 +18,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     setTheme, 
     isAdmin, 
     settings, 
-    isLoaded, 
-    logout,
-    cloudSyncStatus,
-    cloudSynced
+    isLoaded
   } = useApp();
   const location = useLocation();
   const t = TRANSLATIONS[lang];
@@ -72,48 +68,6 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     setShowInstallBanner(false);
     setShowIOSInstructions(false);
     setIsDismissed(true);
-  };
-
-  const renderSyncIndicator = () => {
-    switch (cloudSyncStatus) {
-      case 'syncing':
-        return (
-          <div 
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-400/20 rounded-xl"
-            title={lang === 'bn' ? 'ডাটাবেজ সেভ করা হচ্ছে...' : 'Saving to Firestore...'}
-          >
-            <RefreshCw size={14} className="animate-spin text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-wider hidden xs:inline bengali">
-              {lang === 'bn' ? 'সেভ হচ্ছে' : 'Saving'}
-            </span>
-          </div>
-        );
-      case 'error':
-        return (
-          <div 
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 dark:bg-rose-400/10 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-400/20 rounded-xl animate-pulse"
-            title={lang === 'bn' ? 'ডাটা সেভ করতে ব্যর্থ হয়েছে!' : 'Database Sync Error!'}
-          >
-            <CloudOff size={14} className="text-rose-500" />
-            <span className="text-[10px] font-black uppercase tracking-wider hidden xs:inline bengali">
-              {lang === 'bn' ? 'ব্যর্থ' : 'Sync Error'}
-            </span>
-          </div>
-        );
-      case 'success':
-      default:
-        return (
-          <div 
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-400/20 rounded-xl"
-            title={lang === 'bn' ? 'ডাটাবেজ সম্পূর্ণ সিঙ্কড' : 'Database fully synced'}
-          >
-            <Cloud size={14} className="text-emerald-500 animate-pulse duration-1000" />
-            <span className="text-[10px] font-black uppercase tracking-wider hidden xs:inline bengali">
-              {lang === 'bn' ? 'সংরক্ষিত' : 'Synced'}
-            </span>
-          </div>
-        );
-    }
   };
 
   const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
@@ -272,36 +226,6 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
-            {renderSyncIndicator()}
-
-            <Link 
-              to="/admin" 
-              className={`p-2.5 sm:p-3 rounded-xl transition-all border shadow-sm ${
-                isAdmin 
-                ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 border-emerald-200 dark:border-emerald-700 shadow-emerald-500/10' 
-                : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800 hover:text-emerald-600 hover:border-emerald-200'
-              }`}
-              title="Admin Panel"
-            >
-              <Lock size={18} />
-            </Link>
-
-            {isAdmin && (
-              <button 
-                onClick={async () => {
-                  if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to logout?')) {
-                    await logout();
-                    window.location.href = '/';
-                  }
-                }}
-                className="p-2.5 sm:p-3 rounded-xl transition-all border shadow-sm bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900 shadow-rose-500/10 cursor-pointer flex items-center justify-center shrink-0"
-                title={lang === 'bn' ? 'লগআউট' : 'Logout'}
-              >
-                <LogOut size={18} />
-              </button>
-            )}
-
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block"></div>
             <button 
               onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')} 
               className="px-3 md:px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase flex items-center gap-2 bg-white dark:bg-slate-900 hover:border-emerald-500 transition-all shadow-sm"
@@ -448,6 +372,14 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <Sparkles size={10} className="text-emerald-500 animate-pulse" />
             </div>
           </a>
+          
+          {/* Subtle Secure Gate for Administrators */}
+          <div className="mt-2 text-center opacity-25 hover:opacity-100 transition-all duration-300">
+            <Link to="/admin" className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-1 px-3 rounded-full border border-slate-200/40 dark:border-slate-800/40 bg-slate-50/50 dark:bg-slate-900/50">
+              <Lock size={9} />
+              <span>{lang === 'bn' ? 'প্রশাসক পোর্টাল' : 'Admin Portal'}</span>
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

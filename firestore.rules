@@ -71,6 +71,19 @@ service cloud.firestore {
         && data.bodyText is string && data.bodyText.size() <= 50000;
     }
 
+    function isValidVersion(data) {
+      return data.keys().hasAll(['latestVersion', 'buildNumber', 'releaseDate', 'releaseNotes', 'forceUpdate'])
+        && (data.keys().size() >= 5 && data.keys().size() <= 8)
+        && data.latestVersion is string && data.latestVersion.size() <= 50
+        && data.buildNumber is number
+        && data.releaseDate is string && data.releaseDate.size() <= 100
+        && data.releaseNotes is string && data.releaseNotes.size() <= 10000
+        && data.forceUpdate is bool
+        && (!data.keys().hasAny(['apkDownloadUrl']) || data.apkDownloadUrl is string)
+        && (!data.keys().hasAny(['updateSize']) || data.updateSize is string)
+        && (!data.keys().hasAny(['playStoreUrl']) || data.playStoreUrl is string);
+    }
+
     match /settings/config {
       allow read: if true;
       allow write: if isAdmin() && isValidSettings(incoming());
@@ -79,6 +92,11 @@ service cloud.firestore {
     match /settings/letterhead {
       allow read: if true;
       allow write: if isAdmin() && isValidLetterhead(incoming());
+    }
+
+    match /settings/version {
+      allow read: if true;
+      allow write: if isAdmin() && isValidVersion(incoming());
     }
 
     // Donations schema validation

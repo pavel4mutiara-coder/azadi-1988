@@ -5,6 +5,8 @@ import { AppProvider, useApp } from './context/AppContext';
 import { MainLayout as Layout } from './layouts/MainLayout';
 import Home from './pages/Home';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { UpdateManager } from './components/UpdateManager';
+import { CURRENT_VERSION } from './utils/version';
 import { TRANSLATIONS } from './utils/constants';
 import { Lock, Loader2 } from 'lucide-react';
 const lazyWithRetry = (componentImport: () => Promise<any>) => {
@@ -48,6 +50,8 @@ const LeadershipManager = lazyWithRetry(() => import('./pages/admin/LeadershipMa
 const NoticeManager = lazyWithRetry(() => import('./pages/admin/NoticeManager').then(m => ({ default: m.NoticeManager })));
 const NewsManager = lazyWithRetry(() => import('./pages/admin/NewsManager').then(m => ({ default: m.NewsManager })));
 const TestimonialManager = lazyWithRetry(() => import('./pages/admin/TestimonialManager').then(m => ({ default: m.TestimonialManager })));
+const ReportsManager = lazyWithRetry(() => import('./pages/admin/ReportsManager').then(m => ({ default: m.ReportsManager })));
+const SystemAdmin = lazyWithRetry(() => import('./pages/admin/SystemAdmin').then(m => ({ default: m.SystemAdmin })));
 
 const LoadingSpinner = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -168,6 +172,21 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
             </svg>
             {lang === 'bn' ? 'গুগল দিয়ে লগইন করুন' : 'Sign in with Google'}
           </button>
+
+          <div className="pt-6 border-t border-slate-100 dark:border-slate-800/60 text-center space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block">
+              {lang === 'bn' ? 'সফটওয়্যার সংস্করণ' : 'Application Version'}
+            </span>
+            <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">
+              <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black text-[10px]">
+                {CURRENT_VERSION.latestVersion}
+              </span>
+              <span>•</span>
+              <span>Build #{CURRENT_VERSION.buildNumber}</span>
+              <span>•</span>
+              <span>{CURRENT_VERSION.releaseDate}</span>
+            </div>
+          </div>
         </form>
       </div>
     );
@@ -196,10 +215,12 @@ const AppRoutes: React.FC = () => {
         <Route path="/admin/donations" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/expenses" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute><SettingsManager /></ProtectedRoute>} />
+        <Route path="/admin/system" element={<ProtectedRoute><SystemAdmin /></ProtectedRoute>} />
         <Route path="/admin/events" element={<ProtectedRoute><EventManager /></ProtectedRoute>} />
         <Route path="/admin/notices" element={<ProtectedRoute><NoticeManager /></ProtectedRoute>} />
         <Route path="/admin/news" element={<ProtectedRoute><NewsManager /></ProtectedRoute>} />
         <Route path="/admin/testimonials" element={<ProtectedRoute><TestimonialManager /></ProtectedRoute>} />
+        <Route path="/admin/reports" element={<ProtectedRoute><ReportsManager /></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
@@ -219,6 +240,7 @@ export default function App() {
     return (
       <ErrorBoundary>
         <AppProvider>
+          <UpdateManager />
           <Router>
             <Layout>
               <AppRoutes />

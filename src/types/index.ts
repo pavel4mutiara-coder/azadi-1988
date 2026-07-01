@@ -142,3 +142,14 @@ export interface Expense {
   date: string;
 }
 
+export interface VersionConfig {
+  latestVersion: string;
+  buildNumber: number;
+  releaseDate: string;
+  releaseNotes: string;
+  forceUpdate: boolean;
+  apkDownloadUrl?: string;
+  updateSize?: string;
+  playStoreUrl?: string;
+}
+
