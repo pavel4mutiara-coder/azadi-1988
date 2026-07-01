@@ -40,6 +40,7 @@ const Donation = lazyWithRetry(() => import('./pages/Donation').then(m => ({ def
 const DonationHistory = lazyWithRetry(() => import('./pages/DonationHistory').then(m => ({ default: m.DonationHistory })));
 const Impact = lazyWithRetry(() => import('./pages/Impact').then(m => ({ default: m.Impact })));
 const Notices = lazyWithRetry(() => import('./pages/Notices').then(m => ({ default: m.Notices })));
+const NewsPage = lazyWithRetry(() => import('./pages/News').then(m => ({ default: m.NewsPage })));
 
 // Admin Pages
 const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -207,6 +208,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/donation-history" element={<DonationHistory />} />
         <Route path="/impact" element={<Impact />} />
         <Route path="/notices" element={<Notices />} />
+        <Route path="/news" element={<NewsPage />} />
         
         {/* Admin Panel */}
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

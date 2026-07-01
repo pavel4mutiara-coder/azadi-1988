@@ -153,6 +153,7 @@ export const NAV_ITEMS = [
   { label: 'impact', path: '/impact', icon: <PieChart size={22} /> },
   { label: 'donation', path: '/donation', icon: <Heart size={30} /> },
   { label: 'events', path: '/events', icon: <Sparkles size={24} /> },
+  { label: 'news', path: '/news', icon: <Newspaper size={22} /> },
   { label: 'about', path: '/about', icon: <Info size={22} /> },
 ];
 

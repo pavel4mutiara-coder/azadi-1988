@@ -5,13 +5,31 @@
  * - If the input is in 'YYYY-MM-DD' format (or starts with it), it manually extracts
  *   the year, month, and day, constructing the local Date as: new Date(year, month - 1, day).
  */
-export function parseLocalDate(input: string | Date | null | undefined): Date {
+export function parseLocalDate(input: any): Date {
   if (!input) {
     return new Date();
   }
 
   if (input instanceof Date) {
     return input;
+  }
+
+  // Handle Firestore Timestamp objects
+  if (typeof input === 'object') {
+    if (typeof input.toDate === 'function') {
+      return input.toDate();
+    }
+    if ('seconds' in input && typeof input.seconds === 'number') {
+      return new Date(input.seconds * 1000);
+    }
+  }
+
+  if (typeof input !== 'string') {
+    try {
+      return new Date(input);
+    } catch (e) {
+      return new Date();
+    }
   }
 
   const str = input.trim();

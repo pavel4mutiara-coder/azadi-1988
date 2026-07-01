@@ -116,32 +116,39 @@ export default function Home() {
             </div>
             <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 dark:text-white bengali leading-tight tracking-tighter">{t.news}</h2>
           </div>
-          <button className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase hover:gap-6 transition-all bengali bg-emerald-50 dark:bg-emerald-900/30 px-6 py-3 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+          <Link to="/news" className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase hover:gap-6 transition-all bengali bg-emerald-50 dark:bg-emerald-900/30 px-6 py-3 rounded-2xl border border-emerald-100 dark:border-emerald-800">
             {lang === 'bn' ? 'সব সংবাদ' : 'View All'} <ArrowRight size={20} />
-          </button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {recentNews.length > 0 ? (
-            recentNews.map((n) => (
-              <div key={n.id} className="bg-white dark:bg-slate-900 rounded-4xl border border-emerald-50 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy hover:-translate-y-2 transition-all group flex flex-col">
-                <div className="relative h-64 overflow-hidden bg-slate-100">
-                   {n.image ? <img src={n.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="News" /> : <div className="w-full h-full flex items-center justify-center text-emerald-100 bg-emerald-50/50"><Newspaper size={48} /></div>}
-                   <div className="absolute top-6 left-6 bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">{lang === 'bn' ? 'আপডেট' : 'Update'}</div>
-                </div>
-                <div className="p-10 flex-1 flex flex-col justify-between space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                      <Calendar size={14} className="text-emerald-500" /> {n.date ? parseLocalDate(n.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
-                    </div>
-                    <h3 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl leading-[1.3] line-clamp-2 bengali group-hover:text-emerald-600 transition-colors">{lang === 'bn' ? n.titleBn : n.titleEn}</h3>
+            recentNews.map((n) => {
+              const title = lang === 'bn' ? (n.titleBn || n.title || n.titleEn) : (n.titleEn || n.title || n.titleBn);
+              const image = n.image || n.imageUrl || '';
+              const dateVal = n.date || n.createdAt || '';
+              return (
+                <div key={n.id} className="bg-white dark:bg-slate-900 rounded-4xl border border-emerald-50 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy hover:-translate-y-2 transition-all group flex flex-col">
+                  <div className="relative h-64 overflow-hidden bg-slate-100">
+                     {image ? <img src={image} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="News" /> : <div className="w-full h-full flex items-center justify-center text-emerald-100 bg-emerald-50/50"><Newspaper size={48} /></div>}
+                     <div className="absolute top-6 left-6 bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">{lang === 'bn' ? 'আপডেট' : 'Update'}</div>
                   </div>
-                  <button className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase tracking-widest hover:gap-5 transition-all w-fit">
-                    {lang === 'bn' ? 'আরও পড়ুন' : 'Read More'} <ArrowRight size={18} />
-                  </button>
+                  <div className="p-10 flex-1 flex flex-col justify-between space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                        <Calendar size={14} className="text-emerald-500" /> {dateVal ? parseLocalDate(dateVal).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                      </div>
+                      <Link to={`/news?id=${n.id}`}>
+                        <h3 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl leading-[1.3] line-clamp-2 bengali group-hover:text-emerald-600 transition-colors">{title}</h3>
+                      </Link>
+                    </div>
+                    <Link to={`/news?id=${n.id}`} className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase tracking-widest hover:gap-5 transition-all w-fit">
+                      {lang === 'bn' ? 'আরও পড়ুন' : 'Read More'} <ArrowRight size={18} />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
              <div className="col-span-full py-24 text-center bg-emerald-50/20 dark:bg-slate-950/50 rounded-[4rem] border border-dashed border-emerald-200 space-y-6 opacity-60">
                 <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto shadow-soft">

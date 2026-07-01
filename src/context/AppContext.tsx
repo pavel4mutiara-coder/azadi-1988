@@ -602,7 +602,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubNews = onSnapshot(query(collection(db, 'news'), orderBy('date', 'desc')), (snap) => {
       if (!snap.empty) {
         const list: News[] = [];
-        snap.forEach(d => list.push(d.data() as News));
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as News);
+        });
         setNews(list);
         localStorage.setItem('azadi_news', JSON.stringify(list));
       } else {
