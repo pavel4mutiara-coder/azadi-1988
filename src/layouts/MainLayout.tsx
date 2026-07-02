@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS } from '../utils/constants';
+import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS, MOBILE_NAV_ITEMS } from '../utils/constants';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
   ShieldAlert, DownloadCloud, X, Share, BellRing, ChevronRight,
-  PlusSquare, ArrowUp, PieChart, Home, Info, Sparkles, Lock
+  PlusSquare, ArrowUp, PieChart, Home, Sparkles, Lock
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -258,13 +258,12 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             {/* Animated Dynamic Accent Backlight */}
             <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-rose-500/20 rounded-[2.5rem] blur-2xl opacity-40 transition-opacity"></div>
             
-            {NAV_ITEMS.map((item) => {
+            {MOBILE_NAV_ITEMS.map((item) => {
               const isActive = location.pathname === item.path;
               const isDonation = item.label === 'donation';
               const isImpact = item.label === 'impact';
               const isHome = item.label === 'home';
               const isEvents = item.label === 'events';
-              const isAbout = item.label === 'about';
 
               if (isDonation) {
                 return (

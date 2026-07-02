@@ -157,6 +157,8 @@ export const NAV_ITEMS = [
   { label: 'about', path: '/about', icon: <Info size={22} /> },
 ];
 
+export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(item => item.label !== 'about');
+
 export const ADMIN_NAV_ITEMS = [
   { label: 'dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
   { label: 'leadership', path: '/admin/leadership', icon: <Users size={20} /> },

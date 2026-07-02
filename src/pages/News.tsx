@@ -18,11 +18,11 @@ import { db } from '../lib/firebase';
 const getNewsFields = (item: any, lang: 'bn' | 'en') => {
   if (!item) return null;
   const title = lang === 'bn' 
-    ? (item.titleBn || item.title || item.titleEn) 
-    : (item.titleEn || item.title || item.titleBn);
+    ? (item.titleBn || item.title || item.titleEn || '') 
+    : (item.titleEn || item.title || item.titleBn || '');
   const content = lang === 'bn' 
-    ? (item.contentBn || item.content || item.contentEn) 
-    : (item.contentEn || item.content || item.contentBn);
+    ? (item.contentBn || item.content || item.contentEn || '') 
+    : (item.contentEn || item.content || item.contentBn || '');
   const image = item.image || item.imageUrl || '';
   const date = item.date || item.createdAt || '';
   const status = item.status || 'published';
