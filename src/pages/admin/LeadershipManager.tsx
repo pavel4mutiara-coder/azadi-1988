@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { Leadership } from '../../types';
-import { Users, Plus, Trash2, Edit2, RefreshCcw, Info, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, RefreshCcw, Info, CheckCircle, AlertTriangle, UploadCloud, Loader2, X } from 'lucide-react';
 import { MemberImage } from '../../components/MemberImage';
 import { extractGoogleDriveId } from '../../utils/normalizeGoogleDriveImage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../lib/firebase';
+import { compressInputImage } from '../../utils/imageOptimizer';
 
 export const LeadershipManager: React.FC = () => {
   const { lang, leadership, saveLeader, deleteLeader, replaceLeadership } = useApp();
@@ -28,6 +31,94 @@ export const LeadershipManager: React.FC = () => {
     status: 'active',
     createdAt: new Date().toISOString()
   });
+
+  // Storage Upload States
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleImageUpload(e.target.files[0]);
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg(lang === 'bn' ? 'দয়া করে একটি বৈধ ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
+      return;
+    }
+    
+    setUploading(true);
+    setUploadProgress(0);
+    setErrorMsg(null);
+    
+    try {
+      // Compress client side first to save storage and optimize load performance
+      const compressedBlob = await compressInputImage(file, 400, 400, 0.75);
+      
+      const fileId = `leader_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `leadership/${fileId}`);
+      
+      const uploadTask = uploadBytesResumable(storageRef, compressedBlob);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          setUploadProgress(progress);
+        }, 
+        (error) => {
+          console.error("Storage upload error:", error);
+          setErrorMsg(lang === 'bn' ? 'ছবি আপলোড করতে ব্যর্থ হয়েছে!' : 'Failed to upload image!');
+          setUploading(false);
+          setUploadProgress(null);
+        }, 
+        async () => {
+          try {
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            // Apply cache-busting timestamp
+            const cacheBustedUrl = `${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+            setFormData(prev => ({ ...prev, image: cacheBustedUrl }));
+          } catch (err: any) {
+            console.error("Error getting download URL:", err);
+            setErrorMsg(lang === 'bn' ? 'ডাউনলোড ইউআরএল পেতে ব্যর্থ হয়েছে।' : 'Failed to retrieve download URL.');
+          } finally {
+            setUploading(false);
+            setUploadProgress(null);
+          }
+        }
+      );
+    } catch (err: any) {
+      console.error("Compression / upload initiation failed:", err);
+      setErrorMsg(lang === 'bn' ? 'ছবি প্রক্রিয়াকরণে ব্যর্থতা।' : 'Failed to process image.');
+      setUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, image: '' }));
+  };
 
   const handleRestoreDefaults = () => {
     setShowRestoreConfirm(true);
@@ -177,18 +268,92 @@ export const LeadershipManager: React.FC = () => {
             
             {/* Form Inputs Column */}
             <div className="lg:col-span-7 space-y-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-500">Image Photo URL</label>
-                <input 
-                  type="text" 
-                  placeholder="https://drive.google.com/file/d/.../view?usp=sharing" 
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-bold text-sm focus:outline-none focus:border-emerald-500" 
-                  value={formData.image} 
-                  onChange={e => setFormData({...formData, image: e.target.value})} 
-                />
-                <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">
-                  Use publicly accessible Google Drive image links. Make sure link sharing is set to "Anyone with the link can view".
-                </p>
+              {/* Custom Image Upload Drag-Drop with Progress bar */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-slate-500">
+                  {lang === 'bn' ? 'সদস্যের ছবি আপলোড' : 'Member Profile Photo'}
+                </label>
+                
+                <div 
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[160px] relative overflow-hidden ${
+                    dragActive 
+                      ? 'border-emerald-500 bg-emerald-500/10' 
+                      : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 bg-slate-50/50 dark:bg-slate-950/50'
+                  }`}
+                >
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    className="hidden" 
+                  />
+
+                  {formData.image ? (
+                    <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+                        <img src={formData.image} className="max-w-full max-h-full object-contain" alt="Preview" />
+                        <button 
+                          type="button" 
+                          onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                          title={lang === 'bn' ? 'ছবি মুছে ফেলুন' : 'Remove Image'}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-slate-400 font-bold truncate px-2">{formData.image}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pointer-events-none">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-full w-fit mx-auto shadow-sm border border-slate-100 dark:border-slate-800">
+                        <UploadCloud className="text-emerald-500 animate-pulse" size={24} />
+                      </div>
+                      <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                        {lang === 'bn' ? 'ছবি ড্র্যাগ করে ছাড়ুন অথবা ব্রাউজ করুন' : 'Drag & drop image here, or browse'}
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB (Will be optimized automatically)</p>
+                    </div>
+                  )}
+
+                  {/* Upload Progress Overlay */}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-white/90 dark:bg-slate-950/90 flex flex-col items-center justify-center p-4 z-20 space-y-3" onClick={(e) => e.stopPropagation()}>
+                      <Loader2 className="animate-spin text-emerald-500" size={24} />
+                      <div className="w-full max-w-[150px] bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div 
+                          className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                        {uploadProgress}% {lang === 'bn' ? 'আপলোড হচ্ছে...' : 'Uploading...'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Backwards Compatibility / Manual URL Overriding */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 ml-1 block">
+                    {lang === 'bn' ? 'অথবা সরাসরি ইমেজ লিংক বসান' : 'Or enter image URL directly'}
+                  </span>
+                  <input 
+                    type="text" 
+                    placeholder="https://drive.google.com/file/d/.../view?usp=sharing" 
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-mono text-xs focus:outline-none focus:border-emerald-500 font-bold" 
+                    value={formData.image} 
+                    onChange={e => setFormData({...formData, image: e.target.value})} 
+                  />
+                  <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">
+                    Use publicly accessible Google Drive image links. Make sure link sharing is set to "Anyone with the link can view".
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

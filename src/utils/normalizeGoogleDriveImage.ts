@@ -141,8 +141,14 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
   if (/drive\.google\.com/i.test(decoded)) {
     const fileId = extractGoogleDriveId(trimmed);
     if (fileId) {
+      // Extract t param
+      let tParam = '';
+      const match = trimmed.match(/[?&](t|v)=([a-zA-Z0-9]+)/);
+      if (match) {
+        tParam = `&t=${match[2]}`;
+      }
       // Preferred format: uvexport-view links bypass interactive auth redirects
-      const normalizedDriveUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      const normalizedDriveUrl = `https://drive.google.com/uc?export=view&id=${fileId}${tParam}`;
       normalizationCache.set(trimmed, normalizedDriveUrl);
       return normalizedDriveUrl;
     }

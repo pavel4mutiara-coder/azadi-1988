@@ -24,11 +24,26 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
     return trimmed;
   }
 
+  // Extract cache-busting parameter (t or v) to append to the target optimized url
+  let tParam = '';
+  try {
+    const urlObj = new URL(trimmed);
+    const t = urlObj.searchParams.get('t') || urlObj.searchParams.get('v');
+    if (t) {
+      tParam = `&t=${t}`;
+    }
+  } catch (e) {
+    const match = trimmed.match(/[?&](t|v)=([a-zA-Z0-9]+)/);
+    if (match) {
+      tParam = `&t=${match[2]}`;
+    }
+  }
+
   // 1. Google Drive Image optimization: Rewrite to Google's thumbnailing service
   if (/drive\.google\.com/i.test(trimmed)) {
     const fileId = extractGoogleDriveId(trimmed);
     if (fileId) {
-      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width}`;
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width}${tParam}`;
     }
   }
 
@@ -58,7 +73,7 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
 
   // 3. General public external imagery: Route through high-density images.weserv.nl proxy
   try {
-    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&output=webp&q=80&we`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&output=webp&q=80&we${tParam}`;
   } catch (e) {
     return trimmed;
   }
