@@ -4,7 +4,7 @@ import { TRANSLATIONS } from '../../utils/constants';
 import { Leadership } from '../../types';
 import { Users, Plus, Trash2, Edit2, RefreshCcw, Info, CheckCircle, AlertTriangle, UploadCloud, Loader2, X } from 'lucide-react';
 import { MemberImage } from '../../components/MemberImage';
-import { extractGoogleDriveId } from '../../utils/normalizeGoogleDriveImage';
+import { extractGoogleDriveId, normalizeGoogleDriveImage } from '../../utils/normalizeGoogleDriveImage';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { compressInputImage } from '../../utils/imageOptimizer';
@@ -17,6 +17,7 @@ export const LeadershipManager: React.FC = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showConflict, setShowConflict] = useState(false);
   
   const [formData, setFormData] = useState<Omit<Leadership, 'id'>>({
@@ -133,14 +134,46 @@ export const LeadershipManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setSuccessMsg(null);
     setShowConflict(false);
+
+    // Validate and Normalize image URL before saving
+    const rawImage = formData.image.trim();
+    let normalizedImage = rawImage;
+
+    if (rawImage) {
+      if (/drive\.google\.com/i.test(rawImage)) {
+        const fileId = extractGoogleDriveId(rawImage);
+        if (!fileId) {
+          setErrorMsg(lang === 'bn' 
+            ? 'ত্রুটি: অকার্যকর গুগল ড্রাইভ লিংক। অনুগ্রহ করে সম্পূর্ণ শেয়ার লিংক ব্যবহার করুন।' 
+            : 'Error: Invalid Google Drive link. Please use a valid share link.');
+          return;
+        }
+        normalizedImage = normalizeGoogleDriveImage(rawImage);
+      } else if (!/^https?:\/\//i.test(rawImage) && !/^\//.test(rawImage)) {
+        setErrorMsg(lang === 'bn' 
+          ? 'ত্রুটি: ছবির ইউআরএল অবশ্যই http অথবা https দিয়ে শুরু হতে হবে।' 
+          : 'Error: Image URL must start with http or https protocol.');
+        return;
+      }
+    }
+
     try {
+      const finalPayload = { ...formData, image: normalizedImage };
       if (editingId) {
         const originalLeader = leadership.find(l => l.id === editingId);
-        await saveLeader({ ...formData, id: editingId } as Leadership, originalLeader);
+        await saveLeader({ ...finalPayload, id: editingId } as Leadership, originalLeader);
+        setSuccessMsg(lang === 'bn' 
+          ? 'সদস্যের তথ্য সফলভাবে আপডেট করা হয়েছে!' 
+          : 'Member information updated successfully!');
       } else {
-        await saveLeader({ ...formData, id: '' } as Leadership);
+        await saveLeader({ ...finalPayload, id: '' } as Leadership);
+        setSuccessMsg(lang === 'bn' 
+          ? 'নতুন সদস্য সফলভাবে তালিকাভুক্ত করা হয়েছে!' 
+          : 'New member successfully added to the registry!');
       }
+      setTimeout(() => setSuccessMsg(null), 5000);
       resetForm();
     } catch (err: any) {
       if (err.message === 'EDIT_CONFLICT') {
@@ -161,9 +194,22 @@ export const LeadershipManager: React.FC = () => {
   const handleForceOverwrite = async () => {
     if (!editingId) return;
     setErrorMsg(null);
+    setSuccessMsg(null);
     setShowConflict(false);
+
+    // Normalize image URL
+    const rawImage = formData.image.trim();
+    let normalizedImage = rawImage;
+    if (rawImage && /drive\.google\.com/i.test(rawImage)) {
+      normalizedImage = normalizeGoogleDriveImage(rawImage);
+    }
+
     try {
-      await saveLeader({ ...formData, id: editingId } as Leadership);
+      await saveLeader({ ...formData, image: normalizedImage, id: editingId } as Leadership);
+      setSuccessMsg(lang === 'bn' 
+        ? 'জোরপূর্বক সফলভাবে আপডেট করা হয়েছে!' 
+        : 'Information force-overwritten successfully!');
+      setTimeout(() => setSuccessMsg(null), 5000);
       resetForm();
     } catch (err: any) {
       setErrorMsg(err.message || 'An error occurred while forcing save.');
@@ -191,6 +237,8 @@ export const LeadershipManager: React.FC = () => {
 
   const handleEdit = (leader: Leadership) => {
     setEditingId(leader.id);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     setFormData({
       nameEn: leader.nameEn,
       nameBn: leader.nameBn,
@@ -210,10 +258,23 @@ export const LeadershipManager: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteConfirmId) {
-      deleteLeader(deleteConfirmId);
-      setDeleteConfirmId(null);
+      const leader = leadership.find(l => l.id === deleteConfirmId);
+      const name = leader ? (lang === 'bn' ? leader.nameBn : leader.nameEn) : '';
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      try {
+        await deleteLeader(deleteConfirmId);
+        setSuccessMsg(lang === 'bn' 
+          ? `"${name}" কে সফলভাবে মুছে ফেলা হয়েছে!` 
+          : `"${name}" removed successfully!`);
+        setTimeout(() => setSuccessMsg(null), 5000);
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Failed to remove member.');
+      } finally {
+        setDeleteConfirmId(null);
+      }
     }
   };
 
@@ -246,6 +307,12 @@ export const LeadershipManager: React.FC = () => {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 animate-in slide-in-from-top-4">
+          {successMsg && (
+            <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 p-4 rounded-xl flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs" id="leader-success-banner">
+              <CheckCircle size={16} className="shrink-0 text-emerald-500" />
+              <span>{successMsg}</span>
+            </div>
+          )}
           {errorMsg && (
             <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-700 dark:text-rose-400 font-bold text-xs" id="leader-error-banner">
               <div className="flex items-center gap-2">
@@ -625,8 +692,21 @@ export const LeadershipManager: React.FC = () => {
         </form>
       )}
 
+      {!showForm && successMsg && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 p-4 rounded-xl flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs" id="leader-general-success-banner">
+          <CheckCircle size={16} className="shrink-0 text-emerald-500" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+      {!showForm && errorMsg && (
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-xs" id="leader-general-error-banner">
+          <AlertTriangle size={16} className="shrink-0 text-rose-500 animate-bounce" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {leadership.sort((a,b) => (a.order||0)-(b.order||0)).map(leader => (
+        {[...leadership].sort((a,b) => (a.order||0)-(b.order||0)).map(leader => (
           <div key={leader.id} className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4 group relative">
             {leader.status === 'inactive' && (
               <div className="absolute top-2 right-2 px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-black uppercase">Inactive</div>

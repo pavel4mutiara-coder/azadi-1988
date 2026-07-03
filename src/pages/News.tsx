@@ -13,6 +13,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { normalizeGoogleDriveImage } from '../utils/normalizeGoogleDriveImage';
 
 // Helper function to extract fields from a news item (for robustness/resilience)
 const getNewsFields = (item: any, lang: 'bn' | 'en') => {
@@ -34,21 +35,19 @@ const getDirectImageUrl = (url: string): string => {
   if (!url) return '';
   const trimmed = url.trim();
   
-  // Parse Google Drive links
-  if (trimmed.includes('drive.google.com')) {
-    let fileId = '';
-    const dMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (dMatch && dMatch[1]) {
-      fileId = dMatch[1];
-    } else {
-      const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (idMatch && idMatch[1]) {
-        fileId = idMatch[1];
-      }
-    }
-    
-    if (fileId) {
-      return `https://lh3.googleusercontent.com/d/${fileId}`;
+  // Parse Google Drive links with the robust system utility
+  if (/drive\.google\.com/i.test(trimmed)) {
+    return normalizeGoogleDriveImage(trimmed);
+  }
+  
+  // Append cache-busting query parameter for standard HTTP/HTTPS/Firebase Storage URLs
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      parsed.searchParams.set('t', String(Date.now()));
+      return parsed.toString();
+    } catch {
+      return trimmed;
     }
   }
   
@@ -157,18 +156,36 @@ export const NewsPage: React.FC = () => {
     }
   }, [searchParams, news]);
 
-  // Sort and filter news by date (newest first)
+  // Sort and filter news by date (newest first) with robust malformed document skipping
   const sortedNews = useMemo(() => {
-    return [...news]
-      .filter(n => {
-        const fields = getNewsFields(n, lang);
-        return fields && fields.status !== 'draft';
-      })
-      .sort((a, b) => {
-        const dateA = getNewsFields(a, lang)?.date || 0;
-        const dateB = getNewsFields(b, lang)?.date || 0;
-        return parseLocalDate(dateB).getTime() - parseLocalDate(dateA).getTime();
-      });
+    try {
+      return [...news]
+        .filter(n => {
+          if (!n || typeof n !== 'object' || !n.id) return false;
+          const fields = getNewsFields(n, lang);
+          if (!fields) return false;
+          // Hide drafts, keeping published and missing-status fields as published
+          return fields.status !== 'draft';
+        })
+        .sort((a, b) => {
+          try {
+            const fieldsA = getNewsFields(a, lang);
+            const fieldsB = getNewsFields(b, lang);
+            const dateA = fieldsA?.date || fieldsA?.createdAt || '';
+            const dateB = fieldsB?.date || fieldsB?.createdAt || '';
+            
+            const timeA = dateA ? parseLocalDate(dateA).getTime() : 0;
+            const timeB = dateB ? parseLocalDate(dateB).getTime() : 0;
+            return timeB - timeA;
+          } catch (e) {
+            console.warn("Error parsing dates for news sorting:", e);
+            return 0;
+          }
+        });
+    } catch (err) {
+      console.error("Critical error in sortedNews useMemo:", err);
+      return [];
+    }
   }, [news, lang]);
 
   const handleShare = async (item: any) => {
@@ -232,8 +249,27 @@ export const NewsPage: React.FC = () => {
     // Fallback: Copy to clipboard and display a success toast
     try {
       console.log("Web Share unavailable or failed. Falling back to clipboard copy.");
-      await navigator.clipboard.writeText(fullMessage);
-      showToast(lang === 'bn' ? 'লিঙ্ক ক্লিপবোর্ডে কপি করা হয়েছে!' : 'Link copied to clipboard!');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(fullMessage);
+        showToast(lang === 'bn' ? 'লিঙ্ক ক্লিপবোর্ডে কপি করা হয়েছে!' : 'Link copied to clipboard!');
+      } else {
+        // Document command copy fallback for non-secure contexts/iframes/webview elements
+        const textArea = document.createElement("textarea");
+        textArea.value = fullMessage;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const success = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        if (success) {
+          showToast(lang === 'bn' ? 'লিঙ্ক ক্লিপবোর্ডে কপি করা হয়েছে!' : 'Link copied to clipboard!');
+        } else {
+          throw new Error("execCommand returned false");
+        }
+      }
     } catch (err) {
       console.error('Clipboard copy fallback failed:', err);
       showToast(lang === 'bn' ? 'শেয়ার করতে ব্যর্থ হয়েছে!' : 'Failed to share!');

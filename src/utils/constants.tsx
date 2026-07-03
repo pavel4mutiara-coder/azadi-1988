@@ -157,7 +157,13 @@ export const NAV_ITEMS = [
   { label: 'about', path: '/about', icon: <Info size={22} /> },
 ];
 
-export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(item => item.label !== 'about');
+export const MOBILE_NAV_ITEMS = [
+  { label: 'home', path: '/', icon: <Home size={22} /> },
+  { label: 'impact', path: '/impact', icon: <PieChart size={22} /> },
+  { label: 'donation', path: '/donation', icon: <Heart size={30} /> },
+  { label: 'events', path: '/events', icon: <Sparkles size={24} /> },
+  { label: 'news', path: '/news', icon: <Newspaper size={22} /> },
+];
 
 export const ADMIN_NAV_ITEMS = [
   { label: 'dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },

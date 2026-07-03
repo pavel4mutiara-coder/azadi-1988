@@ -514,49 +514,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 4. Leadership listener
     const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), orderBy('order', 'asc')), (snap) => {
-      setLeadership((prev) => {
-        if (snap.empty) {
-          localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
-          return STATIC_LEADERSHIP;
-        }
-
-        let updatedList = [...prev];
-        const serverDocIds = new Set(snap.docs.map(d => d.id));
-
-        snap.docChanges().forEach((change) => {
-          const docData = { ...change.doc.data(), id: change.doc.id } as Leadership;
-          if (change.type === 'added') {
-            const index = updatedList.findIndex(item => item.id === docData.id);
-            if (index > -1) {
-              updatedList[index] = docData;
-            } else {
-              updatedList = updatedList.filter(item => item.id !== docData.id);
-              updatedList.push(docData);
-            }
-          } else if (change.type === 'modified') {
-            const index = updatedList.findIndex(item => item.id === docData.id);
-            if (index > -1) {
-              updatedList[index] = docData;
-            } else {
-              updatedList.push(docData);
-            }
-          } else if (change.type === 'removed') {
-            updatedList = updatedList.filter(item => item.id !== docData.id);
-          }
+      if (snap.empty) {
+        localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
+        setLeadership(STATIC_LEADERSHIP);
+      } else {
+        const list: Leadership[] = [];
+        snap.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Leadership);
         });
-
-        // Filter out any local fallback data or items that do not exist on server
-        updatedList = updatedList.filter(item => serverDocIds.has(item.id));
-
-        if (updatedList.length === 0) {
-          localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
-          return STATIC_LEADERSHIP;
-        }
-
-        updatedList.sort((a, b) => (a.order || 0) - (b.order || 0));
-        localStorage.setItem('azadi_leadership', JSON.stringify(updatedList));
-        return updatedList;
-      });
+        list.sort((a, b) => (a.order || 0) - (b.order || 0));
+        localStorage.setItem('azadi_leadership', JSON.stringify(list));
+        setLeadership(list);
+      }
       setLoadingLeadership(false);
     }, (error) => {
       console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
@@ -1030,10 +999,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         batch.delete(d.ref);
       }
       
-      // Add or rewrite new default documents
+      // Add or rewrite new default documents with ID inside payload to satisfy security rules
       for (const l of listToSave) {
-        const { id, ...businessData } = l;
-        batch.set(doc(db, 'leadership', id), businessData);
+        batch.set(doc(db, 'leadership', l.id), l);
       }
       
       // Atomically commit batch to Firestore
@@ -1045,38 +1013,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const saveLeader = async (leader: Leadership, originalLeader?: Leadership) => {
+    // Optimistic local state update
+    const prevList = [...leadership];
+    setLeadership(prev => {
+      if (leader.id && prev.some(l => l.id === leader.id)) {
+        return prev.map(l => l.id === leader.id ? leader : l).sort((a, b) => (a.order || 0) - (b.order || 0));
+      }
+      const tempId = leader.id || `temp_${Date.now()}`;
+      return [...prev, { ...leader, id: tempId }].sort((a, b) => (a.order || 0) - (b.order || 0));
+    });
+
     try {
       if (leader.id) {
         // This is an update (or a restore of an item with pre-defined ID)
         const leaderRef = doc(db, 'leadership', leader.id);
         const snap = await getDoc(leaderRef);
-        const { id, ...leaderData } = leader;
         const updatedLeader = {
-          ...leaderData,
+          ...leader, // Keep 'id' inside the data to satisfy firestore security rules
           updatedAt: new Date().toISOString()
         };
 
         if (snap.exists()) {
           const serverData = snap.data() as Leadership;
           if (originalLeader) {
-            // Optimistic concurrency check (OCC)
+            // Optimistic concurrency check (OCC) with sanitized and trimmed fields to prevent false conflicts
             const serverUpdatedAt = (serverData as any).updatedAt || serverData.createdAt || '';
             const originalUpdatedAt = (originalLeader as any).updatedAt || originalLeader.createdAt || '';
 
+            const cleanStr = (val: any) => String(val || '').trim();
+            const cleanNum = (val: any) => Number(val || 0);
+
             const isModifiedOnServer = serverUpdatedAt !== originalUpdatedAt ||
-              serverData.nameEn !== originalLeader.nameEn ||
-              serverData.nameBn !== originalLeader.nameBn ||
-              serverData.designationEn !== originalLeader.designationEn ||
-              serverData.designationBn !== originalLeader.designationBn ||
-              serverData.category !== originalLeader.category ||
-              serverData.status !== originalLeader.status ||
-              serverData.order !== originalLeader.order ||
-              serverData.image !== originalLeader.image ||
-              serverData.phone !== originalLeader.phone ||
-              (serverData.subDesignationEn || '') !== (originalLeader.subDesignationEn || '') ||
-              (serverData.subDesignationBn || '') !== (originalLeader.subDesignationBn || '') ||
-              (serverData.messageEn || '') !== (originalLeader.messageEn || '') ||
-              (serverData.messageBn || '') !== (originalLeader.messageBn || '');
+              cleanStr(serverData.nameEn) !== cleanStr(originalLeader.nameEn) ||
+              cleanStr(serverData.nameBn) !== cleanStr(originalLeader.nameBn) ||
+              cleanStr(serverData.designationEn) !== cleanStr(originalLeader.designationEn) ||
+              cleanStr(serverData.designationBn) !== cleanStr(originalLeader.designationBn) ||
+              cleanStr(serverData.category) !== cleanStr(originalLeader.category) ||
+              cleanStr(serverData.status) !== cleanStr(originalLeader.status) ||
+              cleanNum(serverData.order) !== cleanNum(originalLeader.order) ||
+              cleanStr(serverData.image) !== cleanStr(originalLeader.image) ||
+              cleanStr(serverData.phone) !== cleanStr(originalLeader.phone) ||
+              cleanStr(serverData.subDesignationEn) !== cleanStr(originalLeader.subDesignationEn) ||
+              cleanStr(serverData.subDesignationBn) !== cleanStr(originalLeader.subDesignationBn) ||
+              cleanStr(serverData.messageEn) !== cleanStr(originalLeader.messageEn) ||
+              cleanStr(serverData.messageBn) !== cleanStr(originalLeader.messageBn);
 
             if (isModifiedOnServer) {
               throw new Error('EDIT_CONFLICT');
@@ -1092,8 +1072,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else {
             // No original edit context exists; this is a backup restore or seeder, preserve ID
             const newLeaderData = {
-              ...leaderData,
-              createdAt: leaderData.createdAt || new Date().toISOString(),
+              ...leader, // Keep 'id' inside the data to satisfy firestore security rules
+              createdAt: leader.createdAt || new Date().toISOString(),
               updatedAt: new Date().toISOString()
             };
             await withSync(() => setDoc(leaderRef, newLeaderData as any));
@@ -1101,29 +1081,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } else {
         // Create a new document with Firestore's native auto-generated document ID (single write)
-        const { id, ...leaderData } = leader;
+        const docRef = doc(collection(db, 'leadership'));
         const newLeaderData = {
-          ...leaderData,
-          createdAt: leaderData.createdAt || new Date().toISOString(),
+          ...leader,
+          id: docRef.id, // Store auto-generated ID inside payload to satisfy firestore rules
+          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await withSync(async () => {
-          await addDoc(collection(db, 'leadership'), newLeaderData);
-        });
+        await withSync(() => setDoc(docRef, newLeaderData));
       }
     } catch (error: any) {
+      // Revert optimistic state on failure
+      setLeadership(prevList);
       if (error.message === 'EDIT_CONFLICT' || error.message === 'DOCUMENT_NOT_FOUND') {
         throw error;
       }
       handleFirestoreError(error, OperationType.WRITE, `leadership/${leader.id || 'new'}`);
+      throw error;
     }
   };
 
   const deleteLeader = async (id: string) => {
+    const prevList = [...leadership];
+    // Optimistic local state update
+    setLeadership(prev => prev.filter(l => l.id !== id));
+    
     try {
       await withSync(() => deleteDoc(doc(db, 'leadership', id)));
     } catch (error) {
+      // Revert optimistic state on failure
+      setLeadership(prevList);
       handleFirestoreError(error, OperationType.DELETE, `leadership/${id}`);
+      throw error;
     }
   };
 
