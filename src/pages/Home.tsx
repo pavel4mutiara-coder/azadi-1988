@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom';
 import { NoticeMarquee } from '../components/NoticeMarquee';
 import { MemberImage } from '../components/MemberImage';
 import { parseLocalDate } from '../utils/parseLocalDate';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { logImageLoadFailure } from '../utils/imageMonitor';
 
 const FEATURE_ICONS = [<GraduationCap />, <Users />, <HeartHandshake />, <HandHelping />, <Trophy />];
 
@@ -130,7 +132,21 @@ export default function Home() {
               return (
                 <div key={n.id} className="bg-white dark:bg-slate-900 rounded-4xl border border-emerald-50 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy hover:-translate-y-2 transition-all group flex flex-col">
                   <div className="relative h-64 overflow-hidden bg-slate-100">
-                     {image ? <img src={image} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="News" /> : <div className="w-full h-full flex items-center justify-center text-emerald-100 bg-emerald-50/50"><Newspaper size={48} /></div>}
+                     {image ? (
+                       <img
+                         src={getOptimizedImageUrl(image, 300)}
+                         referrerPolicy="no-referrer"
+                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                         alt="News"
+                         onError={() => {
+                           logImageLoadFailure(getOptimizedImageUrl(image, 300), `Home News Image (${title})`);
+                         }}
+                       />
+                     ) : (
+                       <div className="w-full h-full flex items-center justify-center text-emerald-100 bg-emerald-50/50">
+                         <Newspaper size={48} />
+                       </div>
+                     )}
                      <div className="absolute top-6 left-6 bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">{lang === 'bn' ? 'আপডেট' : 'Update'}</div>
                   </div>
                   <div className="p-10 flex-1 flex flex-col justify-between space-y-6">

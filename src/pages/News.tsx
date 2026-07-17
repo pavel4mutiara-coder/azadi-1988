@@ -14,6 +14,7 @@ import { Share } from '@capacitor/share';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { normalizeGoogleDriveImage } from '../utils/normalizeGoogleDriveImage';
+import { logImageLoadFailure } from '../utils/imageMonitor';
 
 // Helper function to extract fields from a news item (for robustness/resilience)
 const getNewsFields = (item: any, lang: 'bn' | 'en') => {
@@ -85,6 +86,7 @@ const FeaturedImage: React.FC<{ src: string; alt: string; className?: string }> 
       className={className}
       onError={(e) => {
         console.error("Featured image failed to load:", src, e);
+        logImageLoadFailure(imageSrc, `FeaturedImage (${alt})`);
         setHasError(true);
       }}
     />

@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { CURRENT_VERSION } from '../utils/version';
 import { History, Target, Eye, Star, Award, Shield, Heart, Users, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 export const AboutUs: React.FC = () => {
   const { lang, settings } = useApp();
@@ -54,7 +55,7 @@ export const AboutUs: React.FC = () => {
       <div className="text-center space-y-8 pt-10 px-4">
         <div className="flex flex-col items-center gap-6">
           <div className="w-24 h-14 md:w-32 md:h-20 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border-4 border-emerald-900/10 dark:border-emerald-500/20 overflow-hidden transform hover:scale-110 transition-transform duration-500">
-             <img src={settings.flag} className="w-full h-full object-cover" alt="Organization Flag" />
+             <img src={getOptimizedImageUrl(settings.flag, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Organization Flag" />
           </div>
           <div className="inline-flex items-center gap-3 text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-[0.2em] text-[10px] px-6 py-2.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full border border-emerald-200 dark:border-emerald-700 shadow-sm">
              <Users size={14} />

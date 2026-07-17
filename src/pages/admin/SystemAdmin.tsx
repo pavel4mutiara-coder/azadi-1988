@@ -5,7 +5,8 @@ import { CURRENT_VERSION } from '../../utils/version';
 import { 
   Shield, Cloud, CloudOff, RefreshCcw, Download, UploadCloud, 
   Trash2, LogOut, Loader2, ArrowUpCircle, Info, Database, 
-  CheckCircle, AlertTriangle, RefreshCw, Smartphone, Save
+  CheckCircle, AlertTriangle, RefreshCw, Smartphone, Save,
+  Activity, Clock, Server, Wifi, WifiOff
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -21,7 +22,8 @@ export const SystemAdmin: React.FC = () => {
     restoreFromLegacy,
     resetAllData,
     versionConfig,
-    saveVersionConfig
+    saveVersionConfig,
+    syncHealth
   } = useApp();
   
   const navigate = useNavigate();
@@ -49,6 +51,36 @@ export const SystemAdmin: React.FC = () => {
       text: lang === 'bn' ? textBn : textEn
     });
     setTimeout(() => setStatusMessage(null), 5000);
+  };
+
+  const formatSyncTime = (isoString: string | null) => {
+    if (!isoString) return lang === 'bn' ? 'কখনো না' : 'Never';
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString(lang === 'bn' ? 'bn-BD' : 'en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
+  const getCollectionLabel = (name: string) => {
+    const labels: Record<string, { en: string; bn: string }> = {
+      settings: { en: 'Organization Settings', bn: 'প্রতিষ্ঠান সেটিংস' },
+      letterhead: { en: 'Letterhead Config', bn: 'লেটারহেড কনফিগ' },
+      donations: { en: 'Donation Ledgers', bn: 'অনুদান লেজারসমূহ' },
+      leadership: { en: 'Committee Leadership', bn: 'কমিটি ও নেতৃত্ব' },
+      events: { en: 'Public Events', bn: 'জনসাধারণের ইভেন্ট' },
+      notices: { en: 'Urgent Notices', bn: 'জরুরী নোটিশসমূহ' },
+      news: { en: 'News & Media', bn: 'সংবাদ ও মিডিয়া' },
+      expenses: { en: 'Expense Ledgers', bn: 'ব্যয় লেজারসমূহ' },
+      version: { en: 'App Versioning', bn: 'অ্যাপ সংস্করণ' },
+    };
+    return labels[name]?.[lang] || name;
   };
 
   const handleForceSync = async () => {
@@ -300,6 +332,90 @@ export const SystemAdmin: React.FC = () => {
                 {loadingAction === 'sync' ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
                 {lang === 'bn' ? 'ফোর্স সিঙ্ক' : 'Force Sync Now'}
               </button>
+            </div>
+          </div>
+
+          {/* Card 1.5: Document Sync Health Diagnostic Panel */}
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5 uppercase tracking-tight">
+                <Activity className="text-emerald-500" size={22} />
+                {lang === 'bn' ? 'ডকুমেন্ট সিঙ্ক হেলথ' : 'Document Sync Health'}
+              </h2>
+              <span className="text-[10px] font-black uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-200/20">
+                {lang === 'bn' ? 'ডায়াগনস্টিকস লাইভ' : 'Diagnostics Live'}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+              {lang === 'bn'
+                ? 'ফায়ারস্টোর ক্লাউড ডাটাবেজ বনাম ব্রাউজার লোকাল মেমোরি স্টেটের রিয়েল-টাইম সিঙ্ক এবং স্বাস্থ্য পর্যবেক্ষণ করুন।'
+                : 'Monitor real-time synchronization integrity and check for any discrepancy between Cloud Firestore and local store.'}
+            </p>
+
+            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+              {syncHealth && syncHealth.map((item) => {
+                const isSynced = item.status === 'synced';
+                const isOffline = item.status === 'offline';
+                const isStale = item.status === 'stale';
+
+                return (
+                  <div key={item.collectionName} className="p-4 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Database size={14} className="text-slate-400" />
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                          {getCollectionLabel(item.collectionName)}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          ({item.count} {lang === 'bn' ? 'টি' : 'items'})
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Status Badge */}
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                          isSynced ? 'bg-emerald-50 border-emerald-200/50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/50' :
+                          isOffline ? 'bg-blue-50 border-blue-200/50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/50' :
+                          isStale ? 'bg-amber-50 border-amber-200/50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50' :
+                          'bg-slate-50 border-slate-200/50 text-slate-500 dark:bg-slate-950/40 dark:text-slate-400 dark:border-slate-800'
+                        }`}>
+                          {item.status === 'synced' ? (lang === 'bn' ? 'সিঙ্কড' : 'Synced') :
+                           item.status === 'stale' ? (lang === 'bn' ? 'মেমোরি বিলম্ব' : 'Local Stale') :
+                           item.status === 'offline' ? (lang === 'bn' ? 'অফলাইন ক্যাশ' : 'Offline Cache') :
+                           (lang === 'bn' ? 'অজানা' : 'Unknown')}
+                        </span>
+
+                        {/* Source Icon Badge */}
+                        <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-200/50 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          {item.metadataSource === 'server' ? <Server size={8} /> : item.metadataSource === 'cache' ? <WifiOff size={8} /> : <Info size={8} />}
+                          {item.metadataSource === 'server' ? (lang === 'bn' ? 'ক্লাউড' : 'Cloud') :
+                           item.metadataSource === 'cache' ? (lang === 'bn' ? 'ক্যাশ' : 'Cache') :
+                           (lang === 'bn' ? 'ডেমো' : 'Demo')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-1.5 border-t border-slate-200/40 dark:border-slate-800/40 text-[10px] font-bold">
+                      <div className="space-y-0.5">
+                        <span className="text-slate-400 block uppercase tracking-wider text-[8px]">{lang === 'bn' ? 'ফায়ারস্টোর আপডেট' : 'Firestore Update'}</span>
+                        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                          <Clock size={10} className="text-slate-400" />
+                          <span>{formatSyncTime(item.firestoreLastUpdated)}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <span className="text-slate-400 block uppercase tracking-wider text-[8px]">{lang === 'bn' ? 'লোকাল স্টেট আপডেট' : 'Local State Update'}</span>
+                        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                          <Clock size={10} className="text-slate-400" />
+                          <span>{formatSyncTime(item.localLastUpdated)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

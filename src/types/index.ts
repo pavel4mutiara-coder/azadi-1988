@@ -142,6 +142,15 @@ export interface Expense {
   date: string;
 }
 
+export interface CollectionSyncState {
+  collectionName: string;
+  firestoreLastUpdated: string | null;
+  localLastUpdated: string | null;
+  status: 'synced' | 'stale' | 'offline' | 'unknown';
+  metadataSource: 'server' | 'cache' | 'mock';
+  count: number;
+}
+
 export interface VersionConfig {
   latestVersion: string;
   buildNumber: number;
@@ -152,4 +161,6 @@ export interface VersionConfig {
   updateSize?: string;
   playStoreUrl?: string;
 }
+
+
 

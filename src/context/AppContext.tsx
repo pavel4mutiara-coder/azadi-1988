@@ -11,6 +11,7 @@ import {
   News,
   Expense,
   VersionConfig,
+  CollectionSyncState,
 } from '../types';
 import { CURRENT_VERSION } from '../utils/version';
 import { INITIAL_COMMITTEE } from '../utils/committee';
@@ -108,6 +109,7 @@ interface AppState {
   versionConfig: VersionConfig | null;
   saveVersionConfig: (config: VersionConfig) => Promise<void>;
   loadingVersion: boolean;
+  syncHealth: CollectionSyncState[];
 }
 
 const STATIC_SETTINGS: OrganizationSettings = {
@@ -350,6 +352,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cloudSynced, setCloudSynced] = useState(true);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('success');
 
+  const [syncTimestamps, setSyncTimestamps] = useState<Record<string, { firestore: string | null; local: string | null; source: 'server' | 'cache' | 'mock' }>>({
+    settings: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    letterhead: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    donations: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    leadership: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    events: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    notices: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    news: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    expenses: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    version: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+  });
+
+  const recordSyncEvent = (collectionName: string, type: 'firestore' | 'local', source: 'server' | 'cache' | 'mock' = 'server') => {
+    setSyncTimestamps(prev => {
+      const current = prev[collectionName] || { firestore: null, local: null, source: 'mock' };
+      return {
+        ...prev,
+        [collectionName]: {
+          firestore: type === 'firestore' ? new Date().toISOString() : current.firestore,
+          local: type === 'local' ? new Date().toISOString() : current.local,
+          source: type === 'firestore' ? source : current.source
+        }
+      };
+    });
+  };
+
+  const syncHealth: CollectionSyncState[] = Object.entries(syncTimestamps).map(([name, ts]) => {
+    let count = 0;
+    if (name === 'settings') count = 1;
+    else if (name === 'letterhead') count = 1;
+    else if (name === 'donations') count = donations.length;
+    else if (name === 'leadership') count = leadership.length;
+    else if (name === 'events') count = events.length;
+    else if (name === 'notices') count = notices.length;
+    else if (name === 'news') count = news.length;
+    else if (name === 'expenses') count = expenses.length;
+    else if (name === 'version') count = 1;
+
+    let status: 'synced' | 'stale' | 'offline' | 'unknown' = 'unknown';
+    if (ts.source === 'cache') {
+      status = 'offline';
+    } else if (ts.source === 'mock') {
+      status = 'unknown';
+    } else if (ts.firestore && ts.local) {
+      const fTime = new Date(ts.firestore).getTime();
+      const lTime = new Date(ts.local).getTime();
+      if (lTime > fTime + 2000) {
+        status = 'stale';
+      } else {
+        status = 'synced';
+      }
+    } else if (ts.firestore) {
+      status = 'synced';
+    }
+
+    return {
+      collectionName: name,
+      firestoreLastUpdated: ts.firestore,
+      localLastUpdated: ts.local,
+      status,
+      metadataSource: ts.source,
+      count
+    };
+  });
+
   const setTheme = (newTheme: 'light' | 'dark') => {
     setThemeState(newTheme);
     localStorage.setItem('azadi_theme', newTheme);
@@ -448,6 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snap.data() as OrganizationSettings;
         setSettings(data);
         localStorage.setItem('azadi_settings', JSON.stringify(data));
+        recordSyncEvent('settings', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       }
       setLoadingSettings(false);
     }, () => {
@@ -460,6 +528,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snap.data() as LetterheadConfig;
         setLetterhead(data);
         localStorage.setItem('azadi_letterhead', JSON.stringify(data));
+        recordSyncEvent('letterhead', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       }
       setLoadingLetterhead(false);
     }, () => {
@@ -472,6 +541,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snap.data() as VersionConfig;
         setVersionConfig(data);
         localStorage.setItem('azadi_version_config', JSON.stringify(data));
+        recordSyncEvent('version', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       } else {
         // If it doesn't exist yet, seed with CURRENT_VERSION
         const seedVersion = async () => {
@@ -505,10 +575,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDonations([]);
         localStorage.setItem('azadi_donations', JSON.stringify([]));
       }
+      recordSyncEvent('donations', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingDonations(false);
     }, (error) => {
-      console.error("[DEBUG] ERROR on snapshot donations fetch:", error);
-      handleFirestoreError(error, OperationType.LIST, 'donations');
+      console.warn("[DEBUG] ERROR on snapshot donations fetch (graceful fallback active):", error);
       setLoadingDonations(false);
     });
 
@@ -526,6 +596,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('azadi_leadership', JSON.stringify(list));
         setLeadership(list);
       }
+      recordSyncEvent('leadership', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingLeadership(false);
     }, (error) => {
       console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
@@ -544,9 +615,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setEvents([]);
         localStorage.setItem('azadi_events', JSON.stringify([]));
       }
+      recordSyncEvent('events', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingEvents(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'events');
+      console.warn("Events listener failed or offline, falling back to cached state:", error);
       setLoadingEvents(false);
     });
 
@@ -561,9 +633,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNotices([]);
         localStorage.setItem('azadi_notices', JSON.stringify([]));
       }
+      recordSyncEvent('notices', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingNotices(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'notices');
+      console.warn("Notices listener failed or offline, falling back to cached state:", error);
       setLoadingNotices(false);
     });
 
@@ -581,9 +654,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNews([]);
         localStorage.setItem('azadi_news', JSON.stringify([]));
       }
+      recordSyncEvent('news', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingNews(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'news');
+      console.warn("News listener failed or offline, falling back to cached state:", error);
       setLoadingNews(false);
     });
 
@@ -598,9 +672,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setExpenses([]);
         localStorage.setItem('azadi_expenses', JSON.stringify([]));
       }
+      recordSyncEvent('expenses', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingExpenses(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'expenses');
+      console.warn("Expenses listener failed or offline, falling back to cached state:", error);
       setLoadingExpenses(false);
     });
 
@@ -819,6 +894,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return [donation, ...prev];
     });
+    recordSyncEvent('donations', 'local');
 
     try {
       await withSync(() => setDoc(doc(db, 'donations', donation.id), donation));
@@ -851,6 +927,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Optimistic update
     setDonations(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    recordSyncEvent('donations', 'local');
 
     try {
       if (auth.currentUser) {
@@ -932,6 +1009,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const target = donations.find(d => d.id === id);
       // Immediately remove from state to guarantee crisp, instant deletion in the UI
       setDonations(prev => prev.filter(d => d.id !== id));
+      recordSyncEvent('donations', 'local');
 
       if (auth.currentUser) {
         await withSync(() => deleteDoc(doc(db, 'donations', id)));
@@ -954,6 +1032,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveSettings = async (newSettings: OrganizationSettings) => {
     try {
+      recordSyncEvent('settings', 'local');
       await withSync(() => setDoc(doc(db, 'settings', 'config'), newSettings));
       await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: newSettings.nameEn });
     } catch (error) {
@@ -963,6 +1042,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveLetterhead = async (newLetterhead: LetterheadConfig) => {
     try {
+      recordSyncEvent('letterhead', 'local');
       await withSync(() => setDoc(doc(db, 'settings', 'letterhead'), newLetterhead));
       await logAuditTrail('LETTERHEAD_CONFIGURATION_UPDATE', { leaderName: newLetterhead.leaderName });
     } catch (error) {
@@ -972,6 +1052,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveVersionConfig = async (newVersionConfig: VersionConfig) => {
     try {
+      recordSyncEvent('version', 'local');
       await withSync(() => setDoc(doc(db, 'settings', 'version'), newVersionConfig));
       await logAuditTrail('VERSION_CONFIGURATION_UPDATE', { latestVersion: newVersionConfig.latestVersion });
     } catch (error) {
@@ -990,6 +1071,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       // Optimistic local state update
       setLeadership(listToSave);
+      recordSyncEvent('leadership', 'local');
       
       const batch = writeBatch(db);
       const snap = await getDocs(collection(db, 'leadership'));
@@ -1022,6 +1104,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const tempId = leader.id || `temp_${Date.now()}`;
       return [...prev, { ...leader, id: tempId }].sort((a, b) => (a.order || 0) - (b.order || 0));
     });
+    recordSyncEvent('leadership', 'local');
 
     try {
       if (leader.id) {
@@ -1105,6 +1188,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const prevList = [...leadership];
     // Optimistic local state update
     setLeadership(prev => prev.filter(l => l.id !== id));
+    recordSyncEvent('leadership', 'local');
     
     try {
       await withSync(() => deleteDoc(doc(db, 'leadership', id)));
@@ -1118,6 +1202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveEvent = async (event: Event) => {
     try {
+      recordSyncEvent('events', 'local');
       await withSync(() => setDoc(doc(db, 'events', event.id), event));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `events/${event.id}`);
@@ -1126,6 +1211,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteEvent = async (id: string) => {
     try {
+      recordSyncEvent('events', 'local');
       await withSync(() => deleteDoc(doc(db, 'events', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
@@ -1134,6 +1220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveNotice = async (notice: Notice) => {
     try {
+      recordSyncEvent('notices', 'local');
       await withSync(() => setDoc(doc(db, 'notices', notice.id), notice));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `notices/${notice.id}`);
@@ -1142,6 +1229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteNotice = async (id: string) => {
     try {
+      recordSyncEvent('notices', 'local');
       await withSync(() => deleteDoc(doc(db, 'notices', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
@@ -1150,6 +1238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveNews = async (item: News) => {
     try {
+      recordSyncEvent('news', 'local');
       await withSync(() => setDoc(doc(db, 'news', item.id), item));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `news/${item.id}`);
@@ -1158,6 +1247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteNews = async (id: string) => {
     try {
+      recordSyncEvent('news', 'local');
       await withSync(() => deleteDoc(doc(db, 'news', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
@@ -1166,6 +1256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addExpense = async (item: Expense) => {
     try {
+      recordSyncEvent('expenses', 'local');
       await withSync(() => setDoc(doc(db, 'expenses', item.id), item));
       
       // Google Chat trigger on new expense entry
@@ -1222,6 +1313,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteExpense = async (id: string) => {
     try {
+      recordSyncEvent('expenses', 'local');
       await withSync(() => deleteDoc(doc(db, 'expenses', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `expenses/${id}`);
@@ -1353,6 +1445,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadingSettings,
       loadingLetterhead,
       loadingVersion,
+      syncHealth,
       
       setLang, 
       setTheme, 

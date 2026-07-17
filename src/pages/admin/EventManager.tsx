@@ -6,6 +6,7 @@ import { Event } from '../../types';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 export const EventManager: React.FC = () => {
   const { lang, events, saveEvent, deleteEvent } = useApp();
@@ -216,7 +217,7 @@ export const EventManager: React.FC = () => {
                   {formData.image ? (
                     <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
                       <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                        <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
+                        <img src={getOptimizedImageUrl(formData.image, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Preview" />
                         <button 
                           type="button" 
                           onClick={handleRemoveImage}
@@ -341,7 +342,7 @@ export const EventManager: React.FC = () => {
         {events.map(event => (
           <div key={event.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl hover:-translate-y-1 transition-all group flex flex-col">
             <div className="h-48 overflow-hidden relative bg-slate-100 dark:bg-slate-950">
-              {event.image ? <img src={event.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={event.titleEn} /> : <div className="w-full h-full flex items-center justify-center text-emerald-100"><Calendar size={48} /></div>}
+              {event.image ? <img src={getOptimizedImageUrl(event.image, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={event.titleEn} /> : <div className="w-full h-full flex items-center justify-center text-emerald-100"><Calendar size={48} /></div>}
               <div className="absolute top-4 right-4 flex gap-2">
                  <button onClick={() => handleEdit(event)} className="p-3 bg-white/90 dark:bg-slate-800/90 text-emerald-600 rounded-xl shadow-lg hover:scale-110 transition-transform"><Edit2 size={16} /></button>
                  <button onClick={() => handleDelete(event.id)} className="p-3 bg-white/90 dark:bg-slate-800/90 text-rose-600 rounded-xl shadow-lg hover:scale-110 transition-transform"><Trash2 size={16} /></button>

@@ -6,6 +6,7 @@ import { Newspaper, Plus, Trash2, Edit2, Clock, UploadCloud, Image, Loader2, X }
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 export const NewsManager: React.FC = () => {
   const { lang, news, saveNews, deleteNews } = useApp();
@@ -179,7 +180,7 @@ export const NewsManager: React.FC = () => {
                   {formData.image ? (
                     <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
                       <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                        <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
+                        <img src={getOptimizedImageUrl(formData.image, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Preview" />
                         <button 
                           type="button" 
                           onClick={handleRemoveImage}
@@ -262,7 +263,7 @@ export const NewsManager: React.FC = () => {
         {news.map(n => (
           <div key={n.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl group hover:-translate-y-1 transition-all flex flex-col">
             <div className="h-48 overflow-hidden relative bg-slate-100 dark:bg-slate-950">
-              {n.image ? <img src={n.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="News" /> : <div className="w-full h-full flex items-center justify-center text-emerald-100"><Newspaper size={48} /></div>}
+              {n.image ? <img src={getOptimizedImageUrl(n.image, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="News" /> : <div className="w-full h-full flex items-center justify-center text-emerald-100"><Newspaper size={48} /></div>}
               <div className="absolute top-4 left-4 flex gap-2">
                  <button onClick={() => handleEdit(n)} className="p-3 bg-white/90 dark:bg-slate-800/90 text-emerald-600 rounded-xl shadow-lg hover:scale-110 transition-transform"><Edit2 size={16} /></button>
                  <button onClick={() => handleDelete(n.id)} className="p-3 bg-white/90 dark:bg-slate-800/90 text-rose-600 rounded-xl shadow-lg hover:scale-110 transition-transform"><Trash2 size={16} /></button>

@@ -20,6 +20,8 @@ import {
 import { Event } from "../types";
 import { SkeletonLoader } from "../components/SkeletonLoader";
 import { parseLocalDate } from "../utils/parseLocalDate";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
+import { logImageLoadFailure } from "../utils/imageMonitor";
 
 export const Events: React.FC = () => {
   const { lang, events, settings, loadingEvents } = useApp();
@@ -146,9 +148,13 @@ export const Events: React.FC = () => {
               <div className="relative h-64 sm:h-80 overflow-hidden bg-emerald-50 dark:bg-slate-950">
                 {event.image ? (
                   <img
-                    src={event.image}
+                    src={getOptimizedImageUrl(event.image, 600)}
                     alt={lang === "bn" ? event.titleBn : event.titleEn}
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
+                    onError={() => {
+                      logImageLoadFailure(getOptimizedImageUrl(event.image, 600), `Event Main Card Image (${event.titleEn})`);
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-emerald-100 dark:text-slate-800 gap-4 bg-emerald-50/50 dark:bg-slate-900">
@@ -365,9 +371,13 @@ export const Events: React.FC = () => {
               {selectedEvent.image && (
                 <div className="group relative rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-heavy border-4 border-white dark:border-slate-800 aspect-square sm:aspect-video lg:aspect-square">
                   <img
-                    src={selectedEvent.image}
+                    src={getOptimizedImageUrl(selectedEvent.image, 600)}
                     alt="Event highlight"
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                    onError={() => {
+                      logImageLoadFailure(getOptimizedImageUrl(selectedEvent.image, 600), `Event Modal Detail Image (${selectedEvent.titleEn})`);
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
                     <p className="text-white font-bold text-sm bengali">

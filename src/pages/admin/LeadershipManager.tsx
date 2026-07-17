@@ -364,7 +364,7 @@ export const LeadershipManager: React.FC = () => {
                   {formData.image ? (
                     <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
                       <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                        <img src={formData.image} className="max-w-full max-h-full object-contain" alt="Preview" />
+                        <img src={normalizeGoogleDriveImage(formData.image)} referrerPolicy="no-referrer" className="max-w-full max-h-full object-contain" alt="Preview" />
                         <button 
                           type="button" 
                           onClick={handleRemoveImage}

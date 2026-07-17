@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Loader2 } from 'lucide-react';
 import { normalizeGoogleDriveImage, getGoogleDriveThumbnailUrl, extractGoogleDriveId } from '../utils/normalizeGoogleDriveImage';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { logImageLoadFailure } from '../utils/imageMonitor';
 
 interface MemberImageProps {
   src: string | null | undefined;
@@ -99,6 +100,9 @@ export const MemberImage: React.FC<MemberImageProps> = ({
 
     // Logging failed image provider URLs for simple diagnostics
     console.warn(`[MemberImage Error Logs]: Failed loading sequence for target: "${alt}" (current try URL: "${currentSrc}", retry step: ${retryCount}).`);
+    if (currentSrc) {
+      logImageLoadFailure(currentSrc, `MemberImage (${alt})`);
+    }
 
     // Let's increment retry counts and switch pathways
     const nextRetry = retryCount + 1;

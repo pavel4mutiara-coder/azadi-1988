@@ -112,8 +112,9 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
   if (!url) return '';
   const trimmed = url.trim();
 
-  // Return cached normalization immediately if available
-  if (normalizationCache.has(trimmed)) {
+  // Return cached normalization immediately if available (bypass for Google/Firebase Storage to ensure fresh timestamp)
+  const isGoogleOrFirebase = /firebasestorage\.googleapis\.com|drive\.google\.com|googleusercontent\.com/i.test(trimmed);
+  if (normalizationCache.has(trimmed) && !isGoogleOrFirebase) {
     return normalizationCache.get(trimmed)!;
   }
 
@@ -141,14 +142,8 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
   if (/drive\.google\.com/i.test(decoded)) {
     const fileId = extractGoogleDriveId(trimmed);
     if (fileId) {
-      // Extract t param
-      let tParam = '';
-      const match = trimmed.match(/[?&](t|v)=([a-zA-Z0-9]+)/);
-      if (match) {
-        tParam = `&t=${match[2]}`;
-      }
-      // Preferred format: uvexport-view links bypass interactive auth redirects
-      const normalizedDriveUrl = `https://drive.google.com/uc?export=view&id=${fileId}${tParam}`;
+      // Preferred format: Google User Content CDN bypasses third-party cookie blocks and auth redirects with fresh timestamp
+      const normalizedDriveUrl = `https://lh3.googleusercontent.com/d/${fileId}?t=${Date.now()}`;
       normalizationCache.set(trimmed, normalizedDriveUrl);
       return normalizedDriveUrl;
     }
@@ -169,9 +164,21 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
     }
   }
 
-  // Default passthrough
-  normalizationCache.set(trimmed, decoded);
-  return decoded;
+  // Default passthrough with fresh timestamp for Firebase Storage URLs
+  let finalUrl = decoded;
+  if (/firebasestorage\.googleapis\.com/i.test(decoded)) {
+    try {
+      const urlObj = new URL(decoded);
+      urlObj.searchParams.set('t', String(Date.now()));
+      finalUrl = urlObj.toString();
+    } catch {
+      const separator = decoded.includes('?') ? '&' : '?';
+      finalUrl = `${decoded}${separator}t=${Date.now()}`;
+    }
+  }
+
+  normalizationCache.set(trimmed, finalUrl);
+  return finalUrl;
 }
 
 /**
@@ -181,7 +188,7 @@ export function getGoogleDriveThumbnailUrl(url: string | null | undefined): stri
   if (!url) return '';
   const fileId = extractGoogleDriveId(url);
   if (fileId) {
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
   }
   return normalizeGoogleDriveImage(url);
 }

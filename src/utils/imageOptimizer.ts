@@ -39,11 +39,11 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
     }
   }
 
-  // 1. Google Drive Image optimization: Rewrite to Google's thumbnailing service
+  // 1. Google Drive Image optimization: Rewrite to Google's CDN service
   if (/drive\.google\.com/i.test(trimmed)) {
     const fileId = extractGoogleDriveId(trimmed);
     if (fileId) {
-      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width}${tParam}`;
+      return `https://lh3.googleusercontent.com/d/${fileId}?t=${Date.now()}`;
     }
   }
 
@@ -65,10 +65,18 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
     }
   }
 
-  // Skip proxy for local development hosts
+  // Skip proxy for local development hosts and reliable Google CDNs / Firebase Storage
   const isLocalHost = trimmed.includes('localhost') || trimmed.includes('127.0.0.1') || trimmed.includes('0.0.0.0');
-  if (isLocalHost) {
-    return trimmed;
+  const isGoogleOrFirebase = trimmed.includes('firebasestorage.googleapis.com') || trimmed.includes('googleusercontent.com') || trimmed.includes('googleapis.com');
+  if (isLocalHost || isGoogleOrFirebase) {
+    try {
+      const urlObj = new URL(trimmed);
+      urlObj.searchParams.set('t', String(Date.now()));
+      return urlObj.toString();
+    } catch {
+      const separator = trimmed.includes('?') ? '&' : '?';
+      return `${trimmed}${separator}t=${Date.now()}`;
+    }
   }
 
   // 3. General public external imagery: Route through high-density images.weserv.nl proxy
