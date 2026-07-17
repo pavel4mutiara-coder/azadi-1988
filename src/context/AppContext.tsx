@@ -566,7 +566,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list: Donation[] = [];
         snap.forEach(d => {
           const item = d.data();
-          list.push(item as Donation);
+          list.push({ ...item, id: d.id } as Donation);
         });
         setDonations(list);
         localStorage.setItem('azadi_donations', JSON.stringify(list));
@@ -608,7 +608,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubEvents = onSnapshot(query(collection(db, 'events'), orderBy('date', 'desc')), (snap) => {
       if (!snap.empty) {
         const list: Event[] = [];
-        snap.forEach(d => list.push(d.data() as Event));
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as Event);
+        });
         setEvents(list);
         localStorage.setItem('azadi_events', JSON.stringify(list));
       } else {
@@ -626,7 +629,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubNotices = onSnapshot(query(collection(db, 'notices'), orderBy('date', 'desc')), (snap) => {
       if (!snap.empty) {
         const list: Notice[] = [];
-        snap.forEach(d => list.push(d.data() as Notice));
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as Notice);
+        });
         setNotices(list);
         localStorage.setItem('azadi_notices', JSON.stringify(list));
       } else {
@@ -665,7 +671,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), orderBy('date', 'desc')), (snap) => {
       if (!snap.empty) {
         const list: Expense[] = [];
-        snap.forEach(d => list.push(d.data() as Expense));
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as Expense);
+        });
         setExpenses(list);
         localStorage.setItem('azadi_expenses', JSON.stringify(list));
       } else {

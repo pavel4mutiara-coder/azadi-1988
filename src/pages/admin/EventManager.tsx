@@ -6,7 +6,7 @@ import { Event } from '../../types';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
-import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { getOptimizedImageUrl, compressInputImage } from '../../utils/imageOptimizer';
 
 export const EventManager: React.FC = () => {
   const { lang, events, saveEvent, deleteEvent } = useApp();
@@ -69,7 +69,7 @@ export const EventManager: React.FC = () => {
     }
   };
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
       return;
@@ -78,9 +78,17 @@ export const EventManager: React.FC = () => {
     setUploading(true);
     setUploadProgress(0);
     
+    let uploadBlob: Blob = file;
+    try {
+      // Compress to maximum 1024x1024 resolution and 80% JPEG quality for fast transfers
+      uploadBlob = await compressInputImage(file, 1024, 1024, 0.8);
+    } catch (compressErr) {
+      console.warn("Client-side image compression bypassed:", compressErr);
+    }
+    
     const fileId = `event_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
     const storageRef = ref(storage, `events/${fileId}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const uploadTask = uploadBytesResumable(storageRef, uploadBlob);
 
     uploadTask.on('state_changed', 
       (snapshot) => {
