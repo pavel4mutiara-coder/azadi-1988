@@ -1,8 +1,14 @@
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
-import { GraduationCap, Users, HeartHandshake, HandHelping, Trophy, Heart, ArrowRight, Calendar, User, MapPin, Shield, BellRing, Newspaper, Clock, Megaphone, Info, Sparkles } from 'lucide-react';
+import { 
+  GraduationCap, Users, HeartHandshake, HandHelping, Trophy, 
+  Heart, ArrowRight, Calendar, MapPin, Shield, BellRing, 
+  Newspaper, Megaphone, Sparkles, Award, CheckCircle2, 
+  ExternalLink, Phone, Mail, MessageCircle, FileText, 
+  Flame, Compass, Target, Eye, Layers, Activity, ChevronRight,
+  CreditCard, Lock, ShieldCheck
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { NoticeMarquee } from '../components/NoticeMarquee';
@@ -11,224 +17,925 @@ import { parseLocalDate } from '../utils/parseLocalDate';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 import { logImageLoadFailure } from '../utils/imageMonitor';
 
-const FEATURE_ICONS = [<GraduationCap />, <Users />, <HeartHandshake />, <HandHelping />, <Trophy />];
-
 export default function Home() {
-  const { lang, settings, leadership, events, notices, news } = useApp();
+  const { lang, settings, leadership, events, notices, news, testimonials } = useApp();
   const t = TRANSLATIONS[lang];
 
-  const slogan = (lang === 'bn' ? settings?.sloganBn : settings?.sloganEn) || (lang === 'bn' ? 'শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া' : 'Education · Unity · Service · Peace · Sports');
+  const slogan = (lang === 'bn' ? settings?.sloganBn : settings?.sloganEn) || (lang === 'bn' ? 'শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া' : 'Education · Unity · Service · Peace · Sports');
   const features = slogan.split(' · ').filter(Boolean);
-  const topLeaders = Array.isArray(leadership) ? [...leadership].sort((a, b) => (a.order || 99) - (b.order || 99)).slice(0, 4) : [];
-  const recentEvents = Array.isArray(events) ? [...events].slice(0, 2) : [];
-  const recentNews = Array.isArray(news) ? [...news].sort((a, b) => parseLocalDate(b?.date || 0).getTime() - parseLocalDate(a?.date || 0).getTime()).slice(0, 3) : [];
+
+  // Data processing from Firebase AppContext
+  const topLeaders = Array.isArray(leadership) 
+    ? [...leadership].sort((a, b) => (a.order || 99) - (b.order || 99)).slice(0, 4) 
+    : [];
+
+  const recentEvents = Array.isArray(events) 
+    ? [...events].slice(0, 3) 
+    : [];
+
+  const recentNews = Array.isArray(news) 
+    ? [...news].sort((a, b) => parseLocalDate(b?.date || 0).getTime() - parseLocalDate(a?.date || 0).getTime()).slice(0, 3) 
+    : [];
+
   const allNotices = Array.isArray(notices) ? notices : [];
 
+  const approvedTestimonials = Array.isArray(testimonials)
+    ? testimonials.filter(item => item.status === 'APPROVED').slice(0, 3)
+    : [];
+
+  // Organization Seal/Logo
+  const LOGO_URL = settings?.logo || "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
+
+  // Gallery preview images gathered from events & news
+  const galleryImages = [
+    ...recentEvents.map(e => ({ url: e.image, title: lang === 'bn' ? e.titleBn : e.titleEn })),
+    ...recentNews.map(n => ({ url: n.image, title: lang === 'bn' ? n.titleBn : n.titleEn })),
+    { url: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600", title: lang === 'bn' ? "বার্ষিক ক্রীড়া অনুষ্ঠান" : "Annual Sports Meet" },
+    { url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600", title: lang === 'bn' ? "বিনামূল্যে চিকিৎসা সেবা" : "Free Medical Camp" },
+    { url: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=600", title: lang === 'bn' ? "ত্রাণ বিতরণ কর্মসূচি" : "Emergency Relief Camp" },
+    { url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600", title: lang === 'bn' ? "প্রতিষ্ঠাবার্ষিকী অনুষ্ঠান" : "Founding Anniversary" }
+  ].filter(item => Boolean(item.url)).slice(0, 6);
+
   return (
-    <div id="home-page-root" className="space-y-20 sm:space-y-32 pb-24 bengali">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-4xl bg-emerald-950 dark:bg-slate-900 text-white p-8 xs:p-12 sm:p-20 md:p-32 flex flex-col items-center text-center gap-10 shadow-heavy border border-emerald-800 dark:border-slate-800 transition-all duration-700 min-h-[500px] sm:min-h-[600px] hero-section group">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/arabic-bazazz.png')] group-hover:scale-110 transition-transform duration-[20s] linear"></div>
-        <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 md:w-[40rem] md:h-[40rem] bg-emerald-400/20 dark:bg-emerald-500/10 blur-[80px] sm:blur-[120px] -mr-16 -mt-16 sm:-mr-48 sm:-mt-48 rounded-full"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 sm:w-96 sm:h-96 md:w-[40rem] md:h-[40rem] bg-amber-400/10 dark:bg-amber-500/5 blur-[80px] sm:blur-[120px] -ml-16 -mb-16 sm:-ml-48 sm:-mb-48 rounded-full"></div>
-        
-        <div className="relative z-10 space-y-10 sm:space-y-12 w-full max-w-6xl mx-auto">
-          <div className="mb-4 transform hover:scale-105 transition-transform duration-700">
-            <div className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl text-emerald-300 shadow-emerald-400/30 drop-shadow-xl font-serif italic select-none tracking-widest opacity-80">
-                بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
+    <div id="home-page-root" className="space-y-16 sm:space-y-24 md:space-y-32 pb-20 bengali">
+      
+      {/* 1. HERO SECTION */}
+      <section className="relative overflow-hidden rounded-3xl sm:rounded-4xl bg-[#091329] text-white p-6 xs:p-8 sm:p-14 md:p-20 border border-slate-800 shadow-royal group">
+        {/* Decorative Grid Overlay & Light Glows */}
+        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-80 h-80 sm:w-[32rem] sm:h-[32rem] bg-blue-600/20 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 sm:w-[32rem] sm:h-[32rem] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none -ml-20 -mb-20"></div>
+
+        <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center space-y-8 sm:space-y-10">
+          
+          {/* Islamic Bismillah Calligraphy */}
+          <div className="transform hover:scale-105 transition-transform duration-500">
+            <div className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl text-amber-300 font-serif italic tracking-widest drop-shadow-md select-none opacity-90">
+              بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
             </div>
           </div>
-          
-          <div className="space-y-6 sm:space-y-10">
-            <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-8xl font-black leading-[0.9] tracking-tighter text-white bengali drop-shadow-2xl">
-              {lang === 'bn' ? settings?.nameBn : settings?.nameEn}
+
+          {/* Badges / Credibility Highlights */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 px-3.5 py-1.5 rounded-full border border-amber-500/30 shadow-sm">
+              <Award size={14} className="text-amber-400 shrink-0" />
+              <span>{lang === 'bn' ? 'প্রতিষ্ঠিত: ১০ জুন ১৯৮৮ (৩৮ বছরের পথচলা)' : 'Est. 10 June 1988 (38 Years of Service)'}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-blue-900/60 text-blue-200 px-3.5 py-1.5 rounded-full border border-blue-700/50 shadow-sm">
+              <MapPin size={14} className="text-blue-400 shrink-0" />
+              <span>{lang === 'bn' ? 'মিরবক্সটুলা, সিলেট, বাংলাদেশ' : 'Mirbox Tula, Sylhet, Bangladesh'}</span>
+            </span>
+          </div>
+
+          {/* Organization Title & Slogan */}
+          <div className="space-y-4 max-w-4xl">
+            <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-black leading-[1.05] tracking-tight text-white drop-shadow-lg bengali">
+              {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
             </h1>
 
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-10 text-emerald-200 dark:text-emerald-400 font-black text-xs sm:text-lg md:text-3xl bengali tracking-tight uppercase">
+            {/* Slogan Pill Highlights */}
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-6 pt-2">
               {features.map((f, i) => (
-                <span key={i} className="flex items-center gap-3 group/feat">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-amber-400 shadow-amber-400/50 shadow-md group-hover/feat:scale-150 transition-transform"></div>
+                <span key={i} className="inline-flex items-center gap-2 text-xs sm:text-base font-black text-slate-200 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-slate-700/80">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400"></span>
                   {f}
                 </span>
               ))}
             </div>
 
-            <p className="max-w-4xl mx-auto text-emerald-50/90 dark:text-slate-300 text-sm sm:text-xl md:text-3xl font-medium leading-relaxed bengali opacity-90 drop-shadow-sm">
-              {lang === 'bn' 
-                ? "১৯৮৮ সাল থেকে সমাজের সর্বস্তরে শিক্ষা, ঐক্য এবং সেবা নিশ্চিত করতে আমরা নিবেদিতভাবে কাজ করে যাচ্ছি।"
-                : "Since 1988, we have been dedicatedly working to ensure education, unity, and service across all segments of society."}
+            <p className="text-slate-300 text-sm sm:text-lg md:text-xl font-medium leading-relaxed max-w-3xl mx-auto pt-3 text-balance bengali">
+              {lang === 'bn'
+                ? '১৯৮৮ সাল থেকে সিলেটে শিক্ষা বিস্তার, তরুণ উন্নয়ন, ক্রীড়া চর্চা ও সুবিধাবঞ্চিত মানুষের সেবায় নিবেদিত অরাজনৈতিক ও অলাভজনক সামাজিক প্রতিষ্ঠান।'
+                : 'Since 1988, dedicated to education, youth development, sports, and humanitarian social welfare in Sylhet, Bangladesh.'
+              }
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full max-w-sm mx-auto sm:max-w-none justify-center relative z-10 pt-6 sm:pt-10">
-            <Link to="/leadership" className="bg-white dark:bg-slate-800 text-emerald-950 dark:text-emerald-400 px-8 sm:px-14 py-4 sm:py-6 rounded-3xl font-black text-sm sm:text-xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-all shadow-heavy hover:-translate-y-2 active:scale-95 flex items-center justify-center bengali group overflow-hidden relative">
-               <span className="relative z-10">{t.leadership}</span>
-               <div className="absolute inset-0 bg-emerald-100/50 dark:bg-emerald-900/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-5 w-full max-w-md sm:max-w-none pt-2">
+            <Link 
+              to="/donation" 
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 px-8 py-4 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              <Heart size={20} fill="currentColor" className="animate-pulse" />
+              <span>{t.donate as string}</span>
             </Link>
-            <Link to="/donation" className="bg-emerald-600 dark:bg-emerald-500 text-white px-8 sm:px-14 py-4 sm:py-6 rounded-3xl font-black text-sm sm:text-xl border border-emerald-400/30 hover:bg-emerald-500 transition-all shadow-heavy hover:-translate-y-2 active:scale-95 flex items-center justify-center gap-4 bengali group">
-              <Heart size={24} className="group-hover:scale-125 transition-transform duration-300" fill="currentColor" />
-              {t.donate}
+
+            <Link 
+              to="/events" 
+              className="w-full sm:w-auto bg-blue-700 hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider flex items-center justify-center gap-2.5 border border-blue-500/50 shadow-lg shadow-blue-700/20 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              <Sparkles size={18} className="text-amber-300" />
+              <span>{lang === 'bn' ? 'কার্যক্রম দেখুন' : 'Explore Activities'}</span>
             </Link>
+
+            <Link 
+              to="/about" 
+              className="w-full sm:w-auto bg-slate-900/90 hover:bg-slate-800 text-slate-200 px-7 py-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition-all"
+            >
+              <span>{lang === 'bn' ? 'আমাদের ইতিহাস' : 'Our History'}</span>
+              <ArrowRight size={16} className="text-amber-400" />
+            </Link>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 2. TRUST / CREDIBILITY STRIP */}
+      <section className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800/80 p-4 sm:p-6 shadow-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center divide-x-0 md:divide-x divide-slate-100 dark:divide-slate-800">
+          <div className="flex items-center gap-3 p-2 justify-center sm:justify-start md:justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/50">
+              <Award size={20} />
+            </div>
+            <div className="text-left">
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">৩৮ বছরের ইতিহাস</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">প্রতিষ্ঠিত ১০ জুন ১৯৮৮</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-2 justify-center sm:justify-start md:justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/50">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="text-left">
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">স্বচ্ছতা ও সততা</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">১০০% ভেরিফাইড ফান্ডিং</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-2 justify-center sm:justify-start md:justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/50">
+              <Trophy size={20} />
+            </div>
+            <div className="text-left">
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">যুব ও ক্রীড়া কল্যাণ</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">বার্ষিক ক্রীড়া টুর্নামেন্ট</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-2 justify-center sm:justify-start md:justify-center">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/50">
+              <MapPin size={20} />
+            </div>
+            <div className="text-left">
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">সিলেট সদর কেন্দ্র</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">মিরবক্সটুলা, সিলেট</div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Modern Professional Notice Board Section */}
-      <section className="container mx-auto px-4">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl sm:rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 shadow-soft overflow-hidden flex flex-col sm:flex-row items-stretch group transition-all duration-500">
-          <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-6 py-3 sm:px-8 sm:py-6 flex items-center justify-center gap-3 shrink-0 relative overflow-hidden group-hover:bg-emerald-700 transition-colors">
-            <div className="absolute inset-0 bg-white/10 translate-x-full group-hover:translate-x-0 transition-transform duration-700 skew-x-12"></div>
-            <BellRing size={18} className="animate-pulse relative z-10" />
-            <span className="font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] bengali whitespace-nowrap relative z-10">{t.notices}</span>
-          </div>
+      {/* 3. ABOUT AZADI PREVIEW SECTION */}
+      <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-10 md:p-12 shadow-sm relative overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
-          <div className="flex-1 min-w-0 bg-emerald-50/10 dark:bg-slate-950/20 flex items-center py-2 sm:py-0">
-            <NoticeMarquee notices={allNotices} lang={lang} />
+          {/* Visual Column */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-slate-950 group">
+              <img 
+                src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=800" 
+                alt="Azadi Social Welfare Activities" 
+                className="w-full h-64 sm:h-80 object-cover group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent"></div>
+              <div className="absolute bottom-4 left-4 right-4 p-4 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-800 text-white">
+                <div className="flex items-center gap-3">
+                  <img src={LOGO_URL} alt="Seal" className="w-10 h-10 object-contain rounded-full bg-white p-0.5" />
+                  <div>
+                    <div className="font-black text-xs text-amber-400 uppercase">আজাদী সমাজ কল্যাণ সংঘ</div>
+                    <div className="text-[11px] text-slate-300 font-medium">প্রতিষ্ঠা: ১০ জুন ১৯৮৮ | মিরবক্সটুলা, সিলেট</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Text & History Column */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+                <Compass size={14} />
+                <span>{lang === 'bn' ? 'সংগঠনের পরিচয়' : 'Organization Overview'}</span>
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white leading-tight bengali">
+                {lang === 'bn' ? '১৯৮৮ সাল থেকে সিলেটের সমাজসেবা ও যুব উন্নয়নে নিবেদিত' : 'Dedicated to Social Welfare & Youth Development Since 1988'}
+              </h2>
+            </div>
+
+            <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-medium bengali">
+              {lang === 'bn'
+                ? 'আজাদী সমাজ কল্যাণ সংঘ সিলেটের মিরবক্সটুলায় প্রতিষ্ঠিত একটি ঐতিহ্যবাহী অলাভজনক সংস্থা। দীর্ঘ ৩৮ বছর ধরে শিক্ষা, ক্রীড়া, দারিদ্র্য বিমোচন ও সামাজিক সেবায় আমাদের তরুণ সমাজ নিবেদিতভাবে কাজ করে যাচ্ছে।'
+                : 'Azadi Social Welfare Organization is a rooted non-profit organization located in Mirbox Tula, Sylhet. For 38 years, our youth have been actively serving education, sports, and social welfare.'
+              }
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">শিক্ষা বৃত্তি ও বিনামূল্যে পাঠ্যপুস্তক বিতরণ</span>
+              </div>
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">বার্ষিক ক্রীড়া টুর্নামেন্ট ও যুব সংবর্ধনা</span>
+              </div>
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">বন্যা ও প্রাকৃতিক দুর্যোগে জরুরি ত্রাণ সহায়তা</span>
+              </div>
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">বিনামূল্যে চিকিৎসা ক্যাম্প ও রক্তদান কর্মসূচি</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Link 
+                to="/about"
+                className="inline-flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md transition-all active:scale-95"
+              >
+                <span>{lang === 'bn' ? 'আমাদের বিস্তারিত ইতিহাস জানুন' : 'Read Full History'}</span>
+                <ChevronRight size={16} />
+              </Link>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 4. MISSION / VISION / CORE VALUES */}
+      <section className="space-y-8">
+        <div className="text-center space-y-2 max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+            <Target size={14} />
+            <span>{lang === 'bn' ? 'লক্ষ্য ও উদ্দেশ্য' : 'Mission & Vision'}</span>
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white bengali">
+            {lang === 'bn' ? 'আমাদের মূলনীতি ও আদর্শ' : 'Our Principles & Pillars'}
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: Mission */}
+          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:border-blue-500 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+              <Target size={24} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের লক্ষ্য (Mission)' : 'Our Mission'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed bengali">
+              {lang === 'bn'
+                ? 'শিক্ষা, খেলাধুলা ও সামাজিক কল্যাণের মাধ্যমে সমাজ থেকে দারিদ্র্য ও অজ্ঞতা দূর করে এক সুসংগঠিত, আলোকিত ও স্বাবলম্বী যুবসমাজ গড়ে তোলা।'
+                : 'Empower underprivileged communities through education, sports, and humanitarian social welfare.'
+              }
+            </p>
+          </div>
+
+          {/* Card 2: Vision */}
+          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:border-amber-500 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900/50">
+              <Eye size={24} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের উদ্দেশ্য (Vision)' : 'Our Vision'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed bengali">
+              {lang === 'bn'
+                ? 'একটি বৈষম্যহীন, শান্তিময়, মাদকমুক্ত ও ভ্রাতৃত্বপূর্ণ সমাজ বিনির্মাণ করা যেখানে প্রতিটি নাগরিক মর্যাদা ও শিক্ষার সুযোগ পাবে।'
+                : 'A progressive, educated, peaceful, and self-reliant society built on brotherhood and social justice.'
+              }
+            </p>
+          </div>
+
+          {/* Card 3: Core Values */}
+          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:border-emerald-500 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
+              <Layers size={24} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের ৫ মূল স্তম্ভ' : 'Our 5 Core Pillars'}
+            </h3>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {features.map((f, i) => (
+                <span key={i} className="px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs font-black border border-emerald-200 dark:border-emerald-800">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. IMPACT STATISTICS SECTION */}
+      <section className="bg-gradient-to-br from-blue-950 via-slate-900 to-slate-950 text-white rounded-3xl p-8 sm:p-12 border border-slate-800 shadow-xl relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none"></div>
+
+        <div className="relative z-10 space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-[11px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
+              {lang === 'bn' ? 'আমাদের প্রভাব ও অর্জন' : 'Our Verified Impact'}
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black bengali text-white">
+              {lang === 'bn' ? 'সংখ্যার আলোয় আজাদী সংঘ' : 'Azadi Social Welfare in Numbers'}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
+              <div className="text-3xl sm:text-5xl font-black text-amber-400 font-mono">১৯৮৮</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">প্রতিষ্ঠার বছর</div>
+            </div>
+
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
+              <div className="text-3xl sm:text-5xl font-black text-blue-400 font-mono">৩৮+</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">বছরের জনসেবা</div>
+            </div>
+
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
+              <div className="text-3xl sm:text-5xl font-black text-emerald-400 font-mono">৪১+</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">কমিটি সদস্য ও সেবক</div>
+            </div>
+
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
+              <div className="text-3xl sm:text-5xl font-black text-purple-400 font-mono">১০০%</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">অলাভজনক ও স্বেচ্ছাসেবামূলক</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. PROGRAMS / AREAS OF WORK */}
+      <section className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+              <Activity size={14} />
+              <span>{lang === 'bn' ? 'কর্মক্ষেত্র' : 'Areas of Work'}</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের প্রধান সেবামূলক কার্যক্রম' : 'Our Core Social Programs'}
+            </h2>
           </div>
 
           <Link 
-            to="/notices" 
-            className="px-6 py-3 sm:px-8 sm:py-6 bg-slate-900 dark:bg-slate-800 text-white font-black text-[10px] sm:text-[11px] uppercase tracking-[0.1em] hover:bg-black dark:hover:bg-slate-700 transition-all bengali shrink-0 flex items-center justify-center gap-2"
+            to="/events" 
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:underline bengali"
           >
-            {lang === 'bn' ? 'সব নোটিশ' : 'All Notices'}
+            <span>{lang === 'bn' ? 'সব ইভেন্ট ও প্রোগ্রাম দেখুন' : 'View All Events'}</span>
             <ArrowRight size={14} />
           </Link>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Program 1 */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+              <HandHelping size={24} />
+            </div>
+            <h3 className="font-black text-lg text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'সমাজ কল্যাণ ও জরুরি ত্রাণ' : 'Social Welfare & Relief'}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
+              বন্যা ও প্রাকৃতিক দুর্যোগে অসহায় পরিবারের মাঝে শুকনো খাবার, শীতবস্ত্র ও জরুরি নগদ সহায়তা বিতরণ।
+            </p>
+          </div>
+
+          {/* Program 2 */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900/50">
+              <GraduationCap size={24} />
+            </div>
+            <h3 className="font-black text-lg text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'শিক্ষা সহায়তা ও মেধাবৃত্তি' : 'Education & Scholarships'}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
+              দরিদ্র ও মেধাবী শিক্ষার্থীদের মাঝে বিনামূল্যে পাঠ্যপুস্তক, শিক্ষা সামগ্রী ও নগদ শিক্ষা বৃত্তি প্রদান।
+            </p>
+          </div>
+
+          {/* Program 3 */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
+              <Trophy size={24} />
+            </div>
+            <h3 className="font-black text-lg text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'ক্রীড়া ও যুব উন্নয়ন' : 'Sports & Youth Empowerment'}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
+              যুবসমাজকে মাদকমুক্ত রাখতে স্থানীয় ফুটবল, ক্রিকেট টুর্নামেন্ট ও ক্রীড়া সামগ্রী বিতরণ।
+            </p>
+          </div>
+
+          {/* Program 4 */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-100 dark:border-red-900/50">
+              <HeartHandshake size={24} />
+            </div>
+            <h3 className="font-black text-lg text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'বিনামূল্যে চিকিৎসা ও রক্তদান' : 'Healthcare & Blood Donation'}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
+              বিনামূল্যে মেডিকেল ক্যাম্প আয়োজন, সাধারণ মানুষদের চিকিৎসা সেবা প্রদান ও জরুরি রক্তদান কর্মসূচি।
+            </p>
+          </div>
+
+          {/* Program 5 */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:shadow-md transition-all sm:col-span-2 lg:col-span-2">
+            <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100 dark:border-purple-900/50">
+              <Users size={24} />
+            </div>
+            <h3 className="font-black text-lg text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'সামাজিক ঐক্য ও সংস্কার' : 'Community Cohesion & Peace'}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
+              সামাজিক সৌহার্দ্য রক্ষা, ধর্মীয় উদযাপন ও এলাকার সার্বিক শান্তি বজায় রাখতে যৌথ নাগরিক উদ্যোগ।
+            </p>
+          </div>
+        </div>
       </section>
 
-
-      {/* Feature Grid */}
-      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8">
-        {features.map((f, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-4xl border border-emerald-50 dark:border-slate-800 flex flex-col items-center text-center gap-6 hover:shadow-heavy transition-all hover:-translate-y-3 group cursor-default shadow-soft">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 ring-4 ring-emerald-500/5">
-              {FEATURE_ICONS[i] ? React.cloneElement(FEATURE_ICONS[i] as React.ReactElement<any>, { size: 32, className: "sm:size-[36px] md:size-[40px]" }) : <Sparkles size={32} />}
-            </div>
-            <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-lg md:text-2xl leading-tight bengali tracking-tight group-hover:text-emerald-600 transition-colors uppercase">{f}</h3>
+      {/* 7. FEATURED & UPCOMING EVENTS */}
+      <section className="space-y-8">
+        {/* Notice Board Marquee Strip */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col sm:flex-row items-stretch">
+          <div className="bg-blue-700 text-white px-5 py-3 flex items-center justify-center gap-2 shrink-0">
+            <BellRing size={16} className="animate-pulse text-amber-300" />
+            <span className="font-black text-xs uppercase tracking-wider bengali">{t.notices as string}</span>
           </div>
-        ))}
-      </section>
-
-      {/* News & Updates Section */}
-      <section className="space-y-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between px-4 gap-4">
-          <div className="space-y-4">
-            <div className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-2 tracking-[0.2em]">
-              <Newspaper size={16} /> {lang === 'bn' ? 'সর্বশেষ সংবাদ' : 'Latest Updates'}
-            </div>
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 dark:text-white bengali leading-tight tracking-tighter">{t.news}</h2>
+          <div className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-950/40 flex items-center">
+            <NoticeMarquee notices={allNotices} lang={lang} />
           </div>
-          <Link to="/news" className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase hover:gap-6 transition-all bengali bg-emerald-50 dark:bg-emerald-900/30 px-6 py-3 rounded-2xl border border-emerald-100 dark:border-emerald-800">
-            {lang === 'bn' ? 'সব সংবাদ' : 'View All'} <ArrowRight size={20} />
+          <Link 
+            to="/notices" 
+            className="px-5 py-3 bg-slate-900 dark:bg-slate-800 text-slate-200 font-bold text-xs uppercase hover:bg-black transition-colors shrink-0 flex items-center justify-center gap-1.5 bengali"
+          >
+            <span>{lang === 'bn' ? 'সব নোটিশ' : 'All Notices'}</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {recentNews.length > 0 ? (
-            recentNews.map((n) => {
-              const title = lang === 'bn' ? (n.titleBn || n.title || n.titleEn) : (n.titleEn || n.title || n.titleBn);
-              const image = n.image || n.imageUrl || '';
-              const dateVal = n.date || n.createdAt || '';
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+              <Calendar size={14} />
+              <span>{lang === 'bn' ? 'ইভেন্টসমূহ' : 'Events Calendar'}</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'সাম্প্রতিক ও আসন্ন ইভেন্ট' : 'Upcoming & Recent Events'}
+            </h2>
+          </div>
+
+          <Link 
+            to="/events" 
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:underline bengali"
+          >
+            <span>{lang === 'bn' ? 'সব ইভেন্ট দেখুন' : 'View All Events'}</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {/* Events Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {recentEvents.length > 0 ? (
+            recentEvents.map((evt) => {
+              const title = lang === 'bn' ? evt.titleBn : evt.titleEn;
+              const desc = lang === 'bn' ? evt.descriptionBn : evt.descriptionEn;
+              const locationText = lang === 'bn' ? evt.locationBn : evt.locationEn;
+
               return (
-                <div key={n.id} className="bg-white dark:bg-slate-900 rounded-4xl border border-emerald-50 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy hover:-translate-y-2 transition-all group flex flex-col">
-                  <div className="relative h-64 overflow-hidden bg-slate-100">
-                     {image ? (
-                       <img
-                         src={getOptimizedImageUrl(image, 300)}
-                         referrerPolicy="no-referrer"
-                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
-                         alt="News"
-                         onError={() => {
-                           logImageLoadFailure(getOptimizedImageUrl(image, 300), `Home News Image (${title})`);
-                         }}
-                       />
-                     ) : (
-                       <div className="w-full h-full flex items-center justify-center text-emerald-100 bg-emerald-50/50">
-                         <Newspaper size={48} />
-                       </div>
-                     )}
-                     <div className="absolute top-6 left-6 bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">{lang === 'bn' ? 'আপডেট' : 'Update'}</div>
-                  </div>
-                  <div className="p-10 flex-1 flex flex-col justify-between space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                        <Calendar size={14} className="text-emerald-500" /> {dateVal ? parseLocalDate(dateVal).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                <div key={evt.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
+                  <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    {evt.image ? (
+                      <img 
+                        src={getOptimizedImageUrl(evt.image, 400)} 
+                        alt={title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={() => logImageLoadFailure(evt.image, `Event Image (${title})`)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <Calendar size={48} />
                       </div>
-                      <Link to={`/news?id=${n.id}`}>
-                        <h3 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl leading-[1.3] line-clamp-2 bengali group-hover:text-emerald-600 transition-colors">{title}</h3>
-                      </Link>
+                    )}
+                    <div className="absolute top-3 left-3 bg-blue-700 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                      {lang === 'bn' ? 'ইভেন্ট' : 'Event'}
                     </div>
-                    <Link to={`/news?id=${n.id}`} className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase tracking-widest hover:gap-5 transition-all w-fit">
-                      {lang === 'bn' ? 'আরও পড়ুন' : 'Read More'} <ArrowRight size={18} />
+                  </div>
+
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <Calendar size={13} className="text-amber-500 shrink-0" />
+                        <span>{evt.date ? parseLocalDate(evt.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}</span>
+                      </div>
+                      <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg leading-snug line-clamp-2 bengali group-hover:text-blue-600 transition-colors">
+                        {title}
+                      </h3>
+                      {locationText && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                          <MapPin size={12} className="text-blue-500 shrink-0" />
+                          <span className="truncate">{locationText}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Link 
+                      to="/events" 
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:gap-2 transition-all pt-2"
+                    >
+                      <span>{lang === 'bn' ? 'বিস্তারিত দেখুন' : 'View Details'}</span>
+                      <ArrowRight size={14} />
                     </Link>
                   </div>
                 </div>
               );
             })
           ) : (
-             <div className="col-span-full py-24 text-center bg-emerald-50/20 dark:bg-slate-950/50 rounded-[4rem] border border-dashed border-emerald-200 space-y-6 opacity-60">
-                <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto shadow-soft">
-                  <Megaphone size={40} className="text-emerald-200 dark:text-emerald-800" />
-                </div>
-                <p className="font-black text-slate-400 text-lg bengali">{lang === 'bn' ? 'বর্তমানে কোনো সংবাদ নেই।' : 'No news updates available.'}</p>
-             </div>
+            <div className="col-span-full py-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2 text-slate-500">
+              <Calendar size={36} className="mx-auto text-slate-400" />
+              <p className="font-bold text-sm bengali">বর্তমানে কোনো নির্ধারিত ইভেন্ট নেই।</p>
+            </div>
           )}
         </div>
       </section>
 
-      {/* Leadership Preview Section */}
-      <section className="space-y-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between px-4 gap-4">
-          <div className="space-y-4">
-            <div className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-2 tracking-[0.2em]">
-              <Users size={16} /> {lang === 'bn' ? 'আমাদের টিম' : 'Our Team'}
+      {/* 8. LATEST NEWS & ACTIVITIES */}
+      <section className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+              <Newspaper size={14} />
+              <span>{lang === 'bn' ? 'খবর ও আপডেট' : 'News & Media'}</span>
             </div>
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 dark:text-white bengali leading-tight tracking-tighter">{lang === 'bn' ? 'কার্যকরী কমিটি' : 'Executive Committee'}</h2>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'সর্বশেষ সংবাদ ও কার্যক্রম' : 'Latest News & Activities'}
+            </h2>
           </div>
-          <Link to="/leadership" className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-[12px] uppercase hover:gap-6 transition-all bengali bg-emerald-50 dark:bg-emerald-900/30 px-6 py-3 rounded-2xl border border-emerald-100 dark:border-emerald-800">
-            {lang === 'bn' ? 'সব দেখুন' : 'View All'} <ArrowRight size={20} />
+
+          <Link 
+            to="/news" 
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:underline bengali"
+          >
+            <span>{lang === 'bn' ? 'সব সংবাদ দেখুন' : 'View All News'}</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8">
-          {topLeaders.map((leader) => (
-            <div key={leader.id} className="bg-white dark:bg-slate-900 p-8 rounded-4xl border border-emerald-50 dark:border-slate-800 flex flex-col items-center text-center group hover:-translate-y-3 transition-all shadow-soft hover:shadow-heavy relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-600/10 group-hover:bg-emerald-600 transition-colors"></div>
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-emerald-500/10 mb-6 bg-white dark:bg-slate-950 p-1.5 relative group-hover:border-emerald-500 transition-all shadow-inner scale-100 group-hover:scale-105 duration-500">
-                <MemberImage src={leader.image} alt={lang === 'bn' ? leader.nameBn : leader.nameEn} fallbackSrc={settings.logo} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {recentNews.length > 0 ? (
+            recentNews.map((n) => {
+              const title = lang === 'bn' ? (n.titleBn || n.title) : (n.titleEn || n.title);
+              const content = lang === 'bn' ? (n.contentBn || n.content) : (n.contentEn || n.content);
+
+              return (
+                <div key={n.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
+                  <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    {n.image ? (
+                      <img 
+                        src={getOptimizedImageUrl(n.image, 400)} 
+                        alt={title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={() => logImageLoadFailure(n.image, `News Image (${title})`)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <Newspaper size={48} />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3 bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                      {lang === 'bn' ? 'সংবাদ' : 'Update'}
+                    </div>
+                  </div>
+
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <Calendar size={13} className="text-blue-500 shrink-0" />
+                        <span>{n.date ? parseLocalDate(n.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}</span>
+                      </div>
+                      <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg leading-snug line-clamp-2 bengali group-hover:text-blue-600 transition-colors">
+                        {title}
+                      </h3>
+                      {content && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 font-medium leading-relaxed bengali">
+                          {content}
+                        </p>
+                      )}
+                    </div>
+
+                    <Link 
+                      to={`/news?id=${n.id}`} 
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:gap-2 transition-all pt-2"
+                    >
+                      <span>{lang === 'bn' ? 'সম্পূর্ণ পড়ুন' : 'Read More'}</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-full py-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2 text-slate-500">
+              <Megaphone size={36} className="mx-auto text-slate-400" />
+              <p className="font-bold text-sm bengali">বর্তমানে কোনো সংবাদ নেই।</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 9. DONATION / SUPPORT CTA SECTION */}
+      <section className="bg-gradient-to-br from-blue-950 via-slate-950 to-blue-900 text-white rounded-3xl p-8 sm:p-12 md:p-16 border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
+
+        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+            <Heart size={32} fill="currentColor" className="animate-pulse" />
+          </div>
+
+          <div className="space-y-3">
+            <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+              {lang === 'bn' ? 'মানবতার সেবায় অংশ নিন' : 'Support Our Cause'}
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-black leading-tight bengali text-white">
+              {lang === 'bn' ? 'আপনার অনুদান সমাজ পরিবর্তনের বড় শক্তি' : 'Your Support Transforms Lives in Sylhet'}
+            </h2>
+            <p className="text-slate-300 text-sm sm:text-base font-medium max-w-2xl mx-auto leading-relaxed bengali">
+              শিক্ষা কল্যাণ, ফ্রি মেডিকেল ক্যাম্প, ক্রীড়া সামগ্রী ও দুর্যোগে সাধারণ মানুষের সহায়তায় আপনার যে কোনো পরিমাণের সাহায্য অমূল্য ভূমিকা পালন করে।
+            </p>
+          </div>
+
+          {/* Payment options display */}
+          <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 max-w-lg mx-auto space-y-3">
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider bengali">সরাসরি অনুদান পাঠানোর নম্বরসমূহ</div>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold font-mono">
+              <span className="px-3 py-1.5 rounded-xl bg-pink-950/80 text-pink-300 border border-pink-800">
+                bKash: {settings?.bkash || '01711975488'}
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-orange-950/80 text-orange-300 border border-orange-800">
+                Nagad: {settings?.nagad || '01711975488'}
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-purple-950/80 text-purple-300 border border-purple-800">
+                Rocket: {settings?.roket || '01711975488'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <Link 
+              to="/donation" 
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 px-8 py-4 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 active:scale-95 transition-all"
+            >
+              <Heart size={20} fill="currentColor" />
+              <span>{t.donate as string}</span>
+            </Link>
+
+            <Link 
+              to="/impact" 
+              className="w-full sm:w-auto bg-slate-900/90 hover:bg-slate-800 text-slate-200 px-8 py-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition-all"
+            >
+              <span>{lang === 'bn' ? 'অনুদান ব্যবহারের হিসাব দেখুন' : 'Transparency & Impact'}</span>
+              <ArrowRight size={16} className="text-amber-400" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 10. TRANSPARENCY & ACCOUNTABILITY */}
+      <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+              <ShieldCheck size={16} />
+              <span>{lang === 'bn' ? 'স্বচ্ছতা ও জবাবদিহিতা' : 'Transparency & Governance'}</span>
+            </div>
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের প্রতিটি টাকার স্বচ্ছ হিসাব ও রেকর্ড' : 'Audited & Verified Financial Governance'}
+            </h2>
+          </div>
+
+          <Link 
+            to="/impact"
+            className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 transition-colors bengali"
+          >
+            {lang === 'bn' ? 'আর্থিক বিবরণী দেখুন' : 'View Financial Reports'}
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
+            <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+              <span>ভেরিফাইড অনুদান রশিদ</span>
+            </div>
+            <p className="bengali">প্রতিটি অনুমোদিত অনুদানের ক্ষেত্রে ডিজিটাল ট্রানজেকশন আইডি সহ সিস্টেম জেনারেটেড রশিদ প্রদান করা হয়।</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
+            <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+              <span>কার্যনির্বাহী কমিটি নিরীক্ষা</span>
+            </div>
+            <p className="bengali">সংঘের সভাপতি ও অর্থ সম্পাদকের যৌথ অনুমোদনে সকল ধরণের সামাজিক ও প্রাতিষ্ঠানিক ব্যয় সম্পন্ন করা হয়।</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
+            <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+              <span>প্রকাশ্য বার্ষিক অডিট</span>
+            </div>
+            <p className="bengali">বার্ষিক সাধারণ সভায় সকল আয়-ব্যয়ের হিসাব ও ভবিষ্যৎ পরিকল্পনা সাধারণ সদস্যদের সামনে পেশ করা হয়।</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 11. LEADERSHIP PREVIEW SECTION */}
+      <section className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+              <Users size={14} />
+              <span>{lang === 'bn' ? 'কার্যনির্বাহী পরিষদ' : 'Executive Leadership'}</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের পরিচালন পরিষদ' : 'Our Key Leadership'}
+            </h2>
+          </div>
+
+          <Link 
+            to="/leadership" 
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:underline bengali"
+          >
+            <span>{lang === 'bn' ? 'সম্পূর্ণ কমিটি দেখুন' : 'Full Committee'}</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+          {topLeaders.map((leader) => {
+            const name = lang === 'bn' ? leader.nameBn : leader.nameEn;
+            const designation = lang === 'bn' ? leader.designationBn : leader.designationEn;
+
+            return (
+              <div key={leader.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-3 shadow-sm hover:shadow-md transition-all group">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full overflow-hidden border-2 border-blue-600/20 group-hover:border-blue-600 transition-colors">
+                  <MemberImage src={leader.image} alt={name} fallbackSrc={LOGO_URL} />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-tight bengali group-hover:text-blue-600 transition-colors">
+                    {name}
+                  </h4>
+                  <p className="text-[11px] font-bold text-blue-700 dark:text-amber-400 uppercase tracking-wide bengali">
+                    {designation}
+                  </p>
+                </div>
               </div>
-              <h4 className="font-black text-slate-900 dark:text-white text-lg sm:text-xl leading-tight bengali group-hover:text-emerald-600 transition-colors">{lang === 'bn' ? leader.nameBn : leader.nameEn}</h4>
-              <p className="text-[11px] font-black text-emerald-600 uppercase mt-2 tracking-widest bengali opacity-80">{lang === 'bn' ? leader.designationBn : leader.designationEn}</p>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 12. TESTIMONIALS */}
+      {approvedTestimonials.length > 0 && (
+        <section className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 border border-slate-800 space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-xs font-black uppercase tracking-widest text-amber-400">শুভাকাঙ্ক্ষীদের অনুভূতি</span>
+            <h2 className="text-2xl sm:text-3xl font-black bengali text-white">আজাদী সংঘ সম্পর্কে বক্তব্য</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {approvedTestimonials.map((item) => (
+              <div key={item.id} className="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4 flex flex-col justify-between">
+                <p className="text-xs text-slate-300 italic leading-relaxed bengali">"{item.message}"</p>
+                <div>
+                  <div className="font-black text-xs text-amber-400">{item.nameEn}</div>
+                  <div className="text-[10px] text-slate-500">{item.designationEn || 'Community Member'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 13. GALLERY PREVIEW */}
+      <section className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+              <Sparkles size={14} />
+              <span>{lang === 'bn' ? 'গ্যালারি' : 'Photo Gallery'}</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'কার্যক্রমের স্থিরচিত্র' : 'Activity Snapshots'}
+            </h2>
+          </div>
+
+          <Link 
+            to="/events" 
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-amber-400 hover:underline bengali"
+          >
+            <span>{lang === 'bn' ? 'সব ছবি দেখুন' : 'View Gallery'}</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          {galleryImages.map((img, i) => (
+            <div key={i} className="relative aspect-square rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 group shadow-sm">
+              <img 
+                src={getOptimizedImageUrl(img.url, 300)} 
+                alt={img.title} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
+                <span className="text-[10px] font-black text-white leading-tight bengali line-clamp-2">{img.title}</span>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Islamic CTA Section */}
-      <section className="bg-emerald-900 dark:bg-slate-900 p-10 sm:p-20 md:p-32 rounded-4xl text-center space-y-10 relative overflow-hidden shadow-heavy border border-emerald-800 dark:border-slate-800 group">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/black-linen-2.png')] group-hover:scale-110 transition-transform duration-[10s]"></div>
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-emerald-400/10 to-transparent"></div>
-        
-        <div className="relative z-10 space-y-8 max-w-4xl mx-auto">
-           <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-emerald-500/20 shadow-xl border border-emerald-400/30">
-              <Shield size={48} className="text-emerald-400 animate-pulse" />
-           </div>
-           <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-black leading-[1.1] bengali tracking-tighter">
-              {lang === 'bn' ? 'মানবসেবায় আপনার ছোট পদক্ষেপ বড় পরিবর্তন আনতে পারে' : 'Small steps in human service can bring big changes'}
-           </h2>
-           <p className="text-emerald-100/70 font-medium max-w-2xl mx-auto text-base sm:text-xl leading-relaxed bengali opacity-80">
-              {lang === 'bn' ? 'সংস্থার সকল কার্যক্রমে অংশগ্রহণ করতে বা তথ্য জানতে আমাদের সাথে যোগাযোগ করুন।' : 'Contact us to participate in activities or to know more about our organization.'}
-           </p>
-           <div className="pt-8 sm:pt-10 flex flex-wrap justify-center gap-6">
-             <Link to="/donation" className="inline-flex items-center gap-4 bg-amber-500 text-emerald-950 px-10 py-6 rounded-3xl font-black text-lg hover:bg-amber-400 transition-all shadow-heavy shadow-amber-500/20 hover:-translate-y-2 active:scale-95 bengali group">
-                <Heart size={24} className="group-hover:scale-125 transition-transform" fill="currentColor" /> {t.donate}
-             </Link>
-             <Link to="/about" className="inline-flex items-center gap-4 bg-white/10 dark:bg-emerald-500/10 text-white border border-white/20 dark:border-emerald-500/20 backdrop-blur-md px-10 py-6 rounded-3xl font-black text-lg hover:bg-white/20 transition-all hover:-translate-y-2 active:scale-95 bengali">
-                {lang === 'bn' ? 'আরও জানুন' : 'Learn More'} <ArrowRight size={24} />
-             </Link>
-           </div>
+      {/* 14. CONTACT & LOCATION STRIP */}
+      <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/80 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50">
+              <Phone size={14} />
+              <span>{lang === 'bn' ? 'যোগাযোগ করুন' : 'Contact Us'}</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white bengali">
+              {lang === 'bn' ? 'আমাদের কার্যালয়ে আমন্ত্রণ' : 'Visit Our Headquarters'}
+            </h2>
+
+            <div className="space-y-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
+              <div className="flex items-start gap-3">
+                <MapPin size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                <span className="bengali">{settings?.addressBn || 'রোড নং ০১, মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ'}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Phone size={18} className="text-amber-500 shrink-0" />
+                <a href={`tel:${settings?.phone || '+8801712782564'}`} className="hover:text-blue-600 font-bold">
+                  {settings?.phone || '+880 1712-782564'}
+                </a>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Mail size={18} className="text-emerald-500 shrink-0" />
+                <a href={`mailto:${settings?.email || 'info@azadi.org'}`} className="hover:text-blue-600 font-bold">
+                  {settings?.email || 'info@azadi.org'}
+                </a>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-wrap gap-3">
+              <a 
+                href={`https://wa.me/${(settings?.adminWhatsApp || '8801712782564').replace(/\+/g, '')}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all"
+              >
+                <MessageCircle size={16} />
+                <span>WhatsApp এ মেসেজ পাঠান</span>
+              </a>
+
+              <a 
+                href="https://maps.google.com/?q=Mirboxtula,Sylhet,Bangladesh" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-black text-xs px-4 py-2.5 rounded-xl transition-all hover:bg-slate-200"
+              >
+                <MapPin size={16} className="text-blue-600" />
+                <span>ম্যাপে দিকনির্দেশনা দেখুন</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Quick Map / Address Visual Card */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-900 to-slate-950 text-white border border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <img src={LOGO_URL} className="w-12 h-12 object-contain bg-white rounded-full p-1" alt="Seal" />
+              <div>
+                <h4 className="font-black text-sm text-white bengali">{settings?.nameBn}</h4>
+                <p className="text-[10px] text-amber-400 font-black uppercase">সিলেট সদর কেন্দ্র</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed font-medium bengali">
+              যে কোনো পরামর্শ, সদস্যপদ সংক্রান্ত তথ্য বা সামাজিক ইভেন্টে অংশগ্রহণের বিষয়ে আমাদের সঙ্গে যোগাযোগ করতে পারেন।
+            </p>
+
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-bold text-slate-400">
+              <span>সাপ্তাহিক দিনগুলো: খোলা</span>
+              <span className="text-emerald-400">সকাল ১০:০০ - রাত ৯:০০</span>
+            </div>
+          </div>
         </div>
       </section>
+
     </div>
   );
-};
+}

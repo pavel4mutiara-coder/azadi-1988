@@ -28,11 +28,9 @@ import { Link } from 'react-router-dom';
 import { MemberImage } from '../../components/MemberImage';
 
 export const TestimonialManager: React.FC = () => {
-  const { lang, isAdmin } = useApp();
+  const { lang, isAdmin, testimonials, saveTestimonial, deleteTestimonial, loadingTestimonials } = useApp();
   const t = TRANSLATIONS[lang];
 
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
@@ -72,7 +70,6 @@ export const TestimonialManager: React.FC = () => {
       if (!existing) {
         throw new Error("Testimonial not found in local list.");
       }
-      const docRef = doc(db, 'testimonials', editingTestimonialId);
       const fullUpdate: Testimonial = {
         ...existing,
         nameEn: testimonialForm.nameEn,
@@ -85,12 +82,7 @@ export const TestimonialManager: React.FC = () => {
         quoteBn: testimonialForm.quoteBn,
         status: testimonialForm.status as 'PENDING' | 'APPROVED'
       };
-      await setDoc(docRef, fullUpdate);
-      
-      // Update local state
-      setTestimonials(prev => 
-        prev.map(item => item.id === editingTestimonialId ? fullUpdate : item)
-      );
+      await saveTestimonial(fullUpdate);
 
       alert(lang === 'bn' ? 'টেস্টিমোনিয়াল সফলভাবে আপডেট করা হয়েছে!' : 'Testimonial successfully updated!');
       setEditingTestimonialId(null);
@@ -102,31 +94,6 @@ export const TestimonialManager: React.FC = () => {
     }
   };
 
-  const fetchAllTestimonials = async () => {
-    setLoading(true);
-    try {
-      const q = collection(db, 'testimonials');
-      const snapshot = await getDocs(q);
-      const list: Testimonial[] = [];
-      snapshot.forEach(docSnap => {
-        list.push(docSnap.data() as Testimonial);
-      });
-      // Sort by newest first
-      list.sort((a, b) => parseLocalDate(b.createdAt).getTime() - parseLocalDate(a.createdAt).getTime());
-      setTestimonials(list);
-    } catch (err) {
-      console.error("Error retrieving testimonials:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchAllTestimonials();
-    }
-  }, [isAdmin]);
-
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);
     try {
@@ -134,14 +101,8 @@ export const TestimonialManager: React.FC = () => {
       if (!existing) {
         throw new Error("Testimonial not found in local list.");
       }
-      const docRef = doc(db, 'testimonials', id);
       const fullUpdate: Testimonial = { ...existing, status: 'APPROVED' };
-      await setDoc(docRef, fullUpdate);
-      
-      // Update local state
-      setTestimonials(prev => 
-        prev.map(item => item.id === id ? fullUpdate : item)
-      );
+      await saveTestimonial(fullUpdate);
     } catch (err) {
       console.error("Error approving testimonial:", err);
       alert(lang === 'bn' ? 'অনুমোদন করতে ত্রুটি হয়েছে।' : 'Error approving testimonial.');
@@ -156,11 +117,7 @@ export const TestimonialManager: React.FC = () => {
     }
     setActionLoadingId(id);
     try {
-      const docRef = doc(db, 'testimonials', id);
-      await deleteDoc(docRef);
-      
-      // Update local state
-      setTestimonials(prev => prev.filter(item => item.id !== id));
+      await deleteTestimonial(id);
     } catch (err) {
       console.error("Error deleting testimonial:", err);
       alert(lang === 'bn' ? 'মুছে ফেলতে ত্রুটি হয়েছে।' : 'Error deleting testimonial.');
@@ -169,7 +126,7 @@ export const TestimonialManager: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loadingTestimonials) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <Loader2 className="animate-spin text-emerald-600" size={48} />

@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import QRCode from 'qrcode';
 import { Donation, OrganizationSettings, DonationStatus } from '../../types';
-import { Heart, Printer, ArrowLeft, Download, MessageCircle, Shield, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText } from 'lucide-react';
+import { Heart, Printer, ArrowLeft, Download, MessageCircle, Shield, Mail, Phone, MapPin, Loader2, Eye, CheckCircle2, Clock, Share2, FileText, QrCode as QrIcon } from 'lucide-react';
 import { ISLAMIC_QUOTES } from '../../utils/constants';
 import { useApp } from '../../context/AppContext';
 import { parseLocalDate } from '../../utils/parseLocalDate';
@@ -36,6 +37,14 @@ export const ReceiptView: React.FC<Props> = ({
   const base64Logo = settings.logo;
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    const verificationUrl = `${window.location.origin}/verify-donation/REC-${donation.id.slice(-8)}`;
+    QRCode.toDataURL(verificationUrl, { margin: 1, width: 120 })
+      .then(url => setQrCodeDataUrl(url))
+      .catch(err => console.error('Failed to generate QR code:', err));
+  }, [donation.id]);
 
   const handleDownload = async () => {
     try {
@@ -337,14 +346,24 @@ export const ReceiptView: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Signature Row */}
+              {/* Signature & QR Code Row */}
               <div className="flex justify-between items-end px-4">
-                <div className="relative">
-                  <div className="w-20 h-20 border border-emerald-900/10 rounded-full flex flex-col items-center justify-center text-[6px] font-black transform -rotate-12 opacity-30 bg-white shadow-inner">
-                     <Shield size={18} className="mb-0.5 text-emerald-950" />
-                     <span className="uppercase text-center leading-tight">Azadi Social Welfare<br/>Official Seal</span>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 border border-emerald-900/10 rounded-full flex flex-col items-center justify-center text-[6px] font-black transform -rotate-12 opacity-30 bg-white shadow-inner">
+                       <Shield size={18} className="mb-0.5 text-emerald-950" />
+                       <span className="uppercase text-center leading-tight">Azadi Social Welfare<br/>Official Seal</span>
+                    </div>
                   </div>
+
+                  {qrCodeDataUrl && (
+                    <div className="flex flex-col items-center p-1 bg-white border border-slate-200 rounded-lg shadow-sm">
+                      <img src={qrCodeDataUrl} alt="Verify QR Code" className="w-14 h-14 object-contain" />
+                      <span className="text-[6px] font-black uppercase text-slate-500 tracking-tight">Scan to Verify</span>
+                    </div>
+                  )}
                 </div>
+
                 <div className="text-center w-56 space-y-1.5 relative">
                   {signatoryConfig?.signature && (
                     <img 

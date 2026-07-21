@@ -87,6 +87,12 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
   }
 }
 
+export const MAX_ALLOWED_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15MB
+
+export function validateImageFileSize(fileOrBlob: Blob, maxSize = MAX_ALLOWED_FILE_SIZE_BYTES): boolean {
+  return fileOrBlob.size <= maxSize;
+}
+
 /**
  * Downsamples and compresses an uploaded image file client-side using Canvas rendering.
  * Excellent for preventing huge multi-megabyte smart-phone camera photos from overloading
@@ -98,7 +104,11 @@ export async function compressInputImage(
   maxHeight = 400,
   quality = 0.75
 ): Promise<Blob> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    if (fileOrBlob.size > MAX_ALLOWED_FILE_SIZE_BYTES) {
+      return reject(new Error(`File size (${(fileOrBlob.size / (1024 * 1024)).toFixed(1)}MB) exceeds maximum limit of 15MB.`));
+    }
+
     if (!fileOrBlob.type.startsWith('image/')) {
       return resolve(fileOrBlob);
     }

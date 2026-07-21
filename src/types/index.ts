@@ -7,18 +7,39 @@ export enum DonationStatus {
   REJECTED = 'REJECTED'
 }
 
+export interface PrivateDonorInfo {
+  donorName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  transactionId?: string;
+  paymentReference?: string;
+  privateNotes?: string;
+}
+
+export interface PublicDonationStats {
+  totalApprovedAmount: number;
+  totalApprovedDonations: number;
+  lastUpdated: string;
+}
+
 export interface Donation {
   id: string;
   donorName: string;
   isAnonymous: boolean;
   amount: number;
-  phone: string;
-  email?: string; // Optional email field
-  transactionId: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  transactionId?: string;
+  paymentReference?: string;
+  privateNotes?: string;
   purpose: string;
   status: DonationStatus;
   date: string;
   paymentMethod: string;
+  receiptId?: string;
+  isPublic?: boolean;
 }
 
 export interface Leadership {
@@ -160,6 +181,17 @@ export interface VersionConfig {
   apkDownloadUrl?: string;
   updateSize?: string;
   playStoreUrl?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  targetCollection: string;
+  targetDocId: string;
+  userId: string;
+  userEmail: string;
+  timestamp: string;
+  details?: string;
 }
 
 

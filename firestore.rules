@@ -99,29 +99,59 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidVersion(incoming());
     }
 
-    // Donations schema validation
-    function isValidDonation(data) {
-      return data.keys().hasAll(['id', 'donorName', 'isAnonymous', 'amount', 'phone', 'transactionId', 'purpose', 'status', 'date', 'paymentMethod'])
-        && (data.keys().size() == 10 || (data.keys().size() == 11 && data.keys().hasAny(['email'])))
-        && (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 200))
+    // Public safe donation document schema (strictly excludes sensitive phone, email, transactionId)
+    function isValidPublicDonation(data) {
+      return data.keys().hasAll(['id', 'donorName', 'isAnonymous', 'amount', 'purpose', 'status', 'date', 'paymentMethod'])
+        && (data.keys().size() >= 8 && data.keys().size() <= 12)
         && data.id is string && data.id.size() <= 128
         && data.donorName is string && data.donorName.size() <= 200
         && data.isAnonymous is bool
         && data.amount is number && data.amount > 0 && data.amount < 100000000
-        && data.phone is string && data.phone.size() <= 32
-        && data.transactionId is string && data.transactionId.size() <= 128
         && data.purpose is string && data.purpose.size() <= 200
         && data.status is string && (data.status == 'PENDING' || data.status == 'APPROVED' || data.status == 'REJECTED')
         && data.date is string && data.date.size() <= 50
-        && data.paymentMethod is string && data.paymentMethod.size() <= 100;
+        && data.paymentMethod is string && data.paymentMethod.size() <= 100
+        && (!data.keys().hasAny(['receiptId']) || (data.receiptId is string && data.receiptId.size() <= 128))
+        && (!data.keys().hasAny(['isPublic']) || data.isPublic is bool)
+        && (!data.keys().hasAny(['phone', 'email', 'transactionId', 'address', 'paymentReference', 'privateNotes']));
+    }
+
+    // Private donor information subcollection: donations/{donationId}/private_info/details
+    function isValidPrivateInfo(data) {
+      return (data.keys().size() >= 1 && data.keys().size() <= 10)
+        && (!data.keys().hasAny(['donorName']) || (data.donorName is string && data.donorName.size() <= 200))
+        && (!data.keys().hasAny(['phone']) || (data.phone is string && data.phone.size() <= 50))
+        && (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 200))
+        && (!data.keys().hasAny(['address']) || (data.address is string && data.address.size() <= 500))
+        && (!data.keys().hasAny(['transactionId']) || (data.transactionId is string && data.transactionId.size() <= 128))
+        && (!data.keys().hasAny(['paymentReference']) || (data.paymentReference is string && data.paymentReference.size() <= 200))
+        && (!data.keys().hasAny(['privateNotes']) || (data.privateNotes is string && data.privateNotes.size() <= 1000));
     }
 
     match /donations/{donationId} {
       allow get: if isValidId(donationId);
       allow list: if true;
-      allow create: if isValidId(donationId) && donationId == incoming().id && isValidDonation(incoming()) && (isAdmin() || incoming().status == 'PENDING');
-      allow update: if isValidId(donationId) && donationId == incoming().id && isAdmin() && isValidDonation(incoming());
+      allow create: if isValidId(donationId) && donationId == incoming().id && isValidPublicDonation(incoming()) && (isAdmin() || incoming().status == 'PENDING');
+      allow update: if isValidId(donationId) && donationId == incoming().id && isAdmin() && isValidPublicDonation(incoming());
       allow delete: if isValidId(donationId) && isAdmin();
+
+      // Private donor information subcollection
+      match /private_info/{docId} {
+        allow read: if isAdmin();
+        allow create: if isValidId(donationId) && docId == 'details' && isValidPrivateInfo(incoming());
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Collection group rule for admin to query all private_info subcollections securely
+    match /{path=**}/private_info/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Public Aggregate Statistics Collection
+    match /public_stats/{statId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Leadership validation

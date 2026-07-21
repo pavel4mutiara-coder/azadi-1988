@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Inter:wght@400;500;600;700;800;900&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap');
 @import "tailwindcss";
 
 @variant dark (.dark &);
 
 @theme {
-  --font-sans: "Inter", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", "Noto Sans Bengali", sans-serif;
-  --font-bengali: "Noto Sans Bengali", sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", "Noto Sans Bengali", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", "Noto Sans Bengali", "Hind Siliguri", sans-serif;
+  --font-bengali: "Noto Sans Bengali", "Hind Siliguri", sans-serif;
   --font-arabic-amiri: "Amiri", serif;
   --font-arabic-kufi: "Reem Kufi", sans-serif;
 
@@ -15,8 +15,9 @@
   --radius-3xl: 2rem;
   --radius-4xl: 3rem;
 
-  --shadow-soft: 0 4px 20px -2px rgb(0 0 0 / 0.05), 0 2px 10px -2px rgb(0 0 0 / 0.04);
-  --shadow-heavy: 0 20px 40px -10px rgb(0 0 0 / 0.15);
+  --shadow-soft: 0 4px 20px -2px rgb(15 23 42 / 0.05), 0 2px 10px -2px rgb(15 23 42 / 0.04);
+  --shadow-heavy: 0 20px 40px -10px rgb(15 23 42 / 0.15);
+  --shadow-royal: 0 10px 30px -5px rgba(30, 58, 138, 0.25);
   
   --color-app-bg: var(--app-bg);
   --color-app-text: var(--app-text);
@@ -26,8 +27,8 @@
 }
 
 :root {
-  --font-bengali: 'Noto Sans Bengali', sans-serif;
-  --font-english: 'Inter', sans-serif;
+  --font-bengali: 'Noto Sans Bengali', 'Hind Siliguri', sans-serif;
+  --font-english: 'Plus Jakarta Sans', 'Inter', sans-serif;
   --app-bg: #f8fafc;
   --app-text: #0f172a;
   --app-surface: #ffffff;
@@ -37,7 +38,7 @@
 }
 
 .dark {
-  --app-bg: #020617;
+  --app-bg: #0b1329;
   --app-text: #f1f5f9;
   --app-surface: #0f172a;
   --app-on-surface: #f1f5f9;
@@ -96,7 +97,7 @@ a {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(16, 185, 129, 0.5);
+  background-color: rgba(37, 99, 235, 0.5);
 }
 
 .dark ::-webkit-scrollbar-thumb {
@@ -118,8 +119,36 @@ input, select, textarea {
   @apply bg-surface text-on-surface shadow-soft dark:shadow-none border border-app-border;
 }
 
-/* Bengali Typography */
+/* Bengali Typography Optimization */
 .bengali, [lang="bn"], [lang="bn"] * {
+  font-family: var(--font-bengali);
+}
+
+.bengali, [lang="bn"] {
+  letter-spacing: 0.005em;
+}
+
+html[lang="bn"] body {
+  font-family: var(--font-bengali);
+  line-height: 1.6;
+}
+
+html[lang="en"] body {
+  font-family: var(--font-english);
+  line-height: 1.5;
+}
+
+/* Ensure Bengali headings render smoothly without clipping or overcrowding */
+.bengali h1, .bengali h2, .bengali h3, .bengali h4, .bengali h5, .bengali h6,
+[lang="bn"] h1, [lang="bn"] h2, [lang="bn"] h3, [lang="bn"] h4, [lang="bn"] h5, [lang="bn"] h6 {
+  font-family: var(--font-bengali);
+  line-height: 1.35;
+  letter-spacing: normal;
+}
+
+/* Ensure Bengali text wrapped inside buttons and chips remains properly aligned */
+.bengali button, .bengali input, .bengali select, .bengali textarea,
+[lang="bn"] button, [lang="bn"] input, [lang="bn"] select, [lang="bn"] textarea {
   font-family: var(--font-bengali);
 }
 

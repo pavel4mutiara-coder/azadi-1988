@@ -41,6 +41,10 @@ const DonationHistory = lazyWithRetry(() => import('./pages/DonationHistory').th
 const Impact = lazyWithRetry(() => import('./pages/Impact').then(m => ({ default: m.Impact })));
 const Notices = lazyWithRetry(() => import('./pages/Notices').then(m => ({ default: m.Notices })));
 const NewsPage = lazyWithRetry(() => import('./pages/News').then(m => ({ default: m.NewsPage })));
+const Gallery = lazyWithRetry(() => import('./pages/Gallery').then(m => ({ default: m.Gallery })));
+const Transparency = lazyWithRetry(() => import('./pages/Transparency').then(m => ({ default: m.Transparency })));
+const Contact = lazyWithRetry(() => import('./pages/Contact').then(m => ({ default: m.Contact })));
+const VerifyReceipt = lazyWithRetry(() => import('./pages/VerifyReceipt').then(m => ({ default: m.VerifyReceipt })));
 
 // Admin Pages
 const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -52,6 +56,7 @@ const NoticeManager = lazyWithRetry(() => import('./pages/admin/NoticeManager').
 const NewsManager = lazyWithRetry(() => import('./pages/admin/NewsManager').then(m => ({ default: m.NewsManager })));
 const TestimonialManager = lazyWithRetry(() => import('./pages/admin/TestimonialManager').then(m => ({ default: m.TestimonialManager })));
 const ReportsManager = lazyWithRetry(() => import('./pages/admin/ReportsManager').then(m => ({ default: m.ReportsManager })));
+const AuditLogViewer = lazyWithRetry(() => import('./pages/admin/AuditLogViewer').then(m => ({ default: m.AuditLogViewer })));
 const SystemAdmin = lazyWithRetry(() => import('./pages/admin/SystemAdmin').then(m => ({ default: m.SystemAdmin })));
 
 const LoadingSpinner = () => (
@@ -209,6 +214,11 @@ const AppRoutes: React.FC = () => {
         <Route path="/impact" element={<Impact />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/news" element={<NewsPage />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/transparency" element={<Transparency />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/verify-donation" element={<VerifyReceipt />} />
+        <Route path="/verify-donation/:receiptId" element={<VerifyReceipt />} />
         
         {/* Admin Panel */}
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
@@ -223,6 +233,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/admin/news" element={<ProtectedRoute><NewsManager /></ProtectedRoute>} />
         <Route path="/admin/testimonials" element={<ProtectedRoute><TestimonialManager /></ProtectedRoute>} />
         <Route path="/admin/reports" element={<ProtectedRoute><ReportsManager /></ProtectedRoute>} />
+        <Route path="/admin/audit" element={<ProtectedRoute><AuditLogViewer /></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

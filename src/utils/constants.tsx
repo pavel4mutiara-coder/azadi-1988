@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare, Shield, History, Image as ImageIcon } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
@@ -82,9 +82,14 @@ export const TRANSLATIONS = {
     whatsappNumber: "8801712782564",
     testimonials: "Testimonials",
     reports: "Reports & Audits",
+    auditLogs: "Audit Logs",
     themeLight: "Light Mode",
     themeDark: "Dark Mode",
-    toggleTheme: "Toggle Theme"
+    toggleTheme: "Toggle Theme",
+    gallery: "Gallery",
+    transparency: "Transparency",
+    contact: "Contact",
+    verifyDonation: "Verify Receipt"
   },
   bn: {
     home: "হোম",
@@ -142,19 +147,27 @@ export const TRANSLATIONS = {
     whatsappNumber: "8801712782564",
     testimonials: "টেস্টিমোনিয়াল",
     reports: "প্রতিবেদন",
+    auditLogs: "অডিট লগ",
     themeLight: "লাইট মোড",
     themeDark: "ডার্ক মোড",
-    toggleTheme: "থিম পরিবর্তন করুন"
+    toggleTheme: "থিম পরিবর্তন করুন",
+    gallery: "গ্যালারি",
+    transparency: "স্বচ্ছতা ও হিসাব",
+    contact: "যোগাযোগ",
+    verifyDonation: "রশিদ যাচাই"
   }
 };
 
 export const NAV_ITEMS = [
-  { label: 'home', path: '/', icon: <Home size={22} /> },
-  { label: 'impact', path: '/impact', icon: <PieChart size={22} /> },
-  { label: 'donation', path: '/donation', icon: <Heart size={30} /> },
-  { label: 'events', path: '/events', icon: <Sparkles size={24} /> },
-  { label: 'news', path: '/news', icon: <Newspaper size={22} /> },
-  { label: 'about', path: '/about', icon: <Info size={22} /> },
+  { label: 'home', path: '/', icon: <Home size={18} /> },
+  { label: 'about', path: '/about', icon: <Info size={18} /> },
+  { label: 'events', path: '/events', icon: <Sparkles size={18} /> },
+  { label: 'news', path: '/news', icon: <Newspaper size={18} /> },
+  { label: 'notices', path: '/notices', icon: <BellRing size={18} /> },
+  { label: 'gallery', path: '/gallery', icon: <ImageIcon size={18} /> },
+  { label: 'leadership', path: '/leadership', icon: <Users size={18} /> },
+  { label: 'transparency', path: '/transparency', icon: <PieChart size={18} /> },
+  { label: 'contact', path: '/contact', icon: <Contact size={18} /> },
 ];
 
 export const MOBILE_NAV_ITEMS = [
@@ -175,6 +188,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'letterhead', path: '/admin/letterhead', icon: <FileText size={20} /> },
   { label: 'testimonials', path: '/admin/testimonials', icon: <MessageSquare size={20} /> },
   { label: 'reports', path: '/admin/reports', icon: <PieChart size={20} /> },
+  { label: 'auditLogs', path: '/admin/audit', icon: <History size={20} /> },
   { label: 'settings', path: '/admin/settings', icon: <Settings size={20} /> },
   { label: 'system', path: '/admin/system', icon: <Shield size={20} /> },
 ];

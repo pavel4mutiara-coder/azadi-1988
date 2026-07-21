@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { 
   Language, 
   Donation, 
@@ -12,11 +12,16 @@ import {
   Expense,
   VersionConfig,
   CollectionSyncState,
+  Testimonial,
+  AuditLog,
+  PrivateDonorInfo,
+  PublicDonationStats
 } from '../types';
 import { CURRENT_VERSION } from '../utils/version';
 import { INITIAL_COMMITTEE } from '../utils/committee';
 import { 
   collection, 
+  collectionGroup,
   doc, 
   onSnapshot, 
   setDoc, 
@@ -53,11 +58,14 @@ interface AppState {
   user: FirebaseUser | null;
   authLoading: boolean;
   donations: Donation[];
+  publicStats: PublicDonationStats | null;
   leadership: Leadership[];
   events: Event[];
   notices: Notice[];
   news: News[];
   expenses: Expense[];
+  testimonials: Testimonial[];
+  auditLogs: AuditLog[];
   settings: OrganizationSettings;
   letterhead: LetterheadConfig;
   isLoaded: boolean;
@@ -71,6 +79,8 @@ interface AppState {
   loadingNotices: boolean;
   loadingNews: boolean;
   loadingExpenses: boolean;
+  loadingTestimonials: boolean;
+  loadingAuditLogs: boolean;
   loadingSettings: boolean;
   loadingLetterhead: boolean;
   setLang: (lang: Language) => void;
@@ -95,6 +105,9 @@ interface AppState {
   deleteNews: (id: string) => Promise<void>;
   addExpense: (expense: Expense) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+  saveTestimonial: (testimonial: Testimonial) => Promise<void>;
+  deleteTestimonial: (id: string) => Promise<void>;
+  logAuditTrail: (action: string, targetCollection: string, targetDocId: string, details?: any) => Promise<void>;
   updateNotices: (notices: Notice[]) => Promise<void>;
   updateNews: (news: News[]) => Promise<void>;
   updateEvents: (events: Event[]) => Promise<void>;
@@ -328,12 +341,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
 
   // Firestore states (fallback initialized to cached/mock content for instant page load)
-  const [donations, setDonations] = useState<Donation[]>(() => getCachedData('azadi_donations', STATIC_DONATIONS));
+  const [rawDonations, setRawDonations] = useState<Donation[]>(() => getCachedData('azadi_donations', STATIC_DONATIONS));
+  const [privateDonorMap, setPrivateDonorMap] = useState<Map<string, PrivateDonorInfo>>(new Map());
+  const [publicStats, setPublicStats] = useState<PublicDonationStats | null>(null);
+
+  // Hydrate donations array with private donor details when user is authenticated admin
+  const donations = useMemo(() => {
+    if (!isAdmin || privateDonorMap.size === 0) return rawDonations;
+    return rawDonations.map(d => {
+      const priv = privateDonorMap.get(d.id);
+      if (!priv) return d;
+      return {
+        ...d,
+        donorName: (priv.donorName && priv.donorName.trim() !== '') ? priv.donorName : d.donorName,
+        phone: priv.phone || d.phone,
+        email: priv.email || d.email,
+        address: priv.address || d.address,
+        transactionId: priv.transactionId || d.transactionId,
+        paymentReference: priv.paymentReference || d.paymentReference,
+        privateNotes: priv.privateNotes || d.privateNotes
+      };
+    });
+  }, [rawDonations, privateDonorMap, isAdmin]);
   const [leadership, setLeadership] = useState<Leadership[]>(() => getCachedData('azadi_leadership', STATIC_LEADERSHIP));
   const [events, setEvents] = useState<Event[]>(() => getCachedData('azadi_events', STATIC_EVENTS));
   const [notices, setNotices] = useState<Notice[]>(() => getCachedData('azadi_notices', STATIC_NOTICES));
   const [news, setNews] = useState<News[]>(() => getCachedData('azadi_news', STATIC_NEWS));
   const [expenses, setExpenses] = useState<Expense[]>(() => getCachedData('azadi_expenses', STATIC_EXPENSES));
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(() => getCachedData('azadi_testimonials', []));
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [settings, setSettings] = useState<OrganizationSettings>(() => getCachedData('azadi_settings', STATIC_SETTINGS));
   const [letterhead, setLetterhead] = useState<LetterheadConfig>(() => getCachedData('azadi_letterhead', STATIC_LETTERHEAD));
   const [versionConfig, setVersionConfig] = useState<VersionConfig | null>(() => getCachedData('azadi_version_config', CURRENT_VERSION));
@@ -345,6 +381,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loadingNotices, setLoadingNotices] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
   const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(true);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingLetterhead, setLoadingLetterhead] = useState(true);
   const [loadingVersion, setLoadingVersion] = useState(true);
@@ -361,6 +399,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     notices: { firestore: null, local: new Date().toISOString(), source: 'mock' },
     news: { firestore: null, local: new Date().toISOString(), source: 'mock' },
     expenses: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    testimonials: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+    audit_logs: { firestore: null, local: new Date().toISOString(), source: 'mock' },
     version: { firestore: null, local: new Date().toISOString(), source: 'mock' },
   });
 
@@ -388,6 +428,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (name === 'notices') count = notices.length;
     else if (name === 'news') count = news.length;
     else if (name === 'expenses') count = expenses.length;
+    else if (name === 'testimonials') count = testimonials.length;
+    else if (name === 'audit_logs') count = auditLogs.length;
     else if (name === 'version') count = 1;
 
     let status: 'synced' | 'stale' | 'offline' | 'unknown' = 'unknown';
@@ -433,6 +475,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   // Test connection on boot according to SKILL.md (delayed to prevent blocking initial load)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -455,12 +501,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Listen for Authentication state
   useEffect(() => {
-    const checkAdminPersistence = () => {
-      return sessionStorage.getItem('azadi_admin_session') === 'true' ||
-             localStorage.getItem('azadi_admin_session') === 'true' ||
-             localStorage.getItem('azadi_custom_admin') === 'true';
-    };
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -474,7 +514,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (adminDoc.exists()) {
             setIsAdmin(true);
           } else if (isSuperAdminEmail) {
-            // Self-seed admin document
+            // Self-seed admin document for superadmin
             await setDoc(adminRef, {
               email: currentUser.email,
               role: 'superadmin',
@@ -482,25 +522,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
             setIsAdmin(true);
           } else {
-            if (checkAdminPersistence()) {
-              setIsAdmin(true);
-            } else {
-              setIsAdmin(false);
-            }
+            setIsAdmin(false);
           }
         } catch (e) {
-          if (isSuperAdminEmail || checkAdminPersistence()) {
+          if (isSuperAdminEmail) {
             setIsAdmin(true);
           } else {
             setIsAdmin(false);
           }
         }
       } else {
-        if (checkAdminPersistence()) {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
+        setIsAdmin(false);
       }
       setAuthLoading(false);
     });
@@ -559,7 +591,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingVersion(false);
     });
 
-    // 3. Donations listener
+    // 3. Public Stats Listener
+    const unsubPublicStats = onSnapshot(doc(db, 'public_stats', 'donations'), (snap) => {
+      if (snap.exists()) {
+        setPublicStats(snap.data() as PublicDonationStats);
+      }
+    }, (err) => {
+      console.warn("Public stats listener notice:", err);
+    });
+
+    // 4. Donations listener (Public safe)
     const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc')), (snap) => {
       console.log("[DEBUG] Donations collection listener received snapshot. Size:", snap.size, "Is empty:", snap.empty);
       if (!snap.empty) {
@@ -568,11 +609,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const item = d.data();
           list.push({ ...item, id: d.id } as Donation);
         });
-        setDonations(list);
+        setRawDonations(list);
         localStorage.setItem('azadi_donations', JSON.stringify(list));
       } else {
         console.log("[DEBUG] Donations snapshot is empty. Applying empty array.");
-        setDonations([]);
+        setRawDonations([]);
         localStorage.setItem('azadi_donations', JSON.stringify([]));
       }
       recordSyncEvent('donations', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
@@ -688,18 +729,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingExpenses(false);
     });
 
+    // 9. Testimonials listener
+    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), orderBy('createdAt', 'desc')), (snap) => {
+      if (!snap.empty) {
+        const list: Testimonial[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as Testimonial);
+        });
+        setTestimonials(list);
+        localStorage.setItem('azadi_testimonials', JSON.stringify(list));
+      } else {
+        setTestimonials([]);
+        localStorage.setItem('azadi_testimonials', JSON.stringify([]));
+      }
+      recordSyncEvent('testimonials', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setLoadingTestimonials(false);
+    }, (error) => {
+      console.warn("Testimonials listener failed or offline:", error);
+      setLoadingTestimonials(false);
+    });
+
+    // 10. Audit logs & Private Donor Info listeners (only when authenticated/admin)
+    let unsubAuditLogs: () => void = () => {};
+    let unsubPrivateInfo: () => void = () => {};
+
+    if (isAdmin) {
+      // Auto-migrate any legacy flat donation documents
+      runDonationDataMigration();
+
+      unsubPrivateInfo = onSnapshot(query(collectionGroup(db, 'private_info')), (pSnap) => {
+        const newMap = new Map<string, PrivateDonorInfo>();
+        pSnap.forEach(pDoc => {
+          const parentId = pDoc.ref.parent.parent?.id;
+          if (parentId) {
+            newMap.set(parentId, pDoc.data() as PrivateDonorInfo);
+          }
+        });
+        setPrivateDonorMap(newMap);
+      }, (err) => {
+        console.warn("Private info listener notice:", err);
+      });
+
+      unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc')), (snap) => {
+        if (!snap.empty) {
+          const list: AuditLog[] = [];
+          snap.forEach(d => {
+            const data = d.data();
+            list.push({ ...data, id: d.id } as AuditLog);
+          });
+          setAuditLogs(list);
+        } else {
+          setAuditLogs([]);
+        }
+        recordSyncEvent('audit_logs', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+        setLoadingAuditLogs(false);
+      }, (error) => {
+        console.warn("Audit logs listener failed:", error);
+        setLoadingAuditLogs(false);
+      });
+    } else {
+      setLoadingAuditLogs(false);
+    }
+
     return () => {
       unsubSettings();
       unsubLetterhead();
       unsubVersion();
+      unsubPublicStats();
       unsubDonations();
       unsubLeadership();
       unsubEvents();
       unsubNotices();
       unsubNews();
       unsubExpenses();
+      unsubTestimonials();
+      unsubAuditLogs();
+      unsubPrivateInfo();
     };
-  }, []);
+  }, [isAdmin]);
 
   // Database auto-seeder step
   const seedDefaultDatabase = async () => {
@@ -709,8 +817,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await setDoc(doc(db, 'settings', 'letterhead'), STATIC_LETTERHEAD);
 
       for (const d of STATIC_DONATIONS) {
-        await setDoc(doc(db, 'donations', d.id), d);
+        const pub = getPublicDonationDoc(d);
+        const priv = getPrivateInfoDoc(d);
+        await setDoc(doc(db, 'donations', d.id), pub);
+        await setDoc(doc(db, 'donations', d.id, 'private_info', 'details'), priv);
       }
+      await updatePublicStatsAggregate(STATIC_DONATIONS);
       for (const l of STATIC_LEADERSHIP) {
         const { id, ...businessData } = l;
         await setDoc(doc(db, 'leadership', id), businessData);
@@ -734,23 +846,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Auto-seed triggers once admin is logged in but firestore settings index is missing
-  useEffect(() => {
-    if (isAdmin && settings.nameBn === STATIC_SETTINGS.nameBn) {
-      // Check if document exists on server
-      getDoc(doc(db, 'settings', 'config'))
-        .then((snap) => {
-          if (!snap.exists()) {
-            console.log("Seeding newly-discovered database with default structures...");
-            seedDefaultDatabase();
-          }
-        })
-        .catch((error) => {
-          console.warn("Failed to retrieve database configuration (possibly offline):", error);
-        });
-    }
-  }, [isAdmin, settings.nameBn]);
-
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/chat');
@@ -768,18 +863,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const login = async (username?: string, password?: string): Promise<boolean> => {
     if (!username || !password) return false;
-    
-    // Check local credential fallback to allow immediate login with provided credentials
-    const cleanUser = username.trim().toLowerCase();
-    const cleanPass = password.trim();
-    if ((cleanUser === 'azadi' || cleanUser === 'azadi@azadi.org') && cleanPass === 'Azadi@88') {
-      console.log("Local Admin Fallback credential authorized.");
-      sessionStorage.setItem('azadi_admin_session', 'true');
-      localStorage.setItem('azadi_admin_session', 'true');
-      localStorage.setItem('azadi_custom_admin', 'true');
-      setIsAdmin(true);
-      return true;
-    }
     
     // Support either direct email, or user typing 'admin' / other username (append @azadi.org if no @ symbol)
     const email = username.includes('@') ? username.trim() : `${username.toLowerCase().trim()}@azadi.org`;
@@ -809,20 +892,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (dbError) {
         console.warn("Could not check Firestore admin collection (possibly offline). Fallback to superadmin check.", dbError);
-        // Fallback for sandboxes or initial offline boots
         if (isSuperAdminEmail) {
           isAuthorizedAdmin = true;
         }
       }
 
       if (isAuthorizedAdmin) {
-        sessionStorage.setItem('azadi_admin_session', 'true');
-        localStorage.setItem('azadi_admin_session', 'true');
         setIsAdmin(true);
         return true;
       } else {
         // Not authorized as an admin in Firestore admins collection
         await signOut(auth);
+        setIsAdmin(false);
         return false;
       }
     } catch (error: any) {
@@ -845,19 +926,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Secure compliance audit logging trail
-  const logAuditTrail = async (action: string, details: any) => {
+  const logAuditTrail = async (action: string, targetCollection = 'system', targetDocId = 'general', details?: any) => {
     try {
       const logId = `audit_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const cleanDetails = details ? (typeof details === 'object' ? JSON.stringify(details, (key, value) => {
+        if (/password|secret|hash|credential/i.test(key)) return undefined;
+        return value;
+      }) : String(details)) : '';
+
       await setDoc(doc(db, 'audit_logs', logId), {
         id: logId,
         action,
+        targetCollection,
+        targetDocId,
         userId: auth.currentUser?.uid || 'anonymous',
         userEmail: auth.currentUser?.email || 'anonymous',
         timestamp: new Date().toISOString(),
-        details: typeof details === 'object' ? JSON.stringify(details) : String(details)
+        details: cleanDetails
       });
     } catch (e) {
       console.warn("Audit logging failed:", e);
+    }
+  };
+
+  const saveTestimonial = async (item: Testimonial) => {
+    try {
+      recordSyncEvent('testimonials', 'local');
+      const docRef = doc(db, 'testimonials', item.id);
+      await withSync(() => setDoc(docRef, item));
+      await logAuditTrail(
+        item.status === 'APPROVED' ? 'APPROVE_TESTIMONIAL' : 'SAVE_TESTIMONIAL',
+        'testimonials',
+        item.id,
+        { nameEn: item.nameEn, status: item.status }
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `testimonials/${item.id}`);
+    }
+  };
+
+  const deleteTestimonial = async (id: string) => {
+    try {
+      recordSyncEvent('testimonials', 'local');
+      await withSync(() => deleteDoc(doc(db, 'testimonials', id)));
+      await logAuditTrail('DELETE_TESTIMONIAL', 'testimonials', id);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `testimonials/${id}`);
     }
   };
 
@@ -895,9 +1009,99 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Helper to construct public safe donation object (strips sensitive phone, email, address, transactionId)
+  const getPublicDonationDoc = (donation: Donation) => ({
+    id: donation.id,
+    donorName: donation.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : (donation.donorName || 'Anonymous Giver'),
+    isAnonymous: Boolean(donation.isAnonymous),
+    amount: Number(donation.amount) || 0,
+    purpose: donation.purpose || 'General Welfare',
+    status: donation.status || DonationStatus.PENDING,
+    date: donation.date || new Date().toISOString(),
+    paymentMethod: donation.paymentMethod || 'bKash',
+    receiptId: donation.receiptId || `REC-${donation.id.slice(-8)}`,
+    isPublic: donation.isPublic !== false
+  });
+
+  // Helper to construct private donor info object
+  const getPrivateInfoDoc = (donation: Donation) => ({
+    donorName: donation.donorName || '',
+    phone: donation.phone || '',
+    email: donation.email || '',
+    address: donation.address || '',
+    transactionId: donation.transactionId || donation.id,
+    paymentReference: donation.paymentReference || '',
+    privateNotes: donation.privateNotes || ''
+  });
+
+  // Helper to calculate and sync public stats document (public_stats/donations)
+  const updatePublicStatsAggregate = async (donationsList: Donation[]) => {
+    try {
+      const approvedList = donationsList.filter(d => d.status === DonationStatus.APPROVED);
+      const stats: PublicDonationStats = {
+        totalApprovedAmount: approvedList.reduce((sum, d) => sum + (Number(d.amount) || 0), 0),
+        totalApprovedDonations: approvedList.length,
+        lastUpdated: new Date().toISOString()
+      };
+      await setDoc(doc(db, 'public_stats', 'donations'), stats);
+      setPublicStats(stats);
+    } catch (err) {
+      console.warn("Public stats update notice:", err);
+    }
+  };
+
+  // Safe migration helper: moves legacy flat donation fields to private_info subcollection
+  const runDonationDataMigration = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const snap = await getDocs(collection(db, 'donations'));
+      let migratedCount = 0;
+      const allDocs: Donation[] = [];
+      for (const dDoc of snap.docs) {
+        const data = dDoc.data();
+        const id = dDoc.id;
+        if (data.phone !== undefined || data.transactionId !== undefined || data.email !== undefined || data.address !== undefined) {
+          const privateDetails = {
+            donorName: data.donorName || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            address: data.address || '',
+            transactionId: data.transactionId || id,
+            paymentReference: data.paymentReference || '',
+            privateNotes: data.privateNotes || ''
+          };
+          const publicDetails = {
+            id,
+            donorName: data.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : (data.donorName || 'Anonymous Giver'),
+            isAnonymous: Boolean(data.isAnonymous),
+            amount: Number(data.amount) || 0,
+            purpose: data.purpose || 'General Welfare',
+            status: data.status || DonationStatus.PENDING,
+            date: data.date || new Date().toISOString(),
+            paymentMethod: data.paymentMethod || 'bKash',
+            receiptId: data.receiptId || `REC-${id.slice(-8)}`,
+            isPublic: data.isPublic !== false
+          };
+          await setDoc(doc(db, 'donations', id, 'private_info', 'details'), privateDetails);
+          await setDoc(doc(db, 'donations', id), publicDetails);
+          migratedCount++;
+          allDocs.push({ ...publicDetails, ...privateDetails } as Donation);
+        } else {
+          allDocs.push({ ...data, id } as Donation);
+        }
+      }
+      if (migratedCount > 0) {
+        console.log(`[DATA MIGRATION] Migrated ${migratedCount} donation records to private subcollections.`);
+      }
+      await updatePublicStatsAggregate(allDocs);
+    } catch (err) {
+      console.warn("[DATA MIGRATION] Migration check notice:", err);
+    }
+  };
+
   const addDonation = async (donation: Donation) => {
     // Optimistic UI update
-    setDonations(prev => {
+    setRawDonations(prev => {
       if (prev.some(d => d.id === donation.id)) {
         return prev.map(d => d.id === donation.id ? donation : d);
       }
@@ -906,12 +1110,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordSyncEvent('donations', 'local');
 
     try {
-      await withSync(() => setDoc(doc(db, 'donations', donation.id), donation));
+      const publicData = getPublicDonationDoc(donation);
+      const privateData = getPrivateInfoDoc(donation);
+
+      await withSync(() => setDoc(doc(db, 'donations', donation.id), publicData));
+      await setDoc(doc(db, 'donations', donation.id, 'private_info', 'details'), privateData);
+
+      const newDonationsList = [donation, ...rawDonations.filter(d => d.id !== donation.id)];
+      await updatePublicStatsAggregate(newDonationsList);
 
       // Google Chat auto-trigger on new donation request submission
       if (settings.googleChatEnabled && settings.googleChatNotifyOnReceipt !== false) {
         console.log(`[DEBUG] Attempting to trigger Google Chat notification for donation: ${donation.id}, Donor: ${donation.donorName}, Amount: ৳${donation.amount}`);
-        const donorLabel = donation.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : donation.donorName;
+        const donorLabel = donation.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : (donation.donorName || 'Donor');
         const text = `📢 *${lang === 'bn' ? 'নতুন অনুদান জমা হয়েছে!' : 'New Donation Submitted!'}*\n` +
                      `• ${lang === 'bn' ? 'দাতা' : 'Donor'}: ${donorLabel}\n` +
                      `• ${lang === 'bn' ? 'পরিমাণ' : 'Amount'}: ৳${donation.amount.toLocaleString()} BDT\n` +
@@ -929,22 +1140,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateDonation = async (id: string, status: DonationStatus) => {
     console.log("[DEBUG] updateDonation initiated. ID:", id, "Status update requested:", status);
     const existing = donations.find(d => d.id === id);
-    console.log("[DEBUG] Found existing donation status in local AppState:", existing);
     if (!existing) {
-      console.warn("[DEBUG] CRITICAL WARNING: Donation ID not found in the state array. Fallback spread will occur.");
+      console.warn("[DEBUG] CRITICAL WARNING: Donation ID not found in the state array.");
     }
+    const updatedDonation = { ...existing!, id, status };
 
     // Optimistic update
-    setDonations(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    setRawDonations(prev => prev.map(d => d.id === id ? { ...d, status } : d));
     recordSyncEvent('donations', 'local');
 
     try {
       if (auth.currentUser) {
-        const docRef = doc(db, 'donations', id);
-        const updateData = { ...existing!, status };
-        console.log("[DEBUG] Writing to Firestore at path donations/" + id, "Payload:", updateData);
-        await withSync(() => setDoc(docRef, updateData));
-        console.log("[DEBUG] Firestore write success for donations/" + id);
+        const publicData = getPublicDonationDoc(updatedDonation);
+        const privateData = getPrivateInfoDoc(updatedDonation);
+
+        await withSync(() => setDoc(doc(db, 'donations', id), publicData));
+        await setDoc(doc(db, 'donations', id, 'private_info', 'details'), privateData);
+
+        const updatedList = rawDonations.map(d => d.id === id ? updatedDonation : d);
+        await updatePublicStatsAggregate(updatedList);
+
         await logAuditTrail('DONATION_STATUS_UPDATE', { donationId: id, status });
       }
 
@@ -1013,24 +1228,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteDonation = async (id: string) => {
-    const backupDonations = [...donations];
+    const backupDonations = [...rawDonations];
     try {
       const target = donations.find(d => d.id === id);
-      // Immediately remove from state to guarantee crisp, instant deletion in the UI
-      setDonations(prev => prev.filter(d => d.id !== id));
+      // Immediately remove from state
+      setRawDonations(prev => prev.filter(d => d.id !== id));
       recordSyncEvent('donations', 'local');
 
       if (auth.currentUser) {
+        try {
+          await deleteDoc(doc(db, 'donations', id, 'private_info', 'details'));
+        } catch (e) {
+          console.warn("Private info deletion notice:", e);
+        }
         await withSync(() => deleteDoc(doc(db, 'donations', id)));
+
+        const updatedList = rawDonations.filter(d => d.id !== id);
+        await updatePublicStatsAggregate(updatedList);
+
         await logAuditTrail('DONATION_DELETION', { donationId: id, donorName: target?.donorName, amount: target?.amount });
       }
       
-      // Let the user know deletion was successful
       alert(lang === 'bn' ? 'অনুদান এন্ট্রিটি সফলভাবে মুছে ফেলা হয়েছে!' : 'Donation entry has been successfully deleted!');
     } catch (error) {
       console.warn("Firestore delete failed, reverting state:", error);
-      // Rollback immediately to original donations list
-      setDonations(backupDonations);
+      setRawDonations(backupDonations);
       
       alert(lang === 'bn' 
         ? 'অনুদানটি মুছে ফেলা সম্ভব হয়নি! দয়া করে ইন্টারনেট কানেকশন চেক করুন অথবা পুনরায় লগইন করুন।' 
@@ -1434,11 +1656,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user, 
       authLoading, 
       donations, 
+      publicStats,
       leadership, 
       events, 
       notices, 
       news, 
       expenses,
+      testimonials,
+      auditLogs,
       settings, 
       letterhead, 
       versionConfig,
@@ -1451,6 +1676,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadingNotices,
       loadingNews,
       loadingExpenses,
+      loadingTestimonials,
+      loadingAuditLogs,
       loadingSettings,
       loadingLetterhead,
       loadingVersion,
@@ -1490,6 +1717,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       addExpense,
       deleteExpense,
+
+      saveTestimonial,
+      deleteTestimonial,
+      logAuditTrail,
 
       retryCloudConnection,
       restoreFromLegacy,

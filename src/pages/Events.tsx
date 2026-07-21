@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { TRANSLATIONS } from "../utils/constants";
 import {
@@ -11,27 +11,29 @@ import {
   Info,
   Image as ImageIcon,
   Share2,
-  MessageCircle,
-  Copy,
   CheckCircle,
-  Smartphone,
   Video,
+  Filter,
+  Check
 } from "lucide-react";
 import { Event } from "../types";
 import { SkeletonLoader } from "../components/SkeletonLoader";
 import { parseLocalDate } from "../utils/parseLocalDate";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 import { logImageLoadFailure } from "../utils/imageMonitor";
+import { PageHero } from "../components/PageHero";
+import { PageCTA } from "../components/PageCTA";
 
 export const Events: React.FC = () => {
   const { lang, events, settings, loadingEvents } = useApp();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const t = TRANSLATIONS[lang];
+
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "upcoming" | "ongoing" | "past">("all");
 
-  // Handle direct links to events
+  // Handle direct links to events via URL ?id=...
   useEffect(() => {
     const eventId = searchParams.get("id");
     if (eventId && events.length > 0) {
@@ -42,23 +44,56 @@ export const Events: React.FC = () => {
           document
             .getElementById("event-details-section")
             ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 500);
+        }, 300);
       }
     }
   }, [searchParams, events]);
 
-  // Sorting with fallback to prevent crashes if date is missing or invalid
-  const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => {
+  // Categorize events based on date / status
+  const now = useMemo(() => new Date(), []);
+
+  const categorizedEvents = useMemo(() => {
+    const sorted = [...events].sort((a, b) => {
       const dateA = a.date ? parseLocalDate(a.date).getTime() : 0;
       const dateB = b.date ? parseLocalDate(b.date).getTime() : 0;
       return dateB - dateA;
     });
-  }, [events]);
+
+    const upcoming: Event[] = [];
+    const ongoing: Event[] = [];
+    const past: Event[] = [];
+
+    sorted.forEach((e) => {
+      const eventDate = e.date ? parseLocalDate(e.date) : null;
+      const explicitStatus = (e.status || "").toLowerCase();
+
+      if (explicitStatus === "ongoing") {
+        ongoing.push(e);
+      } else if (eventDate) {
+        const isSameDay =
+          eventDate.getFullYear() === now.getFullYear() &&
+          eventDate.getMonth() === now.getMonth() &&
+          eventDate.getDate() === now.getDate();
+
+        if (isSameDay) {
+          ongoing.push(e);
+        } else if (eventDate > now) {
+          upcoming.push(e);
+        } else {
+          past.push(e);
+        }
+      } else {
+        past.push(e);
+      }
+    });
+
+    return { all: sorted, upcoming, ongoing, past };
+  }, [events, now]);
+
+  const displayedEvents = categorizedEvents[activeTab];
 
   const formatDate = (dateStr: string) => {
-    if (!dateStr)
-      return lang === "bn" ? "তারিখ পাওয়া যায়নি" : "Date not available";
+    if (!dateStr) return lang === "bn" ? "তারিখ নির্ধারিত নয়" : "Date TBD";
     try {
       const d = parseLocalDate(dateStr);
       if (isNaN(d.getTime())) return dateStr;
@@ -67,16 +102,50 @@ export const Events: React.FC = () => {
         month: "long",
         year: "numeric",
       });
-    } catch (e) {
+    } catch {
       return dateStr;
     }
+  };
+
+  const getEventStatusBadge = (e: Event) => {
+    const eventDate = e.date ? parseLocalDate(e.date) : null;
+    const isOngoing =
+      (e.status || "").toLowerCase() === "ongoing" ||
+      (eventDate &&
+        eventDate.getFullYear() === now.getFullYear() &&
+        eventDate.getMonth() === now.getMonth() &&
+        eventDate.getDate() === now.getDate());
+
+    if (isOngoing) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-md shadow-emerald-500/20 animate-pulse">
+          <span className="w-2 h-2 rounded-full bg-white"></span>
+          {lang === "bn" ? "চলমান" : "Ongoing"}
+        </span>
+      );
+    }
+
+    if (eventDate && eventDate > now) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-blue-600 text-white shadow-md shadow-blue-600/20">
+          <Clock size={12} />
+          {lang === "bn" ? "আগামী ইভেন্ট" : "Upcoming"}
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+        {lang === "bn" ? "সম্পন্ন ইভেন্ট" : "Past Event"}
+      </span>
+    );
   };
 
   const handleShare = async (event: Event) => {
     const shareTitle = lang === "bn" ? event.titleBn : event.titleEn;
     const shareText = `${shareTitle}\n📅 ${formatDate(event.date)}\n📍 ${lang === "bn" ? event.locationBn : event.locationEn}`;
     const shareUrl = `${window.location.origin}/#/events?id=${event.id}`;
-    const fullMessage = `${shareText}\n\n${lang === "bn" ? event.descriptionBn?.slice(0, 100) : event.descriptionEn?.slice(0, 100)}...\n\nRead more: ${shareUrl}\n— ${lang === "bn" ? settings.nameBn : settings.nameEn}`;
+    const fullMessage = `${shareText}\n\n${lang === "bn" ? event.descriptionBn?.slice(0, 100) : event.descriptionEn?.slice(0, 100)}...\n\nRead more: ${shareUrl}\n— ${lang === "bn" ? settings?.nameBn : settings?.nameEn}`;
 
     if (navigator.share) {
       try {
@@ -87,383 +156,299 @@ export const Events: React.FC = () => {
         });
         return;
       } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Share failed:", err);
-        } else {
-          return; // User cancelled
-        }
+        if ((err as Error).name === "AbortError") return;
       }
     }
 
-    // Fallback: Copy to clipboard and offer social links
     try {
       await navigator.clipboard.writeText(fullMessage);
       setCopyStatus(event.id);
       setTimeout(() => setCopyStatus(null), 3000);
 
-      // Also open a quick choice menu or just default to WhatsApp if mobile
       if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(fullMessage)}`;
-        window.open(waUrl, "_blank");
-      } else {
-        // For desktop fallback, we could show a toast or just rely on the clipboard copy
-        // which we already did above with setCopyStatus
+        window.open(`https://wa.me/?text=${encodeURIComponent(fullMessage)}`, "_blank");
       }
-    } catch (err) {
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(fullMessage)}`;
-      window.open(waUrl, "_blank");
+    } catch {
+      window.open(`https://wa.me/?text=${encodeURIComponent(fullMessage)}`, "_blank");
     }
   };
 
+  const openFacebookShare = (event: Event) => {
+    const shareUrl = encodeURIComponent(`${window.location.origin}/#/events?id=${event.id}`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`, "_blank");
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-20 sm:space-y-32 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-28 md:pb-24 bengali">
-      {/* Page Header */}
-      <div className="text-center space-y-8 max-w-4xl mx-auto px-4">
-        <div className="inline-flex items-center gap-3 text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-[0.2em] text-[10px] px-8 py-3 bg-white dark:bg-slate-900 rounded-full border border-emerald-100 dark:border-emerald-800 shadow-soft">
-          <Calendar size={16} className="text-emerald-500" />
-          {lang === "bn" ? "কার্যক্রম" : "Archive of Impact"}
-        </div>
-        <h1 className="text-4xl sm:text-7xl md:text-8xl font-black text-slate-900 dark:text-white tracking-tighter leading-tight drop-shadow-sm">
-          {t.events}
-        </h1>
-        <p className="text-lg sm:text-2xl text-slate-500 dark:text-slate-400 font-medium leading-relaxed opacity-80">
-          {lang === "bn"
-            ? "আজাদী সমাজ কল্যাণ সংঘের আর্তমানবতার সেবা ও উন্নয়নমূলক কর্মকাণ্ডের চিত্রশালা।"
-            : "A living gallery showcasing our relentless commitment to humanitarian aid and community development since 1988."}
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 bengali animate-in fade-in duration-500">
+      {/* Page Hero Header */}
+      <PageHero
+        icon={<Calendar size={20} />}
+        badgeBn="সংস্থার কার্যক্রম"
+        badgeEn="Official Event Records"
+        titleBn="ইভেন্টস ও সামাজিক কার্যক্রম"
+        titleEn="Events & Social Initiatives"
+        subtitleBn="আজাদী সমাজ কল্যাণ সংঘের আর্তমানবতার সেবা, শিক্ষা, স্বাস্থ্য ও ক্রীড়া বিষয়ক কর্মকাণ্ডের বিবরণী।"
+        subtitleEn="Comprehensive directory of our community relief drives, sports tournaments, and social development programs."
+        breadcrumbs={[
+          { labelBn: "ইভেন্টস", labelEn: "Events" }
+        ]}
+      />
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-12">
+        {[
+          { key: "all", labelBn: `সব ইভেন্ট (${categorizedEvents.all.length})`, labelEn: `All (${categorizedEvents.all.length})` },
+          { key: "upcoming", labelBn: `আগামী (${categorizedEvents.upcoming.length})`, labelEn: `Upcoming (${categorizedEvents.upcoming.length})` },
+          { key: "ongoing", labelBn: `চলমান (${categorizedEvents.ongoing.length})`, labelEn: `Ongoing (${categorizedEvents.ongoing.length})` },
+          { key: "past", labelBn: `সম্পন্ন (${categorizedEvents.past.length})`, labelEn: `Past (${categorizedEvents.past.length})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as any)}
+            className={`px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 flex items-center gap-2 uppercase tracking-wider cursor-pointer ${
+              activeTab === tab.key
+                ? "bg-blue-700 dark:bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105"
+                : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
+            }`}
+          >
+            {activeTab === tab.key && <Check size={14} className="text-amber-400" />}
+            <span>{lang === "bn" ? tab.labelBn : tab.labelEn}</span>
+          </button>
+        ))}
       </div>
 
       {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 px-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {loadingEvents ? (
           <div className="col-span-full">
-            <SkeletonLoader variant="card" count={4} />
+            <SkeletonLoader variant="card" count={3} />
           </div>
-        ) : sortedEvents.length > 0 ? (
-          sortedEvents.map((event) => (
+        ) : displayedEvents.length > 0 ? (
+          displayedEvents.map((event) => (
             <div
               key={event.id}
-              className="group bg-white dark:bg-slate-900 rounded-4xl border border-emerald-50 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy transition-all duration-700 flex flex-col hover:-translate-y-3"
+              className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy transition-all duration-300 flex flex-col hover:-translate-y-2"
             >
-              <div className="relative h-64 sm:h-80 overflow-hidden bg-emerald-50 dark:bg-slate-950">
+              {/* Cover Image */}
+              <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-100 dark:bg-slate-950">
                 {event.image ? (
                   <img
                     src={getOptimizedImageUrl(event.image, 600)}
                     alt={lang === "bn" ? event.titleBn : event.titleEn}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     onError={() => {
-                      logImageLoadFailure(getOptimizedImageUrl(event.image, 600), `Event Main Card Image (${event.titleEn})`);
+                      logImageLoadFailure(getOptimizedImageUrl(event.image, 600), `Event Image (${event.titleEn})`);
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-emerald-100 dark:text-slate-800 gap-4 bg-emerald-50/50 dark:bg-slate-900">
-                    <ImageIcon size={64} className="opacity-50" />
-                    <span className="text-[12px] font-black uppercase tracking-widest opacity-50">
-                      Visual Archive
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-3 bg-slate-100 dark:bg-slate-900">
+                    <ImageIcon size={48} className="opacity-40" />
+                    <span className="text-xs font-bold uppercase tracking-widest opacity-60">
+                      {lang === "bn" ? "ছবি নেই" : "No Photo Available"}
                     </span>
                   </div>
                 )}
 
-                <div className="absolute top-6 right-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-5 py-2.5 rounded-2xl shadow-heavy border border-emerald-50 dark:border-slate-800 group-hover:translate-x-2 transition-transform">
-                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-xs">
-                    <Clock size={16} />
-                    {formatDate(event.date)}
-                  </div>
+                {/* Status Badge */}
+                <div className="absolute top-4 left-4 z-10">
+                  {getEventStatusBadge(event)}
                 </div>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShare(event);
-                  }}
-                  className="absolute top-6 left-6 p-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl shadow-heavy hover:scale-110 active:scale-95 transition-all border border-emerald-400/30 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0"
-                >
-                  {copyStatus === event.id ? (
-                    <CheckCircle size={22} />
-                  ) : (
-                    <Share2 size={22} />
-                  )}
-                </button>
+                {/* Date Tag */}
+                <div className="absolute bottom-4 right-4 bg-slate-900/90 backdrop-blur-md text-white px-3.5 py-1.5 rounded-xl text-xs font-black shadow-lg border border-white/10 flex items-center gap-1.5">
+                  <Calendar size={14} className="text-amber-400" />
+                  <span>{formatDate(event.date)}</span>
+                </div>
               </div>
 
-              <div className="p-10 md:p-14 space-y-6 md:space-y-8 flex-1 flex flex-col">
-                <div className="space-y-4">
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors leading-[1.2] line-clamp-2 bengali tracking-tighter">
+              {/* Event Content */}
+              <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
+                <div className="space-y-3">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-amber-400 transition-colors leading-snug line-clamp-2">
                     {lang === "bn" ? event.titleBn : event.titleEn}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-emerald-500" />
-                      {lang === "bn" ? event.locationBn : event.locationEn}
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={14} className="text-blue-600 dark:text-amber-400 shrink-0" />
+                      <span className="truncate max-w-[180px]">
+                        {lang === "bn" ? event.locationBn : event.locationEn}
+                      </span>
                     </div>
+
                     {event.meetUrl && (
-                      <div className="flex items-center gap-1.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px]">
-                        <Video
-                          size={12}
-                          className="shrink-0 animate-pulse text-blue-500"
-                        />
-                        {lang === "bn"
-                          ? "গুগল মিট উপলব্ধ"
-                          : "Google Meet Included"}
+                      <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                        <Video size={12} className="animate-pulse" />
+                        <span>Google Meet</span>
                       </div>
                     )}
                   </div>
+
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed line-clamp-3 opacity-90">
+                    {lang === "bn" ? event.descriptionBn : event.descriptionEn}
+                  </p>
                 </div>
 
-                <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed line-clamp-4 text-base md:text-lg flex-1 bengali opacity-80 group-hover:opacity-100 transition-opacity">
-                  {lang === "bn" ? event.descriptionBn : event.descriptionEn}
-                </p>
-
-                <div className="flex items-center justify-between pt-8 md:pt-10 border-t border-slate-50 dark:border-slate-800/50">
+                {/* Card Footer Actions */}
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <button
                     onClick={() => {
                       setSelectedEvent(event);
-                      window.history.replaceState(
-                        null,
-                        "",
-                        `/#/events?id=${event.id}`,
-                      );
+                      setSearchParams({ id: event.id });
                       setTimeout(() => {
                         document
                           .getElementById("event-details-section")
-                          ?.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start",
-                          });
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }, 100);
                     }}
-                    className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-sm md:text-base hover:gap-6 transition-all uppercase tracking-[0.1em] group/btn bengali"
+                    className="inline-flex items-center gap-2 text-blue-700 dark:text-amber-400 font-black text-xs uppercase tracking-wider hover:gap-3 transition-all cursor-pointer group/btn"
                   >
-                    {lang === "bn" ? " বিস্তারিত দেখি" : "Explore Details"}
-                    <ArrowRight
-                      size={20}
-                      className="group-hover/btn:translate-x-1 transition-transform"
-                    />
+                    <span>{lang === "bn" ? "বিস্তারিত দেখুন" : "View Details"}</span>
+                    <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                   </button>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShare(event);
-                    }}
-                    className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-emerald-600 transition-colors font-black text-[12px] uppercase tracking-widest bengali group/share"
-                  >
-                    {copyStatus === event.id ? (
-                      <CheckCircle size={16} className="text-emerald-500" />
-                    ) : (
-                      <Share2
-                        size={16}
-                        className="group-hover/share:scale-125 transition-transform"
-                      />
-                    )}
-                    {copyStatus === event.id
-                      ? lang === "bn"
-                        ? "কপি হয়েছে"
-                        : "Copied"
-                      : lang === "bn"
-                        ? "শেয়ার"
-                        : "Share"}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openFacebookShare(event)}
+                      title="Share on Facebook"
+                      className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      <Share2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleShare(event)}
+                      title="Copy Share Link"
+                      className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
+                    >
+                      {copyStatus === event.id ? (
+                        <CheckCircle size={16} className="text-emerald-500" />
+                      ) : (
+                        <Share2 size={16} />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="col-span-full py-20 md:py-32 text-center space-y-6 bg-emerald-50/30 dark:bg-slate-900/50 rounded-[3rem] border-4 border-dashed border-emerald-100 dark:border-slate-800">
-            <div className="w-20 h-20 md:w-24 md:h-24 bg-white dark:bg-slate-800 rounded-[2.2rem] md:rounded-[2.5rem] flex items-center justify-center mx-auto shadow-sm border border-emerald-100">
-              <Calendar
-                size={40}
-                className="text-emerald-200 dark:text-slate-700 md:w-12 md:h-12"
-              />
-            </div>
-            <div className="space-y-2 px-6">
-              <h3 className="text-base md:text-xl font-black text-slate-400 uppercase tracking-[0.2em]">
-                {lang === "bn" ? "কোন ইভেন্ট পাওয়া যায়নি" : "No Events Found"}
-              </h3>
-              <p className="text-slate-400/60 font-bold text-xs md:text-sm">
-                {lang === "bn"
-                  ? "খুব শীঘ্রই নতুন ইভেন্ট যুক্ত করা হবে।"
-                  : "New events will be added soon."}
-              </p>
-            </div>
+          <div className="col-span-full py-16 text-center bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 space-y-4">
+            <Calendar size={48} className="mx-auto text-slate-400 opacity-50" />
+            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
+              {lang === "bn" ? "এই ক্যাটাগরিতে কোনো ইভেন্ট নেই" : "No Events Found in this Category"}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {lang === "bn" ? "নতুন ইভেন্ট দ্রুত যুক্ত করা হবে।" : "Please check back soon for upcoming schedule updates."}
+            </p>
           </div>
         )}
       </div>
 
-      {/* Selected Event Detail Section - In-Page Content */}
+      {/* Selected Event Detail Modal / Section */}
       {selectedEvent && (
         <div
           id="event-details-section"
-          className="scroll-mt-32 max-w-6xl mx-auto px-4 py-20 md:py-32 space-y-12 md:space-y-16 animate-in fade-in slide-in-from-bottom-12 duration-1000 border-t border-slate-100 dark:border-slate-800"
+          className="scroll-mt-24 mt-20 p-8 sm:p-12 bg-white dark:bg-slate-900 rounded-4xl border-2 border-blue-600/30 dark:border-amber-400/30 shadow-heavy space-y-8 animate-in fade-in duration-500"
         >
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b-2 border-emerald-500/20 pb-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-[0.2em] text-[10px]">
-                <ArrowRight size={14} />{" "}
-                {lang === "bn" ? "বিস্তারিত তথ্য গ্যালারি" : "Impact Deep Dive"}
-              </div>
-              <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white bengali leading-tight tracking-tight">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-6">
+            <div className="space-y-1">
+              <span className="text-xs font-black uppercase text-blue-600 dark:text-amber-400 tracking-widest">
+                {lang === "bn" ? "ইভেন্টের বিস্তারিত তথ্য" : "Event Detail Record"}
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white leading-tight">
                 {lang === "bn" ? selectedEvent.titleBn : selectedEvent.titleEn}
               </h2>
             </div>
-            <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
-              <div className="flex items-center gap-3 text-slate-500 font-black text-xs md:text-sm uppercase tracking-widest">
-                <Calendar size={18} className="text-emerald-500" />
-                {formatDate(selectedEvent.date)}
-              </div>
-              <div className="flex items-center gap-3 text-slate-500 font-black text-xs md:text-sm uppercase tracking-widest">
-                <MapPin size={18} className="text-emerald-500" />
-                {lang === "bn"
-                  ? selectedEvent.locationBn
-                  : selectedEvent.locationEn}
-              </div>
-            </div>
+            <button
+              onClick={() => {
+                setSelectedEvent(null);
+                setSearchParams({});
+              }}
+              className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
+            >
+              <X size={20} />
+            </button>
           </div>
 
-          <div className="grid lg:grid-cols-5 gap-12 lg:gap-24">
-            <div className="lg:col-span-3 space-y-10 md:space-y-12">
-              <div className="space-y-6">
-                <h4 className="text-emerald-700 dark:text-emerald-400 font-black uppercase text-[11px] tracking-[0.2em] flex items-center gap-2">
-                  <Info size={16} />{" "}
-                  {lang === "bn"
-                    ? "ইভেন্টের পটভূমি ও বিবরণ"
-                    : "Mission Context & Execution"}
-                </h4>
-                <p className="text-lg md:text-2xl text-slate-600 dark:text-slate-300 font-medium leading-[1.6] md:leading-[1.7] bengali whitespace-pre-line opacity-90 first-letter:text-4xl first-letter:font-black first-letter:text-emerald-600 first-letter:mr-1">
-                  {lang === "bn"
-                    ? selectedEvent.descriptionBn
-                    : selectedEvent.descriptionEn}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-4 md:gap-6 pt-6">
-                <button
-                  onClick={() => handleShare(selectedEvent)}
-                  className={`${copyStatus === selectedEvent.id ? "bg-emerald-500" : "bg-emerald-600 hover:bg-emerald-700"} text-white px-8 md:px-12 py-4 md:py-5 rounded-[2rem] font-black text-xs md:text-sm uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95 shadow-emerald-500/10`}
-                >
-                  {copyStatus === selectedEvent.id ? (
-                    <CheckCircle size={20} />
-                  ) : (
-                    <Share2 size={20} />
-                  )}
-                  {copyStatus === selectedEvent.id
-                    ? lang === "bn"
-                      ? "লিঙ্ক কপি করা হয়েছে"
-                      : "Link Copied"
-                    : lang === "bn"
-                      ? "শেয়ার স্টোরি"
-                      : "Spread the Mission"}
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedEvent(null);
-                    window.history.replaceState(null, "", `/#/events`);
-                  }}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-8 py-4 rounded-[2rem] font-black text-xs md:text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2 active:scale-95"
-                >
-                  <X size={20} /> {lang === "bn" ? "বন্ধ করুন" : "Clear View"}
-                </button>
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 space-y-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
               {selectedEvent.image && (
-                <div className="group relative rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-heavy border-4 border-white dark:border-slate-800 aspect-square sm:aspect-video lg:aspect-square">
+                <div className="rounded-3xl overflow-hidden max-h-96 border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950">
                   <img
-                    src={getOptimizedImageUrl(selectedEvent.image, 600)}
-                    alt="Event highlight"
+                    src={getOptimizedImageUrl(selectedEvent.image, 1000)}
+                    alt={selectedEvent.titleEn}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
-                    onError={() => {
-                      logImageLoadFailure(getOptimizedImageUrl(selectedEvent.image, 600), `Event Modal Detail Image (${selectedEvent.titleEn})`);
-                    }}
+                    className="w-full h-full object-cover"
+                    onError={() => logImageLoadFailure(selectedEvent.image, "Event Detail")}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
-                    <p className="text-white font-bold text-sm bengali">
-                      {lang === "bn"
-                        ? "মানবতার সেবায় একটি অনন্য মুহূর্ত"
-                        : "A signature moment in humanitarian service"}
-                    </p>
-                  </div>
                 </div>
               )}
 
-              <div className="p-8 md:p-10 bg-emerald-50/50 dark:bg-slate-950/50 rounded-[2.5rem] border border-emerald-100 dark:border-slate-800 space-y-6 md:space-y-8">
-                <h4 className="text-emerald-700 dark:text-emerald-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2 border-b border-emerald-100 dark:border-slate-800 pb-4">
-                  <MessageCircle size={14} />{" "}
-                  {lang === "bn" ? "দ্রুত তথ্য" : "Archive Metadata"}
+              <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed font-medium text-base sm:text-lg whitespace-pre-line">
+                {lang === "bn" ? selectedEvent.descriptionBn : selectedEvent.descriptionEn}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+                <h4 className="text-xs font-black uppercase text-slate-500 tracking-widest border-b border-slate-200 dark:border-slate-800 pb-3">
+                  {lang === "bn" ? "মূল তথ্য" : "Event Metadata"}
                 </h4>
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-50 flex items-center justify-center shrink-0">
-                      <Calendar size={18} className="text-emerald-500" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase font-black text-slate-400 tracking-widest">
-                        {lang === "bn" ? "তারিখ" : "Date Record"}
-                      </div>
-                      <div className="text-sm font-bold text-slate-700 dark:text-slate-300 bengali">
-                        {formatDate(selectedEvent.date)}
-                      </div>
-                    </div>
+
+                <div className="space-y-3 text-sm font-bold">
+                  <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
+                    <Calendar size={18} className="text-blue-600 dark:text-amber-400" />
+                    <span>{formatDate(selectedEvent.date)}</span>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-50 flex items-center justify-center shrink-0">
-                      <MapPin size={18} className="text-emerald-500" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase font-black text-slate-400 tracking-widest">
-                        {lang === "bn" ? "অবস্থান" : "Location Data"}
-                      </div>
-                      <div className="text-sm font-bold text-slate-700 dark:text-slate-300 bengali">
-                        {lang === "bn"
-                          ? selectedEvent.locationBn
-                          : selectedEvent.locationEn}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-50 flex items-center justify-center shrink-0">
-                      <Clock size={18} className="text-emerald-500" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase font-black text-slate-400 tracking-widest">
-                        {lang === "bn" ? "আর্কিভ আইডি" : "Reference Code"}
-                      </div>
-                      <div className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">
-                        #{selectedEvent.id.slice(-8).toUpperCase()}
-                      </div>
-                    </div>
+
+                  <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
+                    <MapPin size={18} className="text-blue-600 dark:text-amber-400" />
+                    <span>{lang === "bn" ? selectedEvent.locationBn : selectedEvent.locationEn}</span>
                   </div>
 
                   {selectedEvent.meetUrl && (
-                    <div className="flex items-start gap-4 mt-2 pt-4 border-t border-emerald-100 dark:border-slate-800">
-                      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 animate-pulse animate-duration-1000">
-                        <Video size={18} className="text-blue-500 animate-pulse" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] uppercase font-black text-blue-600 dark:text-blue-400 tracking-widest">
-                          {lang === "bn" ? "গুগল মিট তথ্য" : "Google Meet Bridge"}
-                        </div>
-                        <a
-                          href={selectedEvent.meetUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs px-5 py-3 rounded-2xl shadow-lg active:scale-95 transition-all w-full justify-center"
-                        >
-                          <Video size={14} className="shrink-0" />
-                          {lang === "bn" ? "মিটিংয়ে যোগ দিন" : "Join Google Meet"}
-                        </a>
-                      </div>
-                    </div>
+                    <a
+                      href={selectedEvent.meetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md"
+                    >
+                      <Video size={16} />
+                      <span>{lang === "bn" ? "গুগল মিটে যোগ দিন" : "Join Google Meet"}</span>
+                    </a>
                   )}
+                </div>
+              </div>
+
+              {/* Share Controls */}
+              <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <h4 className="text-xs font-black uppercase text-slate-500 tracking-widest">
+                  {lang === "bn" ? "শেয়ার করুন" : "Share Event"}
+                </h4>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleShare(selectedEvent)}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  >
+                    <Share2 size={16} />
+                    <span>{copyStatus === selectedEvent.id ? (lang === "bn" ? "কপি হয়েছে" : "Copied") : (lang === "bn" ? "শেয়ার" : "Share")}</span>
+                  </button>
+                  <button
+                    onClick={() => openFacebookShare(selectedEvent)}
+                    className="px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-black uppercase cursor-pointer transition-all"
+                  >
+                    Facebook
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Institutional CTA */}
+      <PageCTA />
     </div>
   );
 };

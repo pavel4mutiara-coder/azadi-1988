@@ -3,56 +3,62 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation as DonationType } from '../types';
-import { Copy, CheckCircle, Heart, Receipt, User, Wallet, AlertCircle, Mail, Info, MousePointerClick, Smartphone, FileCheck, Send, X, Loader2 } from 'lucide-react';
+import { 
+  Copy, CheckCircle2, Heart, Receipt, User, Wallet, AlertCircle, 
+  Mail, Info, MousePointerClick, Smartphone, FileCheck, Send, X, Loader2,
+  ShieldCheck, Lock, Search, FileText, Check, ArrowRight, Building2, HelpCircle
+} from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
 import { parseLocalDate } from '../utils/parseLocalDate';
+import { PageHero } from '../components/PageHero';
+import { PageCTA } from '../components/PageCTA';
 
 export const Donation: React.FC = () => {
   const { lang, settings, donations, addDonation } = useApp();
   const t = TRANSLATIONS[lang];
-  
-  const [formData, setFormData] = useState({ 
-    donorName: '', 
-    isAnonymous: false, 
-    amount: '', 
-    phone: '', 
-    email: '', 
-    transactionId: '', 
-    purpose: t.categories?.[0] || 'General Donation',
-    paymentMethod: 'Bkash',
-    image: ''
+
+  const [formData, setFormData] = useState({
+    donorName: '',
+    isAnonymous: false,
+    amount: '',
+    phone: '',
+    email: '',
+    transactionId: '',
+    purpose: t.categories?.[0] || 'General Welfare',
+    paymentMethod: 'bKash',
   });
-  
+
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [submittedDonation, setSubmittedDonation] = useState<Donation | null>(null);
+  const [submittedDonation, setSubmittedDonation] = useState<DonationType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const approvedDonations = donations.filter(d => d.status === DonationStatus.APPROVED);
   const totalReceived = approvedDonations.reduce((acc, curr) => acc + curr.amount, 0);
 
+  // Validation
   const errors = useMemo(() => {
     const errs: Record<string, string> = {};
     const amountNum = Number(formData.amount);
     if (!formData.amount) {
-      errs.amount = lang === 'bn' ? 'পরিমাণ প্রদান করুন' : 'Amount is required';
+      errs.amount = lang === 'bn' ? 'অনুদানের পরিমাণ লিখুন' : 'Amount is required';
     } else if (amountNum <= 0) {
-      errs.amount = lang === 'bn' ? 'সঠিক পরিমাণ লিখুন' : 'Enter a valid amount';
+      errs.amount = lang === 'bn' ? 'সঠিক পরিমাণ প্রদান করুন' : 'Enter a valid amount';
     }
 
     const phoneRegex = /^01[3-9]\d{8}$/;
     if (!formData.phone) {
-      errs.phone = lang === 'bn' ? 'মোবাইল নম্বর লিখুন' : 'Phone is required';
+      errs.phone = lang === 'bn' ? '১১ ডিজিটের মোবাইল নম্বর লিখুন' : 'Phone is required';
     } else if (!phoneRegex.test(formData.phone)) {
-      errs.phone = lang === 'bn' ? 'সঠিক ১১ ডিজিট নম্বর লিখুন (০১৮...)' : 'Enter valid 11-digit BD number';
+      errs.phone = lang === 'bn' ? 'সঠিক মোবাইল নম্বর প্রদান করুন (০১৮...)' : 'Valid 11-digit BD number required';
     }
 
     if (!formData.isAnonymous && !formData.donorName.trim()) {
-      errs.donorName = lang === 'bn' ? 'আপনার নাম লিখুন' : 'Name is required';
+      errs.donorName = lang === 'bn' ? 'দাতার নাম প্রদান করুন' : 'Name is required';
     }
 
     if (!formData.transactionId.trim()) {
-      errs.transactionId = lang === 'bn' ? 'ট্রানজেকশন আইডি লিখুন' : 'Transaction ID is required';
+      errs.transactionId = lang === 'bn' ? 'ট্রানজেকশন আইডি প্রদান করুন' : 'Transaction ID is required';
     }
 
     return errs;
@@ -79,17 +85,17 @@ export const Donation: React.FC = () => {
 
     if (isSubmitting) return;
 
-    // Direct Cooldown Check (anti-spam, 60 seconds cooldown)
+    // Cooldown check (60 seconds)
     const cooldownMs = 60 * 1000;
     const lastSubStr = localStorage.getItem('last_donation_submit');
     if (lastSubStr) {
-      const lastSub = Number(lastSubStr);
-      const diff = Date.now() - lastSub;
+      const diff = Date.now() - Number(lastSubStr);
       if (diff < cooldownMs) {
         const secsLeft = Math.ceil((cooldownMs - diff) / 1000);
-        alert(lang === 'bn' 
-          ? `অনুগ্রহ করে নতুনভাবে ফরম জমা দেওয়ার পূর্বে ${secsLeft} সেকেন্ড অপেক্ষা করুন।` 
-          : `Please wait ${secsLeft} seconds before submitting again.`
+        alert(
+          lang === 'bn'
+            ? `অনুগ্রহ করে নতুন জমা দেওয়ার পূর্বে ${secsLeft} সেকেন্ড অপেক্ষা করুন।`
+            : `Please wait ${secsLeft} seconds before submitting again.`
         );
         return;
       }
@@ -99,7 +105,7 @@ export const Donation: React.FC = () => {
 
     const cleanTxId = formData.transactionId.trim().toUpperCase().replace(/[^A-Z0-9_\-]/g, '') || Date.now().toString();
 
-    const newDonation: Donation = {
+    const newDonation: DonationType = {
       id: cleanTxId,
       donorName: formData.donorName || 'Anonymous Giver',
       isAnonymous: formData.isAnonymous,
@@ -117,50 +123,73 @@ export const Donation: React.FC = () => {
       await addDonation(newDonation);
       localStorage.setItem('last_donation_submit', Date.now().toString());
       setSubmittedDonation(newDonation);
-      setFormData({ donorName: '', isAnonymous: false, amount: '', phone: '', email: '', transactionId: '', purpose: t.categories?.[0] || 'General Donation', paymentMethod: 'Bkash', image: '' });
+      setFormData({
+        donorName: '',
+        isAnonymous: false,
+        amount: '',
+        phone: '',
+        email: '',
+        transactionId: '',
+        purpose: t.categories?.[0] || 'General Welfare',
+        paymentMethod: 'bKash',
+      });
       setTouched({});
     } catch (err) {
-      alert(lang === 'bn' ? 'অনুদান জমা দিতে সমস্যা হয়েছে।' : 'Error submitting donation to real-time sync.');
+      alert(lang === 'bn' ? 'অনুদান জমা দিতে সমস্যা হয়েছে।' : 'Error submitting donation.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const donationSteps = [
+  const donationFlowSteps = [
     {
-      icon: <Copy size={20} />,
-      titleBn: "নম্বর কপি করুন",
-      titleEn: "Copy Number",
-      descBn: "নিচে দেওয়া নম্বরগুলো থেকে আপনার পছন্দের মাধ্যমটি বেছে নিয়ে নম্বরটি কপি করুন।",
-      descEn: "Choose your preferred method from the numbers below and copy the number."
+      step: 1,
+      titleBn: "অনুদানের পরিমাণ",
+      titleEn: "Choose Amount",
+      descBn: "আপনার সামর্থ্য অনুযায়ী যেকোনো পরিমাণ অর্থ নির্বাচন করুন।",
+      descEn: "Select any contribution amount according to your ability."
     },
     {
-      icon: <Smartphone size={20} />,
-      titleBn: "টাকা পাঠান",
-      titleEn: "Send Money",
-      descBn: "আপনার মোবাইল ব্যাংকিং অ্যাপ বা ইউএসএসডি (যেমন *২৪৭#) এর মাধ্যমে টাকা পাঠান।",
-      descEn: "Send money using your mobile banking app or USSD (e.g., *247#)."
+      step: 2,
+      titleBn: "পেমেন্ট পদ্ধতি",
+      titleEn: "Payment Method",
+      descBn: "বিকাশ, নগদ, রকেট বা ব্যাংক অ্যাকাউন্ট সিলেক্ট করুন।",
+      descEn: "Select bKash, Nagad, Rocket, or direct bank transfer."
     },
     {
-      icon: <Info size={20} />,
-      titleBn: "আইডি সংগ্রহ করুন",
-      titleEn: "Collect TrxID",
-      descBn: "পেমেন্ট শেষে প্রাপ্ত ট্রানজেকশন আইডিটি (Transaction ID) সংগ্রহ করুন বা লিখে রাখুন।",
-      descEn: "Collect the Transaction ID from the confirmation message after payment."
+      step: 3,
+      titleBn: "অর্থ প্রেরণ",
+      titleEn: "Complete Payment",
+      descBn: "মোবাইল অ্যাপ বা ইউএসএসডি কোড ব্যবহার করে অর্থ পাঠান।",
+      descEn: "Send money via mobile app or USSD codes (*247# / *167#)."
     },
     {
-      icon: <MousePointerClick size={20} />,
-      titleBn: "ফরম পূরণ করুন",
-      titleEn: "Fill Form",
-      descBn: "নিচের ফরমে আপনার তথ্য এবং ট্রানজেকশন আইডিটি দিয়ে 'জমা দিন' বাটনে ক্লিক করুন।",
-      descEn: "Fill out the form below with your info and TrxID, then click 'Submit'."
+      step: 4,
+      titleBn: "তথ্য জমা দিন",
+      titleEn: "Submit TrxID",
+      descBn: "পেমেন্টের ট্রানজেকশন আইডি ফরমে লিখে জমা দিন।",
+      descEn: "Fill out the transaction ID & reference details in the form."
     },
     {
-      icon: <FileCheck size={20} />,
-      titleBn: "রশিদ সংগ্রহ",
-      titleEn: "Get Receipt",
-      descBn: "সফলভাবে জমা দেওয়ার পর সরাসরি আপনার অফিসিয়াল অনুদান রশিদটি ডাউনলোড করে নিন।",
-      descEn: "After successful submission, download your official donation receipt instantly."
+      step: 5,
+      titleBn: "অপেক্ষাধীন স্থিতি",
+      titleEn: "Pending Status",
+      descBn: "আপনার অনুদানটি PENDING ক্যাটাগরিতে পর্যালোচনায় সংরক্ষিত হবে।",
+      descEn: "Your submission enters PENDING status for financial audit."
+    },
+    {
+      step: 6,
+      titleBn: "ম্যানুয়াল যাচাইকরণ",
+      titleEn: "Verification",
+      descBn: "অর্থ কর্মকর্তা ব্যাংক লগ মিলিয়ে তথ্য অনুমোদন করবেন।",
+      descEn: "Officers manually verify the TrxID with live banking records."
+    },
+    {
+      step: 7,
+      titleBn: "অফিসিয়াল রিসিট",
+      titleEn: "Official Receipt",
+      descBn: "অনুমোদনের পর কিউআর কোডসহ রিসিট ডাউনলোড করতে পারবেন।",
+      descEn: "Download your official QR-verified PDF receipt anytime."
     }
   ];
 
@@ -175,186 +204,200 @@ export const Donation: React.FC = () => {
     );
   }
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-12 animate-in slide-in-from-bottom-2 duration-500 pb-20 bengali">
-      
-      {/* Arabic Calligraphy Header Section */}
-      <div className="p-2 border border-emerald-500/20 rounded-[3.5rem] bg-gradient-to-r from-emerald-950 via-teal-950 to-emerald-950 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 shadow-2xl transition-all relative overflow-hidden group">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/arabic-bazazz.png')] group-hover:scale-105 transition-transform duration-1000"></div>
-        <div className="absolute -top-32 -left-32 w-80 h-80 bg-emerald-500/20 dark:bg-emerald-500/5 blur-[120px] rounded-full"></div>
-        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-emerald-400/15 dark:bg-amber-500/5 blur-[120px] rounded-full"></div>
-        
-        <div className="border border-dashed border-emerald-500/25 dark:border-emerald-500/15 rounded-[3.25rem] p-8 md:p-14 flex flex-col items-center justify-center text-center relative z-10 space-y-8 w-full">
-          
-          {/* Traditional Decorative Motif / Corners */}
-          <div className="absolute top-4 left-4 w-6 h-6 border-t border-l border-emerald-400/40 rounded-tl-xl"></div>
-          <div className="absolute top-4 right-4 w-6 h-6 border-t border-r border-emerald-400/40 rounded-tr-xl"></div>
-          <div className="absolute bottom-4 left-4 w-6 h-6 border-b border-l border-emerald-400/40 rounded-bl-xl"></div>
-          <div className="absolute bottom-4 right-4 w-6 h-6 border-b border-r border-emerald-400/40 rounded-br-xl"></div>
-          
-          <div className="space-y-6 w-full">
-            {/* Arabic Calligraphy Verse */}
-            <div className="transform transition-transform duration-700 hover:scale-[1.02]">
-              <div 
-                dir="rtl" 
-                className="text-4xl sm:text-5xl md:text-7xl text-emerald-300 font-arabic-amiri tracking-wide select-none leading-relaxed drop-shadow-[0_2px_15px_rgba(52,211,153,0.45)]"
-              >
-                <span className="text-amber-400 opacity-80 mr-2">﴿</span>
-                وَمَا تُنْفِقُوا مِنْ خَيْرٍ فَلِأَنْفُسِكُمْ
-                <span className="text-amber-400 opacity-80 ml-2">﴾</span>
-              </div>
-            </div>
-            
-            {/* Elegant Divider */}
-            <div className="flex items-center justify-center gap-4">
-              <span className="w-16 h-px bg-gradient-to-r from-transparent to-emerald-400/30"></span>
-              <div className="w-1.5 h-1.5 bg-emerald-400 rotate-45"></div>
-              <span className="w-16 h-px bg-gradient-to-l from-transparent to-emerald-400/30"></span>
-            </div>
+  // Active verified payment methods
+  const paymentMethods = [
+    { name: 'bKash', number: settings.bkash, color: 'border-pink-500/30 bg-pink-50/50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-400' },
+    { name: 'Nagad', number: settings.nagad, color: 'border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400' },
+    { name: 'Rocket', number: settings.roket, color: 'border-purple-500/30 bg-purple-50/50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400' }
+  ].filter(m => Boolean(m.number));
 
-            {/* Translation & Citation */}
-            <div className="space-y-4 max-w-2xl mx-auto px-4">
-              <p className="text-emerald-50 dark:text-emerald-100/90 text-lg md:text-xl font-medium leading-relaxed bengali" style={{ fontFamily: '"Noto Sans Bengali", sans-serif', letterSpacing: 'normal' }}>
-                {lang === 'bn' 
-                  ? '“তোমরা যে উত্তম বস্তু ব্যয় করো, তা তোমাদের নিজেদের কল্যাণের জন্যই”'
-                  : '“Whatever good you spend is for your own souls”'}
-              </p>
-              <div className="inline-block py-1 px-4 rounded-full bg-emerald-950/50 dark:bg-slate-900 border border-emerald-500/20 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-emerald-400/80 bengali">
-                {lang === 'bn' ? '— সূরা আল-বাকারা: ২৭২' : '— Surah Al-Baqarah: 272'}
-              </div>
-            </div>
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 bengali animate-in fade-in duration-500">
+      {/* Page Hero */}
+      <PageHero
+        icon={<Heart size={20} />}
+        badgeBn="অনলাইন অনুদান পোর্টাল"
+        badgeEn="Official Donation Portal"
+        titleBn="আজাদী সমাজ কল্যাণ সংঘে অনুদান"
+        titleEn="Support Our Community Welfare Projects"
+        subtitleBn="আপনার সদকা ও যাকাত সিলেটের দুঃস্থ পরিবার, শিক্ষা স্কলারশিপ ও স্বাস্থ্যসেবায় স্বচ্ছতার সাথে ব্যবহৃত হয়।"
+        subtitleEn="100% of your public contributions directly empower marginalized families, student stipends, and relief drives."
+        breadcrumbs={[
+          { labelBn: "অনুদান", labelEn: "Donation" }
+        ]}
+      />
+
+      {/* Islamic Quranic Calligraphy Hero Banner */}
+      <div className="mb-16 p-8 sm:p-12 rounded-4xl bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 border border-emerald-500/30 shadow-heavy text-center relative overflow-hidden">
+        <div className="relative z-10 space-y-6 max-w-3xl mx-auto">
+          <div dir="rtl" className="text-3xl sm:text-5xl text-emerald-300 font-serif leading-relaxed drop-shadow-[0_2px_10px_rgba(52,211,153,0.3)]">
+            <span className="text-amber-400 opacity-80 mr-2">﴿</span>
+            وَمَا تُنْفِقُوا مِنْ خَيْرٍ فَلِأَنْفُسِكُمْ
+            <span className="text-amber-400 opacity-80 ml-2">﴾</span>
           </div>
+
+          <p className="text-emerald-100 text-sm sm:text-lg font-medium leading-relaxed">
+            {lang === 'bn' 
+              ? '“তোমরা যে উত্তম বস্তু ব্যয় করো, তা তোমাদের নিজেদের কল্যাণের জন্যই”'
+              : '“Whatever good you spend is for your own souls”'}
+          </p>
+
+          <span className="inline-block px-4 py-1 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[11px] font-black uppercase tracking-widest text-amber-300">
+            {lang === 'bn' ? '— সূরা আল-বাকারা: ২৭২' : '— Surah Al-Baqarah: 272'}
+          </span>
         </div>
       </div>
 
-      <div className="text-center space-y-4">
-        <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200 dark:border-emerald-800 shadow-xl rotate-3">
-          <Heart size={40} fill="currentColor" />
+      {/* 7-Step Institutional Process Flow */}
+      <div className="mb-16 bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-heavy space-y-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
+          <div className="space-y-1">
+            <span className="text-xs font-black uppercase text-blue-700 dark:text-amber-400 tracking-widest">
+              {lang === 'bn' ? 'অনুদানের স্বচ্ছ পরিক্রমা' : 'Transparent Process Flow'}
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+              {lang === 'bn' ? '৭টি ধাপে অনুদান প্রদান ও রিসিট পাওয়ার নিয়ম' : 'How Your Donation is Processed & Verified'}
+            </h2>
+          </div>
+
+          <Link
+            to="/verify-donation"
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0"
+          >
+            <ShieldCheck size={16} className="text-emerald-500" />
+            <span>{lang === 'bn' ? 'রশিদ সত্যতা যাচাই করুন' : 'Verify a Receipt'}</span>
+          </Link>
         </div>
-        <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight">{t.donation}</h1>
-        <p className="text-slate-500 dark:text-slate-400 font-bold max-w-xl mx-auto text-base md:text-lg leading-relaxed">{t.paymentInstructions}</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          {donationFlowSteps.map((s) => (
+            <div key={s.step} className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="w-7 h-7 rounded-full bg-blue-700 text-white font-black text-xs flex items-center justify-center shrink-0">
+                  {s.step}
+                </span>
+                <span className="text-[10px] font-mono font-bold text-slate-400">Step 0{s.step}</span>
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-black text-xs text-slate-900 dark:text-white">
+                  {lang === 'bn' ? s.titleBn : s.titleEn}
+                </h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                  {lang === 'bn' ? s.descBn : s.descEn}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Payment Numbers */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {[
-          { label: 'Bkash', num: settings.bkash, color: 'bg-pink-50 text-pink-700 border-pink-100 dark:bg-pink-950/40 dark:text-pink-400 dark:border-pink-900/50' },
-          { label: 'Nagad', num: settings.nagad, color: 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50' },
-          { label: 'Roket', num: settings.roket, color: 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/50' },
-        ].map(m => (
-          <div key={m.label} className={`p-8 rounded-[2.5rem] border ${m.color} flex items-center justify-between shadow-lg shadow-black/5 group hover:scale-[1.02] transition-all duration-300`}>
-            <div className="space-y-1">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{m.label}</div>
-              <div className="text-2xl font-black font-mono tracking-tighter">{m.num}</div>
+      <div className="mb-16 space-y-6">
+        <h3 className="text-xs font-black uppercase text-blue-700 dark:text-amber-400 tracking-widest">
+          {lang === 'bn' ? 'অফিসিয়াল মোবাইল ব্যাংকিং হিসাব' : 'Official Payment Channels'}
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {paymentMethods.map(m => (
+            <div 
+              key={m.name} 
+              className={`p-6 rounded-3xl border ${m.color} flex items-center justify-between shadow-soft hover:shadow-heavy transition-all duration-300`}
+            >
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{m.name} Personal / Merchant</span>
+                <div className="text-xl font-black font-mono tracking-tight">{m.number}</div>
+              </div>
+
+              <button 
+                onClick={() => handleCopy(m.number, m.name)} 
+                className="p-3 bg-white dark:bg-slate-900 rounded-2xl shadow-md hover:scale-105 active:scale-95 transition-all text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 cursor-pointer"
+              >
+                {copyStatus === m.name ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Copy size={18} />}
+              </button>
             </div>
-            <button onClick={() => handleCopy(m.num, m.label)} className="p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-xl hover:scale-110 active:scale-95 transition-all text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
-              {copyStatus === m.label ? <CheckCircle size={22} className="text-emerald-500" /> : <Copy size={22} />}
-            </button>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Donation Guide Section */}
-      <section className="bg-white dark:bg-slate-900/50 rounded-[3rem] p-8 md:p-12 border border-emerald-100 dark:border-slate-800 shadow-xl space-y-10 relative overflow-hidden group">
-         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:rotate-12 transition-transform">
-           <Send size={120} className="text-emerald-500" />
-         </div>
-         
-         <div className="flex items-center gap-4 relative z-10">
-           <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
-             <Info size={24} />
-           </div>
-           <div className="space-y-1">
-             <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white leading-tight">
-               {lang === 'bn' ? 'কিভাবে অনুদান দিবেন?' : 'How to Donate?'}
-             </h2>
-             <p className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest">৫টি সহজ ধাপে আপনার অনুদানটি সম্পন্ন করুন</p>
-           </div>
-         </div>
+      {/* Main Donation Form & Side Panel Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-16">
+        {/* Form Container */}
+        <form 
+          onSubmit={handleSubmit} 
+          className="lg:col-span-7 bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-heavy space-y-8"
+        >
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-6">
+            <div className="space-y-1">
+              <span className="text-xs font-black uppercase text-blue-700 dark:text-amber-400 tracking-widest">
+                {lang === 'bn' ? 'অনলাইন অনুদান পেশ করুন' : 'Submit Contribution'}
+              </span>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Wallet className="text-blue-600 dark:text-amber-400" size={24} />
+                <span>{lang === 'bn' ? 'অনুদান জমা ফর্ম' : 'Donation Form'}</span>
+              </h3>
+            </div>
 
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
-            {donationSteps.map((step, index) => (
-              <div key={index} className="space-y-4 group/step">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center font-black border border-emerald-100 dark:border-emerald-800 group-hover/step:bg-emerald-600 group-hover/step:text-white transition-all">
-                    {index + 1}
-                  </div>
-                  <div className="h-0.5 flex-1 bg-emerald-100 dark:bg-slate-800 hidden lg:block last:hidden"></div>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">
-                    {lang === 'bn' ? step.titleBn : step.titleEn}
-                  </h4>
-                  <p className="text-slate-500 dark:text-slate-400 font-bold text-[11px] leading-relaxed">
-                    {lang === 'bn' ? step.descBn : step.descEn}
-                  </p>
-                </div>
-              </div>
-            ))}
-         </div>
-      </section>
-
-      <div className="grid md:grid-cols-12 gap-10 items-start">
-        <form onSubmit={handleSubmit} className="md:col-span-7 bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-emerald-100 dark:border-slate-800 shadow-2xl space-y-10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-          
-          <div className="flex justify-between items-center border-b border-emerald-100 dark:border-slate-800 pb-8 relative z-10">
-            <h3 className="text-2xl font-black text-emerald-900 dark:text-white flex items-center gap-3">
-              <Wallet className="text-emerald-600 dark:text-emerald-400" />
-              {lang === 'bn' ? 'অণুদান ফরম' : 'Donation Form'}
-            </h3>
-            <label className="flex items-center gap-3 text-[10px] font-black cursor-pointer bg-slate-50 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-emerald-200 dark:border-slate-800 select-none hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors">
+            <label className="flex items-center gap-2 text-[11px] font-black cursor-pointer bg-slate-50 dark:bg-slate-950 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 select-none">
               <input 
                 type="checkbox" 
-                className="w-5 h-5 text-emerald-600 dark:bg-slate-950 border-emerald-300 dark:border-slate-700 rounded-lg cursor-pointer focus:ring-emerald-500" 
+                className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
                 checked={formData.isAnonymous}
                 onChange={e => setFormData({...formData, isAnonymous: e.target.checked})}
               />
-              <span className="text-emerald-800 dark:text-slate-300 uppercase tracking-widest">{t.anonymous}</span>
+              <span className="text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t.anonymous}</span>
             </label>
           </div>
-          
-          <div className="space-y-8 relative z-10">
+
+          <div className="space-y-6">
             {!formData.isAnonymous && (
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.donorName}</label>
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1">
+                  {t.donorName} *
+                </label>
                 <input 
-                  required 
                   type="text" 
                   onBlur={() => handleBlur('donorName')}
-                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.donorName && errors.donorName ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-slate-500`} 
-                  placeholder="আপনার পূর্ণ নাম লিখুন" 
+                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.donorName && errors.donorName ? 'border-rose-500' : 'border-slate-200 dark:border-slate-800'} p-4 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-500/20 transition-all`} 
+                  placeholder={lang === 'bn' ? 'আপনার পূর্ণ নাম লিখুন' : 'Enter your full name'} 
                   value={formData.donorName} 
                   onChange={e => setFormData({...formData, donorName: e.target.value})} 
                 />
-                {touched.donorName && errors.donorName && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.donorName}</p>}
+                {touched.donorName && errors.donorName && (
+                  <p className="text-rose-500 text-xs font-bold flex items-center gap-1"><AlertCircle size={12}/> {errors.donorName}</p>
+                )}
               </div>
             )}
-            <div className="grid sm:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.amount} (BDT)</label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1">
+                  {t.amount} (BDT) *
+                </label>
                 <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-emerald-600 dark:text-emerald-400 text-2xl">৳</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-lg">৳</span>
                   <input 
-                    required 
                     type="number" 
                     onBlur={() => handleBlur('amount')}
-                    className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.amount && errors.amount ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black text-3xl tracking-tighter placeholder-slate-400 dark:placeholder-slate-500`} 
+                    className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.amount && errors.amount ? 'border-rose-500' : 'border-slate-200 dark:border-slate-800'} p-4 pl-10 rounded-2xl text-lg font-black font-mono text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-500/20 transition-all`} 
                     placeholder="1000" 
                     value={formData.amount} 
                     onChange={e => setFormData({...formData, amount: e.target.value})} 
                   />
                 </div>
-                {touched.amount && errors.amount && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.amount}</p>}
+                {touched.amount && errors.amount && (
+                  <p className="text-rose-500 text-xs font-bold flex items-center gap-1"><AlertCircle size={12}/> {errors.amount}</p>
+                )}
               </div>
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.phone}</label>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1">
+                  {t.phone} *
+                </label>
                 <input 
-                  required 
                   type="tel" 
                   maxLength={11}
                   onBlur={() => handleBlur('phone')}
-                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-slate-500`} 
+                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.phone && errors.phone ? 'border-rose-500' : 'border-slate-200 dark:border-slate-800'} p-4 rounded-2xl text-sm font-bold font-mono text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-500/20 transition-all`} 
                   placeholder="01XXXXXXXXX" 
                   value={formData.phone} 
                   onChange={e => {
@@ -362,43 +405,62 @@ export const Donation: React.FC = () => {
                     if (val.length <= 11) setFormData({...formData, phone: val});
                   }} 
                 />
-                {touched.phone && errors.phone && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.phone}</p>}
+                {touched.phone && errors.phone && (
+                  <p className="text-rose-500 text-xs font-bold flex items-center gap-1"><AlertCircle size={12}/> {errors.phone}</p>
+                )}
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{lang === 'bn' ? 'ইমেইল (ঐচ্ছিক)' : 'Email (Optional)'}</label>
-                <div className="relative">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-600/50" size={20} />
-                  <input 
-                    type="email" 
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 pl-12 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-slate-500" 
-                    placeholder="example@mail.com" 
-                    value={formData.email} 
-                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                  />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1">
+                  {lang === 'bn' ? 'পেমেন্ট মাধ্যম' : 'Payment Method'}
+                </label>
+                <select 
+                  value={formData.paymentMethod}
+                  onChange={e => setFormData({...formData, paymentMethod: e.target.value})}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-500/20 transition-all cursor-pointer"
+                >
+                  <option value="bKash">bKash</option>
+                  <option value="Nagad">Nagad</option>
+                  <option value="Rocket">Rocket</option>
+                  <option value="Bank Transfer">Direct Bank Transfer</option>
+                  <option value="Cash / Handover">In-Person Cash</option>
+                </select>
               </div>
-              <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.txid}</label>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1">
+                  {t.txid} *
+                </label>
                 <input 
-                  required 
                   type="text" 
                   onBlur={() => handleBlur('transactionId')}
-                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'} p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-mono font-black uppercase text-xl tracking-wider placeholder-slate-400 dark:placeholder-slate-500`} 
+                  className={`w-full bg-slate-50 dark:bg-slate-950 border ${touched.transactionId && errors.transactionId ? 'border-rose-500' : 'border-slate-200 dark:border-slate-800'} p-4 rounded-2xl text-sm font-mono font-black uppercase tracking-wider text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-500/20 transition-all`} 
                   placeholder="TRX12345..." 
                   value={formData.transactionId} 
                   onChange={e => setFormData({...formData, transactionId: e.target.value})} 
                 />
-                {touched.transactionId && errors.transactionId && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><AlertCircle size={12}/> {errors.transactionId}</p>}
+                {touched.transactionId && errors.transactionId && (
+                  <p className="text-rose-500 text-xs font-bold flex items-center gap-1"><AlertCircle size={12}/> {errors.transactionId}</p>
+                )}
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-slate-500 ml-1">{t.purpose}</label>
-              <select className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl focus:ring-2 ring-emerald-500/20 outline-none transition-all text-slate-900 dark:text-white font-black cursor-pointer appearance-none" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
-                {t.categories?.map((c: string) => <option key={c} value={c} className="font-bold py-3 bg-white dark:bg-slate-900">{c}</option>)}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1">
+                {t.purpose}
+              </label>
+              <select 
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-500/20 transition-all cursor-pointer" 
+                value={formData.purpose} 
+                onChange={e => setFormData({...formData, purpose: e.target.value})}
+              >
+                {t.categories?.map((c: string) => (
+                  <option key={c} value={c} className="font-bold py-2 bg-white dark:bg-slate-900">
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -406,69 +468,81 @@ export const Donation: React.FC = () => {
           <button 
             type="submit" 
             disabled={isSubmitting}
-            className={`w-full bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 hover:-translate-y-1 active:scale-95 text-white font-black py-6 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-3 text-xl ring-4 ring-emerald-500/10 group ${isSubmitting ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+            className="w-full py-5 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white font-black text-sm uppercase tracking-wider rounded-2xl shadow-heavy transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? (
-              <Loader2 className="animate-spin text-white animate-infinite" size={26} />
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                <span>{lang === 'bn' ? 'প্রক্রিয়াধীন...' : 'Processing Submission...'}</span>
+              </>
             ) : (
-              <Heart size={26} className="group-hover:scale-110 transition-transform" />
+              <>
+                <Heart size={20} className="text-amber-400" />
+                <span>{t.submit}</span>
+              </>
             )}
-            {isSubmitting ? (lang === 'bn' ? 'প্রক্রিয়াধীন...' : 'Processing...') : t.submit}
           </button>
         </form>
 
-        <div className="md:col-span-5 space-y-10">
-          <div className="bg-emerald-900 dark:bg-emerald-950 p-10 rounded-[3.5rem] border-2 border-emerald-800/50 shadow-2xl flex items-center justify-between text-white group overflow-hidden relative transition-all">
-            <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:scale-125 transition-all duration-1000">
-               <Heart size={180} fill="white" />
+        {/* Right Column: Total Raised Summary & Trust Guarantees */}
+        <div className="lg:col-span-5 space-y-8">
+          <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 sm:p-10 rounded-4xl border border-blue-800/40 shadow-heavy text-white space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-widest text-amber-400">
+                {lang === 'bn' ? 'অনুমোদিত সর্বমোট কল্যাণ দান' : 'Total Approved Raised'}
+              </span>
+              <Receipt size={24} className="text-blue-400" />
             </div>
-            <div className="relative z-10 space-y-3">
-              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-400/80">{lang === 'bn' ? 'সর্বমোট সাহায্য প্রাপ্তি' : 'Total Donations'}</div>
-              <div className="text-4xl font-black tracking-tighter">৳ {totalReceived.toLocaleString()}</div>
+
+            <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight">
+              ৳ {totalReceived.toLocaleString()}
             </div>
-            <Receipt size={56} className="text-emerald-400 opacity-20 relative z-10" />
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
+              <span>{lang === 'bn' ? 'অনুমোদিত ট্রানজেকশন' : 'Approved Records'}</span>
+              <span className="font-bold text-amber-400 font-mono">{approvedDonations.length}</span>
+            </div>
           </div>
 
-          <div className="bg-emerald-100/30 dark:bg-slate-900 p-8 rounded-[3.5rem] border border-emerald-200/60 dark:border-slate-800 shadow-2xl space-y-8">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xl font-black flex items-center gap-4 text-emerald-950 dark:text-white">
-                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100">
-                  <User size={24} />
-                </div>
-                {t.recentDonors}
-              </h3>
-              <Link to="/donation-history" className="text-emerald-600 dark:text-emerald-400 font-black text-xs uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-1">
-                {t.history} <Send size={14} className="rotate-45" />
-              </Link>
+          {/* Institutional Trust Guarantees Block */}
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-soft space-y-6">
+            <h4 className="text-xs font-black uppercase text-blue-700 dark:text-amber-400 tracking-wider flex items-center gap-2">
+              <ShieldCheck size={18} />
+              <span>{lang === 'bn' ? 'আমাদের সামাজিক নিরাপত্তা গ্যারান্টি' : 'Trust & Stewardship Guarantees'}</span>
+            </h4>
+
+            <div className="space-y-4 text-xs font-medium text-slate-600 dark:text-slate-400">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                <p>{lang === 'bn' ? 'অনুদানের তথ্য সরাসরি ম্যানুয়ালি যাচাই করা হয় এবং PENDING থেকে APPROVED করা হয়।' : 'Every submission undergoes 100% manual bank statement audit before approval.'}</p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                <p>{lang === 'bn' ? 'অনুমোদনের সাথে সাথে ডিজিটাল রিসিট এবং কিউআর ভেরিফিকেশন তৈরি হয়।' : 'Approved donations generate an official digital receipt with QR authenticity scan.'}</p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                <p>{lang === 'bn' ? 'দাতার ফোন ও ব্যক্তিগত বিবরণ সুরক্ষিত রাখা হয় এবং কখনো প্রকাশ করা হয় না।' : 'Donor privacy is guaranteed — phone & private contact info remain strictly concealed.'}</p>
+              </div>
             </div>
-            <div className="space-y-5 max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
-              {approvedDonations.length === 0 ? (
-                <div className="py-20 text-center space-y-4 opacity-30">
-                   <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto">
-                      <Heart size={32} className="text-slate-400" />
-                   </div>
-                   <p className="font-bold italic text-slate-500">No approved donations yet.</p>
-                </div>
-              ) : (
-                approvedDonations.map(d => (
-                  <div key={d.id} className="p-6 rounded-[2rem] bg-white/70 dark:bg-slate-950 border border-emerald-100 dark:border-slate-800 flex items-center justify-between group hover:border-emerald-500 transition-all shadow-sm">
-                    <div className="space-y-1">
-                      <div className="font-black text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                        {d.isAnonymous ? t.anonymous : d.donorName}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/40 px-3 py-1 rounded-full">{d.purpose}</span>
-                        <span className="text-[9px] font-bold text-slate-400">{parseLocalDate(d.date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <div className="text-xl font-black text-emerald-700 dark:text-emerald-400 font-mono tracking-tighter">৳{d.amount.toLocaleString()}</div>
-                  </div>
-                ))
-              )}
+
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <Link
+                to="/donation-history"
+                className="text-xs font-black text-blue-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1 hover:underline"
+              >
+                <span>{lang === 'bn' ? 'অণুদানের ইতিহাস দেখুন' : 'Check Donation Records'}</span>
+                <ArrowRight size={14} />
+              </Link>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Institutional CTA */}
+      <PageCTA />
     </div>
   );
 };
