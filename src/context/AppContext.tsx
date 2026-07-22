@@ -330,7 +330,15 @@ const getCachedData = <T,>(key: string, defaultValue: T): T => {
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLang] = useState<Language>('bn');
+  const [lang, setLangState] = useState<Language>(() => {
+    const saved = localStorage.getItem('azadi_lang');
+    return (saved === 'en' || saved === 'bn') ? saved : 'bn';
+  });
+
+  const setLang = (newLang: Language) => {
+    setLangState(newLang);
+    localStorage.setItem('azadi_lang', newLang);
+  };
   const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('azadi_theme');
     return (saved === 'dark' || saved === 'light') ? saved : 'light';

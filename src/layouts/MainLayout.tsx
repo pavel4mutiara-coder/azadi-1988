@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS, MOBILE_NAV_ITEMS } from '../utils/constants';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
-  DownloadCloud, X, Share, BellRing, ChevronRight,
+  DownloadCloud, X, Share, BellRing, ChevronRight, ChevronDown,
   PlusSquare, ArrowUp, PieChart, Home, Sparkles, Lock, Menu,
-  Award, Shield, ExternalLink, CheckCircle2, Image as ImageIcon
+  Award, Shield, ExternalLink, CheckCircle2, Image as ImageIcon,
+  Info, Newspaper, Contact, MoreHorizontal
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,10 +28,31 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   // Mobile menu drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile drawer on route change
+  // Desktop 'More' menu dropdown state
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sync document lang attribute
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  // Close mobile drawer and dropdown on route change
   useEffect(() => {
     setMobileMenuOpen(false);
+    setMoreMenuOpen(false);
   }, [location.pathname]);
+
+  // Close 'More' dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // PWA install banner logic
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -132,6 +154,28 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     );
   }
 
+  // Define responsive groups for navigation items to prevent horizontal overflow
+  // Group 1: Always visible on desktop (lg: 1024px+)
+  const primaryNavItems = [
+    { label: 'home', path: '/', icon: <Home size={15} /> },
+    { label: 'about', path: '/about', icon: <Info size={15} /> },
+    { label: 'events', path: '/events', icon: <Sparkles size={15} /> },
+  ];
+
+  // Group 2: Visible on desktop xl (1280px+)
+  const xlNavItems = [
+    { label: 'news', path: '/news', icon: <Newspaper size={15} /> },
+    { label: 'notices', path: '/notices', icon: <BellRing size={15} /> },
+    { label: 'gallery', path: '/gallery', icon: <ImageIcon size={15} /> },
+  ];
+
+  // Group 3: Visible on desktop 2xl (1536px+)
+  const xxlNavItems = [
+    { label: 'leadership', path: '/leadership', icon: <Users size={15} /> },
+    { label: 'transparency', path: '/transparency', icon: <PieChart size={15} /> },
+    { label: 'contact', path: '/contact', icon: <Contact size={15} /> },
+  ];
+
   return (
     <div 
       id="app-layout-root"
@@ -225,71 +269,220 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
       {/* MAIN HEADER & NAVIGATION BAR */}
       <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-[#0b1329]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 no-print shadow-sm transition-all duration-300">
-        <div className="container mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+        <div className="container mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo & Brand Identity */}
-          <Link to="/" className="flex items-center gap-2.5 sm:gap-3.5 group min-w-0 shrink-0 transition-transform active:scale-[0.98]">
-            <OrganizationSeal className="w-9 h-9 sm:w-12 sm:h-12" />
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0 shrink-0 transition-transform active:scale-[0.98]">
+            <OrganizationSeal className="w-8 h-8 sm:w-11 sm:h-11" />
             <div className="flex flex-col justify-center min-w-0">
-              <h1 className="text-12px xs:text-14px sm:text-base md:text-lg lg:text-xl font-black uppercase leading-tight text-slate-900 dark:text-white truncate bengali tracking-tight">
+              <h1 className="text-xs sm:text-sm md:text-base lg:text-lg font-black uppercase leading-tight text-slate-900 dark:text-white truncate bengali tracking-tight">
                 {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
               </h1>
-              <p className="text-[9px] sm:text-[10px] text-blue-700 dark:text-amber-400 font-bold uppercase truncate bengali tracking-wider mt-0.5">
+              <p className="text-[9px] sm:text-[10px] text-blue-700 dark:text-amber-400 font-bold uppercase truncate bengali tracking-wider mt-0.5 hidden xs:block">
                 {lang === 'bn' ? settings?.sloganBn || 'শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া' : settings?.sloganEn || 'Education · Unity · Service · Peace · Sports'}
               </p>
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0">
-            {(isAdmin && !isPublicPage ? ADMIN_NAV_ITEMS : NAV_ITEMS).map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link 
-                  key={item.path} 
-                  to={item.path} 
-                  className={`text-xs font-bold transition-all px-3 xl:px-3.5 py-2 rounded-xl flex items-center gap-1.5 uppercase tracking-wide group ${
-                    isActive 
-                    ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
+          {/* Responsive Desktop Navigation Links - Non-Overflowing Layout */}
+          {isAdmin && !isPublicPage ? (
+            <nav className="hidden lg:flex items-center gap-1 shrink-0">
+              {ADMIN_NAV_ITEMS.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link 
+                    key={item.path} 
+                    to={item.path} 
+                    className={`text-xs font-bold transition-all px-2.5 py-1.5 rounded-xl flex items-center gap-1 uppercase tracking-wide group ${
+                      isActive 
+                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
+                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                    } bengali`}
+                  >
+                    <span>{t[item.label as keyof typeof t] as string}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          ) : (
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5">
+              {/* Always visible on lg screens */}
+              {primaryNavItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link 
+                    key={item.path} 
+                    to={item.path} 
+                    className={`text-xs font-bold transition-all px-2.5 xl:px-3 py-2 rounded-xl flex items-center gap-1.5 uppercase tracking-wide group ${
+                      isActive 
+                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
+                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                    } bengali`}
+                  >
+                    <span className={`transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
+                      {React.cloneElement(item.icon, { size: 15 })}
+                    </span>
+                    <span>{t[item.label as keyof typeof t] as string}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Visible on xl screens (1280px+) */}
+              {xlNavItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link 
+                    key={item.path} 
+                    to={item.path} 
+                    className={`hidden xl:flex text-xs font-bold transition-all px-2.5 xl:px-3 py-2 rounded-xl items-center gap-1.5 uppercase tracking-wide group ${
+                      isActive 
+                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
+                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                    } bengali`}
+                  >
+                    <span className={`transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
+                      {React.cloneElement(item.icon, { size: 15 })}
+                    </span>
+                    <span>{t[item.label as keyof typeof t] as string}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Visible on 2xl screens (1536px+) */}
+              {xxlNavItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link 
+                    key={item.path} 
+                    to={item.path} 
+                    className={`hidden 2xl:flex text-xs font-bold transition-all px-2.5 xl:px-3 py-2 rounded-xl items-center gap-1.5 uppercase tracking-wide group ${
+                      isActive 
+                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
+                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                    } bengali`}
+                  >
+                    <span className={`transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
+                      {React.cloneElement(item.icon, { size: 15 })}
+                    </span>
+                    <span>{t[item.label as keyof typeof t] as string}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Desktop 'More' Dropdown for smaller desktop viewports */}
+              <div className="relative 2xl:hidden" ref={moreMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                  className={`text-xs font-bold transition-all px-2.5 py-2 rounded-xl flex items-center gap-1 uppercase tracking-wide border border-transparent ${
+                    moreMenuOpen
+                    ? 'bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-amber-400 border-blue-200 dark:border-slate-700'
                     : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
                   } bengali`}
+                  aria-expanded={moreMenuOpen}
+                  aria-haspopup="true"
                 >
-                  <span className={`transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
-                    {React.cloneElement(item.icon as React.ReactElement<any>, { size: 15 })}
-                  </span>
-                  <span>{t[item.label as keyof typeof t] as string}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                  <MoreHorizontal size={16} />
+                  <span>{(t as any).more || (lang === 'bn' ? 'আরও' : 'More')}</span>
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${moreMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-          {/* Action Controls & Donate CTA */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                {/* Dropdown Menu */}
+                {moreMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Items hidden on lg but shown on xl (so show in dropdown when < xl) */}
+                    {xlNavItems.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setMoreMenuOpen(false)}
+                          className={`xl:hidden flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali ${
+                            isActive ? 'text-blue-700 dark:text-amber-400 bg-blue-50/50 dark:bg-slate-800/50' : 'text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <span className="text-slate-400 dark:text-slate-400">{React.cloneElement(item.icon, { size: 15 })}</span>
+                          <span>{t[item.label as keyof typeof t] as string}</span>
+                        </Link>
+                      );
+                    })}
+
+                    {/* Items hidden on lg & xl (so show in dropdown when < 2xl) */}
+                    {xxlNavItems.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setMoreMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali ${
+                            isActive ? 'text-blue-700 dark:text-amber-400 bg-blue-50/50 dark:bg-slate-800/50' : 'text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <span className="text-slate-400 dark:text-slate-400">{React.cloneElement(item.icon, { size: 15 })}</span>
+                          <span>{t[item.label as keyof typeof t] as string}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </nav>
+          )}
+
+          {/* Action Controls & Donate CTA - ALWAYS Visible and Unclipped */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Header Donate Button (Desktop & Tablet) */}
             <Link 
               to="/donation"
-              className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-md shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.03] active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider px-3.5 py-2.5 rounded-xl shadow-md shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.03] active:scale-95"
             >
-              <Heart size={15} fill="currentColor" className="text-slate-950 animate-pulse" />
+              <Heart size={14} fill="currentColor" className="text-slate-950 animate-pulse" />
               <span>{t.donate as string}</span>
             </Link>
 
-            {/* Language Switcher */}
-            <button 
-              onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')} 
-              className="px-2.5 sm:px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-bold text-[11px] uppercase flex items-center gap-1.5 bg-white dark:bg-slate-900 hover:border-blue-500 transition-all shadow-sm"
-              title={lang === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'}
+            {/* Highly Visible Segmented Language Switcher Control */}
+            <div 
+              className="flex items-center bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner shrink-0"
+              role="group"
+              aria-label={lang === 'bn' ? 'ভাষা নির্বাচন' : 'Language Selection'}
             >
-              <Languages size={14} className="text-blue-600 dark:text-blue-400" /> 
-              <span className="hidden sm:inline font-bold">{lang === 'bn' ? 'EN' : 'বাংলা'}</span>
-              <span className="sm:hidden font-bold">{lang === 'bn' ? 'EN' : 'বাং'}</span>
-            </button>
+              <button 
+                type="button"
+                onClick={() => setLang('bn')} 
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1 ${
+                  lang === 'bn' 
+                  ? 'bg-blue-700 dark:bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/20' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                aria-label="বাংলা ভাষায় পরিবর্তন করুন"
+                aria-pressed={lang === 'bn'}
+              >
+                <span>বাংলা</span>
+              </button>
+              
+              <button 
+                type="button"
+                onClick={() => setLang('en')} 
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1 ${
+                  lang === 'en' 
+                  ? 'bg-blue-700 dark:bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/20' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                aria-label="Switch to English"
+                aria-pressed={lang === 'en'}
+              >
+                <span>EN</span>
+              </button>
+            </div>
 
-            {/* Theme Toggle */}
+            {/* Theme Toggle Button */}
             <button 
               id="theme-toggle-btn"
+              type="button"
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
-              className="p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-amber-400 border border-slate-200 dark:border-slate-800 transition-all shadow-sm cursor-pointer"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-amber-400 border border-slate-200 dark:border-slate-800 transition-all shadow-sm cursor-pointer shrink-0"
               title={theme === 'light' ? (t.themeDark as string) : (t.themeLight as string)}
               aria-label={theme === 'light' ? (t.themeDark as string) : (t.themeLight as string)}
             >
@@ -298,6 +491,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
             {/* Mobile Hamburger Drawer Trigger */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
               aria-label="Toggle Mobile Menu"
@@ -311,24 +505,54 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
       {/* MOBILE FULL DRAWER MENU OVERLAY */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-[90] no-print flex flex-col bg-slate-950/95 backdrop-blur-xl text-white animate-in fade-in duration-200">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <OrganizationSeal className="w-10 h-10" />
-              <div>
-                <h3 className="font-black text-sm text-white bengali leading-tight">
-                  {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
-                </h3>
-                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider bengali mt-0.5">
-                  {lang === 'bn' ? 'প্রতিষ্ঠিত ১৯৮৮' : 'Established 1988'}
-                </p>
+          <div className="p-4 border-b border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <OrganizationSeal className="w-10 h-10" />
+                <div>
+                  <h3 className="font-black text-sm text-white bengali leading-tight">
+                    {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
+                  </h3>
+                  <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider bengali mt-0.5">
+                    {lang === 'bn' ? 'প্রতিষ্ঠিত ১৯৮৮' : 'Established 1988'}
+                  </p>
+                </div>
               </div>
+              <button 
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <button 
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800"
-            >
-              <X size={20} />
-            </button>
+
+            {/* Mobile Drawer Language Selector */}
+            <div className="bg-slate-900 p-1.5 rounded-2xl border border-slate-800 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setLang('bn')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
+                  lang === 'bn'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🇧🇩</span>
+                <span>বাংলা</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
+                  lang === 'en'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🇬🇧</span>
+                <span>English</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -340,7 +564,8 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               { label: 'notices', path: '/notices', icon: <BellRing size={18} /> },
               { label: 'gallery', path: '/gallery', icon: <ImageIcon size={18} /> },
               { label: 'leadership', path: '/leadership', icon: <Users size={18} /> },
-              { label: 'impact', path: '/impact', icon: <PieChart size={18} /> },
+              { label: 'transparency', path: '/transparency', icon: <PieChart size={18} /> },
+              { label: 'contact', path: '/contact', icon: <Contact size={18} /> },
               { label: 'donation', path: '/donation', icon: <Heart size={18} /> },
             ]).map((item) => {
               const isActive = location.pathname === item.path;

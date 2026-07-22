@@ -89,7 +89,8 @@ export const TRANSLATIONS = {
     gallery: "Gallery",
     transparency: "Transparency",
     contact: "Contact",
-    verifyDonation: "Verify Receipt"
+    verifyDonation: "Verify Receipt",
+    more: "More"
   },
   bn: {
     home: "হোম",
@@ -154,7 +155,8 @@ export const TRANSLATIONS = {
     gallery: "গ্যালারি",
     transparency: "স্বচ্ছতা ও হিসাব",
     contact: "যোগাযোগ",
-    verifyDonation: "রশিদ যাচাই"
+    verifyDonation: "রশিদ যাচাই",
+    more: "আরও"
   }
 };
 
