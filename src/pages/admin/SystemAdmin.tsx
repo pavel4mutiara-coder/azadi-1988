@@ -42,7 +42,7 @@ export const SystemAdmin: React.FC = () => {
     }
   }, [versionConfig]);
 
-  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
+  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com';
   const isSuperAdmin = user?.email === superAdminEmail;
 
   const showStatus = (type: 'success' | 'error', textBn: string, textEn: string) => {

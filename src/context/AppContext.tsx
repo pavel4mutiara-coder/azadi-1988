@@ -48,6 +48,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   User as FirebaseUser
 } from 'firebase/auth';
 
@@ -85,7 +86,8 @@ interface AppState {
   loadingLetterhead: boolean;
   setLang: (lang: Language) => void;
   setTheme: (theme: 'light' | 'dark') => void;
-  login: (username?: string, password?: string) => Promise<boolean>;
+  login: (username?: string, password?: string) => Promise<{ success: boolean; message?: string; errorCode?: string }>;
+  resetAdminPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   addDonation: (donation: Donation) => Promise<void>;
@@ -513,7 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser(currentUser);
       if (currentUser) {
         // Evaluate if user is admin
-        const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com').toLowerCase();
+        const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
         const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
         
         try {
@@ -542,6 +544,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         setIsAdmin(false);
       }
+      setAuthLoading(false);
+    }, (authError) => {
+      console.warn("Firebase Auth state observer notice:", authError);
       setAuthLoading(false);
     });
     return unsubscribe;
@@ -869,8 +874,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const login = async (username?: string, password?: string): Promise<boolean> => {
-    if (!username || !password) return false;
+  const resetAdminPassword = async (emailInput: string): Promise<{ success: boolean; message: string }> => {
+    if (!emailInput || !emailInput.trim()) {
+      return { 
+        success: false, 
+        message: lang === 'bn' ? 'অনুগ্রহ করে ইমেল এড্রেসটি টাইপ করুন।' : 'Please enter an email address.' 
+      };
+    }
+    const email = emailInput.includes('@') ? emailInput.trim() : `${emailInput.toLowerCase().trim()}@azadi.org`;
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return {
+        success: true,
+        message: lang === 'bn' 
+          ? `${email} ঠিকানায় পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে! আপনার ইমেলের ইনবক্স অথবা স্প্যাম ফোল্ডার চেক করুন।` 
+          : `Password reset link sent to ${email}! Please check your email inbox or spam folder.`
+      };
+    } catch (err: any) {
+      console.error("Password reset error:", err);
+      let msg = err.message || 'Failed to send reset email';
+      if (err.code === 'auth/user-not-found') {
+        msg = lang === 'bn' ? 'এই ইমেলের বিপরীতে কোনো অ্যাকাউন্ট খুঁজে পাওয়া যায়নি।' : 'No account found for this email address.';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = lang === 'bn' ? 'ইমেল এড্রেসটি সঠিক নয়।' : 'Invalid email address format.';
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = lang === 'bn' ? 'অনেক বেশি চেষ্টার কারণে সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।' : 'Too many requests. Please wait a while before trying again.';
+      }
+      return { success: false, message: msg };
+    }
+  };
+
+  const login = async (username?: string, password?: string): Promise<{ success: boolean; message?: string; errorCode?: string }> => {
+    if (!username || !password) {
+      return { 
+        success: false, 
+        message: lang === 'bn' ? 'ইউজারনেম এবং পাসওয়ার্ড দুটিই প্রয়োজন।' : 'Both Username and Password are required.',
+        errorCode: 'auth/missing-fields'
+      };
+    }
     
     // Support either direct email, or user typing 'admin' / other username (append @azadi.org if no @ symbol)
     const email = username.includes('@') ? username.trim() : `${username.toLowerCase().trim()}@azadi.org`;
@@ -881,7 +922,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const currentUser = userCredential.user;
       
       // Determine if they are authorized admins (either database check or superadmin email)
-      const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com').toLowerCase();
+      const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
       const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
       
       let isAuthorizedAdmin = false;
@@ -889,13 +930,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
         if (adminDoc.exists() || isSuperAdminEmail) {
           isAuthorizedAdmin = true;
-          if (isSuperAdminEmail && !adminDoc.exists()) {
-            // Seed super admin dynamically if not seeded yet
+          if (isSuperAdminEmail && (!adminDoc.exists() || adminDoc.data()?.role !== 'superadmin')) {
+            // Seed/update super admin record dynamically
             await setDoc(doc(db, 'admins', currentUser.uid), {
+              uid: currentUser.uid,
               email: currentUser.email,
+              displayName: currentUser.displayName || 'Super Admin',
               role: 'superadmin',
-              createdAt: new Date().toISOString()
-            });
+              active: true,
+              createdAt: adminDoc.exists() ? adminDoc.data()?.createdAt || new Date().toISOString() : new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
           }
         }
       } catch (dbError) {
@@ -907,16 +952,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (isAuthorizedAdmin) {
         setIsAdmin(true);
-        return true;
+        return { success: true };
       } else {
         // Not authorized as an admin in Firestore admins collection
         await signOut(auth);
         setIsAdmin(false);
-        return false;
+        return { 
+          success: false, 
+          message: lang === 'bn' 
+            ? 'ইউজার অ্যাকাউন্ট সফলভাবে পাওয়া গেছে, কিন্তু এটিadmins রেজিস্ট্রিতে নিবন্ধিত নয়।' 
+            : 'Authenticated successfully, but this account is not registered in the admins registry.',
+          errorCode: 'auth/not-authorized'
+        };
       }
     } catch (error: any) {
       console.error("Firebase auth login failed:", error);
-      return false;
+      let msg = error.message || 'Authentication failed';
+      const code = error.code || 'auth/unknown';
+      if (code === 'auth/user-not-found') {
+        msg = lang === 'bn' ? `এই অ্যাকাউন্টের (${email}) বিপরীতে কোনো নিবন্ধিত ইউজার পাওয়া যায়নি।` : `No account found for ${email}.`;
+      } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        msg = lang === 'bn' ? 'ভুল পাসওয়ার্ড। দয়া করে পাসওয়ার্ড যাচাই করুন অথবা রিসেট লিংক ব্যবহার করুন।' : 'Incorrect password. Please verify or use password reset.';
+      } else if (code === 'auth/invalid-email') {
+        msg = lang === 'bn' ? 'ইমেল এড্রেসের বিন্যাস সঠিক নয়।' : 'Invalid email format.';
+      } else if (code === 'auth/too-many-requests') {
+        msg = lang === 'bn' ? 'অতিরিক্ত চেষ্টার কারণে অ্যাকাউন্ট সাময়িকভাবে লক করা হয়েছে। কিছুক্ষণ পর চেষ্টা করুন।' : 'Access temporarily blocked due to multiple failed login attempts. Try again later or reset password.';
+      } else if (code === 'auth/network-request-failed') {
+        msg = lang === 'bn' ? 'নেটওয়ার্ক সংযোগ ডাইরেক্ট বিচ্ছিন্ন হয়েছে। ইন্টারনেট কানেকশন চেক করুন।' : 'Network connection failed. Please check your internet.';
+      }
+      return { success: false, message: msg, errorCode: code };
     }
   };
 
@@ -1694,6 +1758,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLang, 
       setTheme, 
       login,
+      resetAdminPassword,
       loginWithGoogle,
       logout,
       

@@ -142,7 +142,7 @@ export const TRANSLATIONS = {
     inspiration: "প্রতিদিনের প্রেরণা",
     foundingTitle: "প্রতিষ্ঠার প্রেক্ষাপট",
     missionTitle: "আমাদের লক্ষ্য",
-    visionTitle: "Our Vision",
+    visionTitle: "আমাদের দূরদৃষ্টি",
     milestonesTitle: "উল্লেখযোগ্য মাইলফলক",
     devCredit: "Developed by Ahmad Hossain Pavel",
     whatsappNumber: "8801712782564",

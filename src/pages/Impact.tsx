@@ -10,7 +10,7 @@ import { MemberImage } from '../components/MemberImage';
 import { SubmitTestimonialForm } from '../components/SubmitTestimonialForm';
 import { PageHero } from '../components/PageHero';
 import { PageCTA } from '../components/PageCTA';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 
 export const Impact: React.FC = () => {
   const { lang, donations, testimonials, events, leadership } = useApp();

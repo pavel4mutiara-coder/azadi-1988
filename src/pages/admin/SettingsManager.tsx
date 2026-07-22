@@ -91,7 +91,7 @@ export const SettingsManager: React.FC = () => {
     setLocalSettings(JSON.parse(settingsString));
   }, [settingsString]);
 
-  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'pavel4mutiara@gmail.com';
+  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com';
   const isSuperAdmin = user?.email === superAdminEmail;
 
   const handleSave = async () => {

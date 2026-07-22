@@ -76,29 +76,29 @@ export default function Home() {
           </div>
 
           {/* Badges / Credibility Highlights */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider">
-            <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 px-3.5 py-1.5 rounded-full border border-amber-500/30 shadow-sm">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-[10px] xs:text-[11px] sm:text-xs font-black uppercase tracking-wider max-w-full">
+            <span className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 px-3 sm:px-3.5 py-1.5 rounded-full border border-amber-500/30 shadow-sm text-center">
               <Award size={14} className="text-amber-400 shrink-0" />
               <span>{lang === 'bn' ? 'প্রতিষ্ঠিত: ১০ জুন ১৯৮৮ (৩৮ বছরের পথচলা)' : 'Est. 10 June 1988 (38 Years of Service)'}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 bg-blue-900/60 text-blue-200 px-3.5 py-1.5 rounded-full border border-blue-700/50 shadow-sm">
+            <span className="inline-flex items-center gap-1.5 bg-blue-900/60 text-blue-200 px-3 sm:px-3.5 py-1.5 rounded-full border border-blue-700/50 shadow-sm text-center">
               <MapPin size={14} className="text-blue-400 shrink-0" />
               <span>{lang === 'bn' ? 'মিরবক্সটুলা, সিলেট, বাংলাদেশ' : 'Mirbox Tula, Sylhet, Bangladesh'}</span>
             </span>
           </div>
 
           {/* Organization Title & Slogan */}
-          <div className="space-y-4 max-w-4xl">
-            <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-black leading-[1.05] tracking-tight text-white drop-shadow-lg bengali">
+          <div className="space-y-3 sm:space-y-4 max-w-4xl">
+            <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] sm:leading-[1.05] tracking-tight text-white drop-shadow-lg bengali">
               {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
             </h1>
 
             {/* Slogan Pill Highlights */}
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-6 pt-2">
+            <div className="flex flex-wrap justify-center gap-2 xs:gap-2.5 sm:gap-4 md:gap-6 pt-1 sm:pt-2">
               {features.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-2 text-xs sm:text-base font-black text-slate-200 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-slate-700/80">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400"></span>
-                  {f}
+                <span key={i} className="inline-flex items-center gap-1.5 xs:gap-2 text-xs sm:text-base font-black text-slate-200 bg-slate-900/80 px-2.5 xs:px-3.5 py-1.5 rounded-xl border border-slate-700/80">
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400 shrink-0"></span>
+                  <span>{f}</span>
                 </span>
               ))}
             </div>
@@ -149,8 +149,12 @@ export default function Home() {
               <Award size={20} />
             </div>
             <div className="text-left">
-              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">৩৮ বছরের ইতিহাস</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">প্রতিষ্ঠিত ১০ জুন ১৯৮৮</div>
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                {lang === 'bn' ? '৩৮ বছরের ইতিহাস' : '38 Years History'}
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                {lang === 'bn' ? 'প্রতিষ্ঠিত ১০ জুন ১৯৮৮' : 'Founded June 10, 1988'}
+              </div>
             </div>
           </div>
 
@@ -159,8 +163,12 @@ export default function Home() {
               <ShieldCheck size={20} />
             </div>
             <div className="text-left">
-              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">স্বচ্ছতা ও সততা</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">১০০% ভেরিফাইড ফান্ডিং</div>
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'স্বচ্ছতা ও সততা' : 'Transparency & Integrity'}
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                {lang === 'bn' ? '১০০% ভেরিফাইড ফান্ডিং' : '100% Verified Funding'}
+              </div>
             </div>
           </div>
 
@@ -169,8 +177,12 @@ export default function Home() {
               <Trophy size={20} />
             </div>
             <div className="text-left">
-              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">যুব ও ক্রীড়া কল্যাণ</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">বার্ষিক ক্রীড়া টুর্নামেন্ট</div>
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'যুব ও ক্রীড়া কল্যাণ' : 'Youth & Sports Welfare'}
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                {lang === 'bn' ? 'বার্ষিক ক্রীড়া টুর্নামেন্ট' : 'Annual Sports Tournaments'}
+              </div>
             </div>
           </div>
 
@@ -179,8 +191,12 @@ export default function Home() {
               <MapPin size={20} />
             </div>
             <div className="text-left">
-              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">সিলেট সদর কেন্দ্র</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">মিরবক্সটুলা, সিলেট</div>
+              <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'সিলেট সদর কেন্দ্র' : 'Sylhet HQ Center'}
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                {lang === 'bn' ? 'মিরবক্সটুলা, সিলেট' : 'Mirbox Tula, Sylhet'}
+              </div>
             </div>
           </div>
         </div>
@@ -203,8 +219,12 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <img src={LOGO_URL} alt="Seal" className="w-10 h-10 object-contain rounded-full bg-white p-0.5" />
                   <div>
-                    <div className="font-black text-xs text-amber-400 uppercase">আজাদী সমাজ কল্যাণ সংঘ</div>
-                    <div className="text-[11px] text-slate-300 font-medium">প্রতিষ্ঠা: ১০ জুন ১৯৮৮ | মিরবক্সটুলা, সিলেট</div>
+                    <div className="font-black text-xs text-amber-400 uppercase">
+                      {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
+                    </div>
+                    <div className="text-[11px] text-slate-300 font-medium">
+                      {lang === 'bn' ? 'প্রতিষ্ঠা: ১০ জুন ১৯৮৮ | মিরবক্সটুলা, সিলেট' : 'Est: 10 June 1988 | Mirbox Tula, Sylhet'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -233,19 +253,27 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                 <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">শিক্ষা বৃত্তি ও বিনামূল্যে পাঠ্যপুস্তক বিতরণ</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">
+                  {lang === 'bn' ? 'শিক্ষা বৃত্তি ও বিনামূল্যে পাঠ্যপুস্তক বিতরণ' : 'Education Stipends & Free Textbook Distribution'}
+                </span>
               </div>
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                 <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">বার্ষিক ক্রীড়া টুর্নামেন্ট ও যুব সংবর্ধনা</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">
+                  {lang === 'bn' ? 'বার্ষিক ক্রীড়া টুর্নামেন্ট ও যুব সংবর্ধনা' : 'Annual Youth Sports Tournaments & Awards'}
+                </span>
               </div>
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                 <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">বন্যা ও প্রাকৃতিক দুর্যোগে জরুরি ত্রাণ সহায়তা</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">
+                  {lang === 'bn' ? 'বন্যা ও প্রাকৃতিক দুর্যোগে জরুরি ত্রাণ সহায়তা' : 'Emergency Disaster & Flood Relief Assistance'}
+                </span>
               </div>
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                 <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">বিনামূল্যে চিকিৎসা ক্যাম্প ও রক্তদান কর্মসূচি</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 bengali">
+                  {lang === 'bn' ? 'বিনামূল্যে চিকিৎসা ক্যাম্প ও রক্তদান কর্মসূচি' : 'Free Healthcare Camps & Blood Donation Drives'}
+                </span>
               </div>
             </div>
 
@@ -343,23 +371,23 @@ export default function Home() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
-              <div className="text-3xl sm:text-5xl font-black text-amber-400 font-mono">১৯৮৮</div>
-              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">প্রতিষ্ঠার বছর</div>
+              <div className="text-3xl sm:text-5xl font-black text-amber-400 font-mono">{lang === 'bn' ? '১৯৮৮' : '1988'}</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">{lang === 'bn' ? 'প্রতিষ্ঠার বছর' : 'Year Founded'}</div>
             </div>
 
             <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
-              <div className="text-3xl sm:text-5xl font-black text-blue-400 font-mono">৩৮+</div>
-              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">বছরের জনসেবা</div>
+              <div className="text-3xl sm:text-5xl font-black text-blue-400 font-mono">{lang === 'bn' ? '৩৮+' : '38+'}</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">{lang === 'bn' ? 'বছরের জনসেবা' : 'Years of Service'}</div>
             </div>
 
             <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
-              <div className="text-3xl sm:text-5xl font-black text-emerald-400 font-mono">৪১+</div>
-              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">কমিটি সদস্য ও সেবক</div>
+              <div className="text-3xl sm:text-5xl font-black text-emerald-400 font-mono">{lang === 'bn' ? '৪১+' : '41+'}</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">{lang === 'bn' ? 'কমিটি সদস্য ও সেবক' : 'Active Members'}</div>
             </div>
 
             <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80">
-              <div className="text-3xl sm:text-5xl font-black text-purple-400 font-mono">১০০%</div>
-              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">অলাভজনক ও স্বেচ্ছাসেবামূলক</div>
+              <div className="text-3xl sm:text-5xl font-black text-purple-400 font-mono">100%</div>
+              <div className="text-xs font-black uppercase text-slate-300 mt-2 bengali">{lang === 'bn' ? 'অলাভজনক ও স্বেচ্ছাসেবামূলক' : 'Non-profit & Volunteer'}</div>
             </div>
           </div>
         </div>
@@ -397,7 +425,7 @@ export default function Home() {
               {lang === 'bn' ? 'সমাজ কল্যাণ ও জরুরি ত্রাণ' : 'Social Welfare & Relief'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
-              বন্যা ও প্রাকৃতিক দুর্যোগে অসহায় পরিবারের মাঝে শুকনো খাবার, শীতবস্ত্র ও জরুরি নগদ সহায়তা বিতরণ।
+              {lang === 'bn' ? 'বন্যা ও প্রাকৃতিক দুর্যোগে অসহায় পরিবারের মাঝে শুকনো খাবার, শীতবস্ত্র ও জরুরি নগদ সহায়তা বিতরণ।' : 'Providing dry food, winter clothing, and emergency cash support to disaster-affected families.'}
             </p>
           </div>
 
@@ -410,7 +438,7 @@ export default function Home() {
               {lang === 'bn' ? 'শিক্ষা সহায়তা ও মেধাবৃত্তি' : 'Education & Scholarships'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
-              দরিদ্র ও মেধাবী শিক্ষার্থীদের মাঝে বিনামূল্যে পাঠ্যপুস্তক, শিক্ষা সামগ্রী ও নগদ শিক্ষা বৃত্তি প্রদান।
+              {lang === 'bn' ? 'দরিদ্র ও মেধাবী শিক্ষার্থীদের মাঝে বিনামূল্যে পাঠ্যপুস্তক, শিক্ষা সামগ্রী ও নগদ শিক্ষা বৃত্তি প্রদান।' : 'Distributing free textbooks, educational materials, and merit stipends to underprivileged students.'}
             </p>
           </div>
 
@@ -423,7 +451,7 @@ export default function Home() {
               {lang === 'bn' ? 'ক্রীড়া ও যুব উন্নয়ন' : 'Sports & Youth Empowerment'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
-              যুবসমাজকে মাদকমুক্ত রাখতে স্থানীয় ফুটবল, ক্রিকেট টুর্নামেন্ট ও ক্রীড়া সামগ্রী বিতরণ।
+              {lang === 'bn' ? 'যুবসমাজকে মাদকমুক্ত রাখতে স্থানীয় ফুটবল, ক্রিকেট টুর্নামেন্ট ও ক্রীড়া সামগ্রী বিতরণ।' : 'Organizing football/cricket tournaments and sports gear distribution to engage youth constructively.'}
             </p>
           </div>
 
@@ -436,7 +464,7 @@ export default function Home() {
               {lang === 'bn' ? 'বিনামূল্যে চিকিৎসা ও রক্তদান' : 'Healthcare & Blood Donation'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
-              বিনামূল্যে মেডিকেল ক্যাম্প আয়োজন, সাধারণ মানুষদের চিকিৎসা সেবা প্রদান ও জরুরি রক্তদান কর্মসূচি।
+              {lang === 'bn' ? 'বিনামূল্যে মেডিকেল ক্যাম্প আয়োজন, সাধারণ মানুষদের চিকিৎসা সেবা প্রদান ও জরুরি রক্তদান কর্মসূচি।' : 'Hosting free medical camps, health checkups, and voluntary blood donation drives.'}
             </p>
           </div>
 
@@ -449,7 +477,7 @@ export default function Home() {
               {lang === 'bn' ? 'সামাজিক ঐক্য ও সংস্কার' : 'Community Cohesion & Peace'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed bengali">
-              সামাজিক সৌহার্দ্য রক্ষা, ধর্মীয় উদযাপন ও এলাকার সার্বিক শান্তি বজায় রাখতে যৌথ নাগরিক উদ্যোগ।
+              {lang === 'bn' ? 'সামাজিক সৌহার্দ্য রক্ষা, ধর্মীয় উদযাপন ও এলাকার সার্বিক শান্তি বজায় রাখতে যৌথ নাগরিক উদ্যোগ।' : 'Promoting civic harmony, communal solidarity, and peaceful community building in Sylhet.'}
             </p>
           </div>
         </div>
@@ -662,13 +690,18 @@ export default function Home() {
               {lang === 'bn' ? 'আপনার অনুদান সমাজ পরিবর্তনের বড় শক্তি' : 'Your Support Transforms Lives in Sylhet'}
             </h2>
             <p className="text-slate-300 text-sm sm:text-base font-medium max-w-2xl mx-auto leading-relaxed bengali">
-              শিক্ষা কল্যাণ, ফ্রি মেডিকেল ক্যাম্প, ক্রীড়া সামগ্রী ও দুর্যোগে সাধারণ মানুষের সহায়তায় আপনার যে কোনো পরিমাণের সাহায্য অমূল্য ভূমিকা পালন করে।
+              {lang === 'bn' 
+                ? 'শিক্ষা কল্যাণ, ফ্রি মেডিকেল ক্যাম্প, ক্রীড়া সামগ্রী ও দুর্যোগে সাধারণ মানুষের সহায়তায় আপনার যে কোনো পরিমাণের সাহায্য অমূল্য ভূমিকা পালন করে।'
+                : 'Your generous support empowers education, free medical care, youth sports, and emergency disaster relief in Sylhet.'
+              }
             </p>
           </div>
 
           {/* Payment options display */}
           <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 max-w-lg mx-auto space-y-3">
-            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider bengali">সরাসরি অনুদান পাঠানোর নম্বরসমূহ</div>
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider bengali">
+              {lang === 'bn' ? 'সরাসরি অনুদান পাঠানোর নম্বরসমূহ' : 'Direct Donation Mobile Banking Numbers'}
+            </div>
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold font-mono">
               <span className="px-3 py-1.5 rounded-xl bg-pink-950/80 text-pink-300 border border-pink-800">
                 bKash: {settings?.bkash || '01711975488'}
@@ -727,25 +760,31 @@ export default function Home() {
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
             <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-500" />
-              <span>ভেরিফাইড অনুদান রশিদ</span>
+              <span>{lang === 'bn' ? 'ভেরিফাইড অনুদান রশিদ' : 'Verified Donation Receipt'}</span>
             </div>
-            <p className="bengali">প্রতিটি অনুমোদিত অনুদানের ক্ষেত্রে ডিজিটাল ট্রানজেকশন আইডি সহ সিস্টেম জেনারেটেড রশিদ প্রদান করা হয়।</p>
+            <p className="bengali">
+              {lang === 'bn' ? 'প্রতিটি অনুমোদিত অনুদানের ক্ষেত্রে ডিজিটাল ট্রানজেকশন আইডি সহ সিস্টেম জেনারেটেড রশিদ প্রদান করা হয়।' : 'System-generated digital receipt with transaction ID is issued for every approved donation.'}
+            </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
             <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-500" />
-              <span>কার্যনির্বাহী কমিটি নিরীক্ষা</span>
+              <span>{lang === 'bn' ? 'কার্যনির্বাহী কমিটি নিরীক্ষা' : 'Executive Audit'}</span>
             </div>
-            <p className="bengali">সংঘের সভাপতি ও অর্থ সম্পাদকের যৌথ অনুমোদনে সকল ধরণের সামাজিক ও প্রাতিষ্ঠানিক ব্যয় সম্পন্ন করা হয়।</p>
+            <p className="bengali">
+              {lang === 'bn' ? 'সংঘের সভাপতি ও অর্থ সম্পাদকের যৌথ অনুমোদনে সকল ধরণের সামাজিক ও প্রাতিষ্ঠানিক ব্যয় সম্পন্ন করা হয়।' : 'All social and organizational expenditures are approved jointly by the President and Treasurer.'}
+            </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
             <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-500" />
-              <span>প্রকাশ্য বার্ষিক অডিট</span>
+              <span>{lang === 'bn' ? 'প্রকাশ্য বার্ষিক অডিট' : 'Annual Public Audit'}</span>
             </div>
-            <p className="bengali">বার্ষিক সাধারণ সভায় সকল আয়-ব্যয়ের হিসাব ও ভবিষ্যৎ পরিকল্পনা সাধারণ সদস্যদের সামনে পেশ করা হয়।</p>
+            <p className="bengali">
+              {lang === 'bn' ? 'বার্ষিক সাধারণ সভায় সকল আয়-ব্যয়ের হিসাব ও ভবিষ্যৎ পরিকল্পনা সাধারণ সদস্যদের সামনে পেশ করা হয়।' : 'All financial accounts and future plans are presented transparently at the Annual General Meeting.'}
+            </p>
           </div>
         </div>
       </section>
@@ -800,17 +839,21 @@ export default function Home() {
       {approvedTestimonials.length > 0 && (
         <section className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 border border-slate-800 space-y-8">
           <div className="text-center space-y-2">
-            <span className="text-xs font-black uppercase tracking-widest text-amber-400">শুভাকাঙ্ক্ষীদের অনুভূতি</span>
-            <h2 className="text-2xl sm:text-3xl font-black bengali text-white">আজাদী সংঘ সম্পর্কে বক্তব্য</h2>
+            <span className="text-xs font-black uppercase tracking-widest text-amber-400">
+              {lang === 'bn' ? 'শুভাকাঙ্ক্ষীদের অনুভূতি' : 'Community Voices'}
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black bengali text-white">
+              {lang === 'bn' ? 'আজাদী সংঘ সম্পর্কে বক্তব্য' : 'Words About Azadi Organization'}
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {approvedTestimonials.map((item) => (
               <div key={item.id} className="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4 flex flex-col justify-between">
-                <p className="text-xs text-slate-300 italic leading-relaxed bengali">"{item.message}"</p>
+                <p className="text-xs text-slate-300 italic leading-relaxed bengali">"{lang === 'bn' ? (item.messageBn || item.message || item.messageEn) : (item.messageEn || item.messageBn || item.message)}"</p>
                 <div>
-                  <div className="font-black text-xs text-amber-400">{item.nameEn}</div>
-                  <div className="text-[10px] text-slate-500">{item.designationEn || 'Community Member'}</div>
+                  <div className="font-black text-xs text-amber-400">{lang === 'bn' ? (item.nameBn || item.nameEn) : (item.nameEn || item.nameBn)}</div>
+                  <div className="text-[10px] text-slate-500">{lang === 'bn' ? (item.designationBn || item.designationEn || 'সুশীল সমাজের প্রতিনিধি') : (item.designationEn || item.designationBn || 'Community Member')}</div>
                 </div>
               </div>
             ))}
@@ -873,7 +916,12 @@ export default function Home() {
             <div className="space-y-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-blue-600 shrink-0 mt-0.5" />
-                <span className="bengali">{settings?.addressBn || 'রোড নং ০১, মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ'}</span>
+                <span className="bengali">
+                  {lang === 'bn' 
+                    ? settings?.addressBn || 'মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ' 
+                    : settings?.addressEn || 'Mirbox Tula, Sylhet-3100, Bangladesh'
+                  }
+                </span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -899,7 +947,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all"
               >
                 <MessageCircle size={16} />
-                <span>WhatsApp এ মেসেজ পাঠান</span>
+                <span>{lang === 'bn' ? 'WhatsApp এ মেসেজ পাঠান' : 'Message on WhatsApp'}</span>
               </a>
 
               <a 
@@ -909,7 +957,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-black text-xs px-4 py-2.5 rounded-xl transition-all hover:bg-slate-200"
               >
                 <MapPin size={16} className="text-blue-600" />
-                <span>ম্যাপে দিকনির্দেশনা দেখুন</span>
+                <span>{lang === 'bn' ? 'ম্যাপে দিকনির্দেশনা দেখুন' : 'Get Directions on Map'}</span>
               </a>
             </div>
           </div>
@@ -919,18 +967,21 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <img src={LOGO_URL} className="w-12 h-12 object-contain bg-white rounded-full p-1" alt="Seal" />
               <div>
-                <h4 className="font-black text-sm text-white bengali">{settings?.nameBn}</h4>
-                <p className="text-[10px] text-amber-400 font-black uppercase">সিলেট সদর কেন্দ্র</p>
+                <h4 className="font-black text-sm text-white bengali">{lang === 'bn' ? settings?.nameBn : settings?.nameEn}</h4>
+                <p className="text-[10px] text-amber-400 font-black uppercase">{lang === 'bn' ? 'সিলেট সদর কেন্দ্র' : 'Sylhet Headquarters'}</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed font-medium bengali">
-              যে কোনো পরামর্শ, সদস্যপদ সংক্রান্ত তথ্য বা সামাজিক ইভেন্টে অংশগ্রহণের বিষয়ে আমাদের সঙ্গে যোগাযোগ করতে পারেন।
+              {lang === 'bn' 
+                ? 'যে কোনো পরামর্শ, সদস্যপদ সংক্রান্ত তথ্য বা সামাজিক ইভেন্টে অংশগ্রহণের বিষয়ে আমাদের সঙ্গে যোগাযোগ করতে পারেন।'
+                : 'Feel free to contact us for suggestions, membership inquiries, or participation in social initiatives.'
+              }
             </p>
 
             <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-bold text-slate-400">
-              <span>সাপ্তাহিক দিনগুলো: খোলা</span>
-              <span className="text-emerald-400">সকাল ১০:০০ - রাত ৯:০০</span>
+              <span>{lang === 'bn' ? 'সাপ্তাহিক দিনগুলো: খোলা' : 'Operating Days: Open'}</span>
+              <span className="text-emerald-400">{lang === 'bn' ? 'সকাল ১০:০০ - রাত ৯:০০' : '10:00 AM - 9:00 PM'}</span>
             </div>
           </div>
         </div>
