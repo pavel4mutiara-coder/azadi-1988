@@ -142,8 +142,8 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
   if (/drive\.google\.com/i.test(decoded)) {
     const fileId = extractGoogleDriveId(trimmed);
     if (fileId) {
-      // Preferred format: Google User Content CDN bypasses third-party cookie blocks and auth redirects with fresh timestamp
-      const normalizedDriveUrl = `https://lh3.googleusercontent.com/d/${fileId}?t=${Date.now()}`;
+      // Preferred format: Google User Content CDN bypasses third-party cookie blocks and auth redirects
+      const normalizedDriveUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
       normalizationCache.set(trimmed, normalizedDriveUrl);
       return normalizedDriveUrl;
     }
@@ -164,18 +164,8 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
     }
   }
 
-  // Default passthrough with fresh timestamp for Firebase Storage URLs
-  let finalUrl = decoded;
-  if (/firebasestorage\.googleapis\.com/i.test(decoded)) {
-    try {
-      const urlObj = new URL(decoded);
-      urlObj.searchParams.set('t', String(Date.now()));
-      finalUrl = urlObj.toString();
-    } catch {
-      const separator = decoded.includes('?') ? '&' : '?';
-      finalUrl = `${decoded}${separator}t=${Date.now()}`;
-    }
-  }
+  // Default passthrough for Firebase Storage and other URLs
+  const finalUrl = decoded;
 
   normalizationCache.set(trimmed, finalUrl);
   return finalUrl;

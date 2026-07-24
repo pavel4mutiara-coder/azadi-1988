@@ -135,7 +135,7 @@ export const Leadership: React.FC = () => {
                 <div className="relative mt-4 mb-6">
                   <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-blue-600/20 dark:border-amber-400/20 shadow-lg group-hover:scale-105 transition-transform duration-500 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
                     <MemberImage
-                      src={member.photo}
+                      src={member.image || (member as any).photo}
                       alt={name}
                       widthPreset="medium"
                       className="w-full h-full object-cover"

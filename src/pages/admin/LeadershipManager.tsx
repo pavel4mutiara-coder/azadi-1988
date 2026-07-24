@@ -6,7 +6,7 @@ import { Users, Plus, Trash2, Edit2, RefreshCcw, Info, CheckCircle, AlertTriangl
 import { MemberImage } from '../../components/MemberImage';
 import { extractGoogleDriveId, normalizeGoogleDriveImage } from '../../utils/normalizeGoogleDriveImage';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../lib/firebase';
+import { storage, formatFirebaseError } from '../../lib/firebase';
 import { compressInputImage } from '../../utils/imageOptimizer';
 
 export const LeadershipManager: React.FC = () => {
@@ -19,6 +19,9 @@ export const LeadershipManager: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showConflict, setShowConflict] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [imageLoadError, setImageLoadError] = useState(false);
   
   const [formData, setFormData] = useState<Omit<Leadership, 'id'>>({
     nameEn: '', nameBn: '',
@@ -97,12 +100,10 @@ export const LeadershipManager: React.FC = () => {
         async () => {
           try {
             const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            // Apply cache-busting timestamp
-            const cacheBustedUrl = `${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
-            setFormData(prev => ({ ...prev, image: cacheBustedUrl }));
+            setFormData(prev => ({ ...prev, image: downloadUrl }));
           } catch (err: any) {
             console.error("Error getting download URL:", err);
-            setErrorMsg(lang === 'bn' ? 'ডাউনলোড ইউআরএল পেতে ব্যর্থ হয়েছে।' : 'Failed to retrieve download URL.');
+            setErrorMsg(formatFirebaseError(err, lang));
           } finally {
             setUploading(false);
             setUploadProgress(null);
@@ -111,13 +112,14 @@ export const LeadershipManager: React.FC = () => {
       );
     } catch (err: any) {
       console.error("Compression / upload initiation failed:", err);
-      setErrorMsg(lang === 'bn' ? 'ছবি প্রক্রিয়াকরণে ব্যর্থতা।' : 'Failed to process image.');
+      setErrorMsg(formatFirebaseError(err, lang));
       setUploading(false);
       setUploadProgress(null);
     }
   };
 
   const handleRemoveImage = () => {
+    setImageLoadError(false);
     setFormData(prev => ({ ...prev, image: '' }));
   };
 
@@ -133,6 +135,9 @@ export const LeadershipManager: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+
+    setIsSaving(true);
     setErrorMsg(null);
     setSuccessMsg(null);
     setShowConflict(false);
@@ -148,6 +153,7 @@ export const LeadershipManager: React.FC = () => {
           setErrorMsg(lang === 'bn' 
             ? 'ত্রুটি: অকার্যকর গুগল ড্রাইভ লিংক। অনুগ্রহ করে সম্পূর্ণ শেয়ার লিংক ব্যবহার করুন।' 
             : 'Error: Invalid Google Drive link. Please use a valid share link.');
+          setIsSaving(false);
           return;
         }
         normalizedImage = normalizeGoogleDriveImage(rawImage);
@@ -155,6 +161,7 @@ export const LeadershipManager: React.FC = () => {
         setErrorMsg(lang === 'bn' 
           ? 'ত্রুটি: ছবির ইউআরএল অবশ্যই http অথবা https দিয়ে শুরু হতে হবে।' 
           : 'Error: Image URL must start with http or https protocol.');
+        setIsSaving(false);
         return;
       }
     }
@@ -186,13 +193,16 @@ export const LeadershipManager: React.FC = () => {
           ? 'ত্রুটি: এই সদস্যটি অন্য একজন প্রশাসক দ্বারা মুছে ফেলা হয়েছে।'
           : 'Error: This member has been deleted by another administrator.');
       } else {
-        setErrorMsg(err.message || 'An error occurred while saving.');
+        setErrorMsg(formatFirebaseError(err, lang));
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleForceOverwrite = async () => {
-    if (!editingId) return;
+    if (!editingId || isSaving) return;
+    setIsSaving(true);
     setErrorMsg(null);
     setSuccessMsg(null);
     setShowConflict(false);
@@ -212,7 +222,9 @@ export const LeadershipManager: React.FC = () => {
       setTimeout(() => setSuccessMsg(null), 5000);
       resetForm();
     } catch (err: any) {
-      setErrorMsg(err.message || 'An error occurred while forcing save.');
+      setErrorMsg(formatFirebaseError(err, lang));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -221,6 +233,7 @@ export const LeadershipManager: React.FC = () => {
     setEditingId(null);
     setErrorMsg(null);
     setShowConflict(false);
+    setImageLoadError(false);
     setFormData({ 
       nameEn: '', nameBn: '', 
       designationEn: '', designationBn: '', 
@@ -239,6 +252,7 @@ export const LeadershipManager: React.FC = () => {
     setEditingId(leader.id);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setImageLoadError(false);
     setFormData({
       nameEn: leader.nameEn,
       nameBn: leader.nameBn,
@@ -364,7 +378,14 @@ export const LeadershipManager: React.FC = () => {
                   {formData.image ? (
                     <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
                       <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                        <img src={normalizeGoogleDriveImage(formData.image)} referrerPolicy="no-referrer" className="max-w-full max-h-full object-contain" alt="Preview" />
+                        <img 
+                          src={normalizeGoogleDriveImage(formData.image)} 
+                          referrerPolicy="no-referrer" 
+                          className="max-w-full max-h-full object-contain" 
+                          alt="Preview" 
+                          onLoad={() => setImageLoadError(false)}
+                          onError={() => setImageLoadError(true)}
+                        />
                         <button 
                           type="button" 
                           onClick={handleRemoveImage}
@@ -415,11 +436,30 @@ export const LeadershipManager: React.FC = () => {
                     placeholder="https://drive.google.com/file/d/.../view?usp=sharing" 
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-mono text-xs focus:outline-none focus:border-emerald-500 font-bold" 
                     value={formData.image} 
-                    onChange={e => setFormData({...formData, image: e.target.value})} 
+                    onChange={e => {
+                      setImageLoadError(false);
+                      setFormData({...formData, image: e.target.value});
+                    }} 
                   />
                   <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">
                     Use publicly accessible Google Drive image links. Make sure link sharing is set to "Anyone with the link can view".
                   </p>
+
+                  {/drive\.google\.com/i.test(formData.image) && imageLoadError && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5 mt-2">
+                      <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                      <div className="space-y-1">
+                        <p className="font-bold">
+                          {lang === 'bn' ? 'গুগল ড্রাইভ অনুমতি সতর্কতা' : 'Google Drive Sharing Warning'}
+                        </p>
+                        <p className="text-[11px] leading-relaxed">
+                          {lang === 'bn' 
+                            ? 'এই ছবিটির প্রিভিউ লোড করা যায়নি। অনুগ্রহ করে গুগল ড্রাইভে ফাইলটির শেয়ারিং সেটিংসে "Anyone with the link can view" পারমিশন দিন যাতে সাধারণ দর্শকরা দেখতে পারেন। তবে আপনি চাইলে এই সদস্য তথ্য এখনই দেখতে ও সংরক্ষণ করতে পারবেন।'
+                            : 'The image preview could not be fetched. Please ensure your Google Drive file sharing is set to "Anyone with the link" (Viewer) so public visitors can view it. You can still save this leader now.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -682,11 +722,23 @@ export const LeadershipManager: React.FC = () => {
 
           </div>
           <div className="flex gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
-            <button type="submit" className="flex-1 bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-emerald-700 transition-colors">
-              {editingId ? 'Update Member' : 'Save Member'}
+            <button 
+              type="submit" 
+              disabled={isSaving || uploading}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black py-4 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+            >
+              {isSaving && <Loader2 size={16} className="animate-spin" />}
+              {editingId 
+                ? (lang === 'bn' ? 'তথ্য আপডেট করুন' : 'Update Member') 
+                : (lang === 'bn' ? 'সদস্য সংরক্ষণ করুন' : 'Save Member')}
             </button>
-            <button type="button" onClick={resetForm} className="px-8 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-4 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-              Cancel
+            <button 
+              type="button" 
+              onClick={resetForm} 
+              disabled={isSaving}
+              className="px-8 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-4 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+            >
+              {lang === 'bn' ? 'বাতিল' : 'Cancel'}
             </button>
           </div>
         </form>

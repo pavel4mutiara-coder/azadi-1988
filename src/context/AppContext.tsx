@@ -28,6 +28,7 @@ import {
   deleteDoc, 
   query, 
   orderBy, 
+  limit,
   getDoc,
   getDocs,
   getDocFromServer,
@@ -49,6 +50,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   User as FirebaseUser
 } from 'firebase/auth';
 
@@ -88,6 +91,8 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark') => void;
   login: (username?: string, password?: string) => Promise<{ success: boolean; message?: string; errorCode?: string }>;
   resetAdminPassword: (email: string) => Promise<{ success: boolean; message: string }>;
+  verifyResetCode: (oobCode: string) => Promise<{ success: boolean; email?: string; message?: string; errorCode?: string }>;
+  confirmNewPassword: (oobCode: string, newPassword: string) => Promise<{ success: boolean; message: string; errorCode?: string }>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   addDonation: (donation: Donation) => Promise<void>;
@@ -489,31 +494,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // Test connection on boot according to SKILL.md (delayed to prevent blocking initial load)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      async function testConnection() {
-        try {
-          await getDocFromServer(doc(db, 'test', 'connection'));
-        } catch (error) {
-          const errMsg = error instanceof Error ? error.message : String(error);
-          if (errMsg.toLowerCase().includes('offline')) {
-            console.warn("Firebase is offline. Relying on local cache/capabilities.");
-          } else {
-            console.warn("Firebase connection test notice:", errMsg);
-          }
-        }
-      }
-      testConnection();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Listen for Authentication state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Fast path: Check sessionStorage cache
+        const cachedAdminKey = `azadi_admin_cached_uid_${currentUser.uid}`;
+        if (sessionStorage.getItem(cachedAdminKey) === 'true') {
+          setIsAdmin(true);
+        }
+
         // Evaluate if user is admin
         const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
         const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
@@ -523,6 +514,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const adminDoc = await getDoc(adminRef);
           if (adminDoc.exists()) {
             setIsAdmin(true);
+            sessionStorage.setItem(cachedAdminKey, 'true');
           } else if (isSuperAdminEmail) {
             // Self-seed admin document for superadmin
             await setDoc(adminRef, {
@@ -531,12 +523,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               createdAt: new Date().toISOString()
             });
             setIsAdmin(true);
+            sessionStorage.setItem(cachedAdminKey, 'true');
           } else {
             setIsAdmin(false);
+            sessionStorage.removeItem(cachedAdminKey);
           }
         } catch (e) {
           if (isSuperAdminEmail) {
             setIsAdmin(true);
+            sessionStorage.setItem(cachedAdminKey, 'true');
           } else {
             setIsAdmin(false);
           }
@@ -552,9 +547,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return unsubscribe;
   }, []);
 
-  // Real-time Listeners for Firestore Collections
+  // 1. Core Public Real-time Listeners (Run once on mount and persist throughout session)
   useEffect(() => {
-    // 1. Settings listener
+    // Settings listener
     const unsubSettings = onSnapshot(doc(db, 'settings', 'config'), (snap) => {
       if (snap.exists()) {
         const data = snap.data() as OrganizationSettings;
@@ -567,7 +562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingSettings(false);
     });
 
-    // 2. Letterhead listener
+    // Letterhead listener
     const unsubLetterhead = onSnapshot(doc(db, 'settings', 'letterhead'), (snap) => {
       if (snap.exists()) {
         const data = snap.data() as LetterheadConfig;
@@ -588,7 +583,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('azadi_version_config', JSON.stringify(data));
         recordSyncEvent('version', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       } else {
-        // If it doesn't exist yet, seed with CURRENT_VERSION
         const seedVersion = async () => {
           try {
             await setDoc(doc(db, 'settings', 'version'), CURRENT_VERSION);
@@ -604,7 +598,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingVersion(false);
     });
 
-    // 3. Public Stats Listener
+    // Public Stats Listener
     const unsubPublicStats = onSnapshot(doc(db, 'public_stats', 'donations'), (snap) => {
       if (snap.exists()) {
         setPublicStats(snap.data() as PublicDonationStats);
@@ -613,9 +607,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn("Public stats listener notice:", err);
     });
 
-    // 4. Donations listener (Public safe)
-    const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc')), (snap) => {
-      console.log("[DEBUG] Donations collection listener received snapshot. Size:", snap.size, "Is empty:", snap.empty);
+    // Donations listener (Public safe - limited to 20 for fast page startup)
+    const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc'), limit(20)), (snap) => {
       if (!snap.empty) {
         const list: Donation[] = [];
         snap.forEach(d => {
@@ -625,19 +618,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setRawDonations(list);
         localStorage.setItem('azadi_donations', JSON.stringify(list));
       } else {
-        console.log("[DEBUG] Donations snapshot is empty. Applying empty array.");
         setRawDonations([]);
         localStorage.setItem('azadi_donations', JSON.stringify([]));
       }
       recordSyncEvent('donations', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingDonations(false);
     }, (error) => {
-      console.warn("[DEBUG] ERROR on snapshot donations fetch (graceful fallback active):", error);
+      console.warn("Donations snapshot listener notice:", error);
       setLoadingDonations(false);
     });
 
-    // 4. Leadership listener
-    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), orderBy('order', 'asc')), (snap) => {
+    // Leadership listener (limit 30)
+    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), orderBy('order', 'asc'), limit(30)), (snap) => {
       if (snap.empty) {
         localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
         setLeadership(STATIC_LEADERSHIP);
@@ -653,13 +645,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSyncEvent('leadership', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingLeadership(false);
     }, (error) => {
-      console.warn("Leadership listener failed or offline, falling back to STATIC_LEADERSHIP:", error);
+      console.warn("Leadership listener notice, using static fallback:", error);
       setLeadership(STATIC_LEADERSHIP);
       setLoadingLeadership(false);
     });
 
-    // 5. Events listener
-    const unsubEvents = onSnapshot(query(collection(db, 'events'), orderBy('date', 'desc')), (snap) => {
+    // Events listener (limit 15)
+    const unsubEvents = onSnapshot(query(collection(db, 'events'), orderBy('date', 'desc'), limit(15)), (snap) => {
       if (!snap.empty) {
         const list: Event[] = [];
         snap.forEach(d => {
@@ -675,12 +667,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSyncEvent('events', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingEvents(false);
     }, (error) => {
-      console.warn("Events listener failed or offline, falling back to cached state:", error);
+      console.warn("Events listener notice:", error);
       setLoadingEvents(false);
     });
 
-    // 6. Notices listener
-    const unsubNotices = onSnapshot(query(collection(db, 'notices'), orderBy('date', 'desc')), (snap) => {
+    // Notices listener (limit 15)
+    const unsubNotices = onSnapshot(query(collection(db, 'notices'), orderBy('date', 'desc'), limit(15)), (snap) => {
       if (!snap.empty) {
         const list: Notice[] = [];
         snap.forEach(d => {
@@ -696,12 +688,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSyncEvent('notices', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingNotices(false);
     }, (error) => {
-      console.warn("Notices listener failed or offline, falling back to cached state:", error);
+      console.warn("Notices listener notice:", error);
       setLoadingNotices(false);
     });
 
-    // 7. News listener
-    const unsubNews = onSnapshot(query(collection(db, 'news'), orderBy('date', 'desc')), (snap) => {
+    // News listener (limit 15)
+    const unsubNews = onSnapshot(query(collection(db, 'news'), orderBy('date', 'desc'), limit(15)), (snap) => {
       if (!snap.empty) {
         const list: News[] = [];
         snap.forEach(d => {
@@ -717,33 +709,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSyncEvent('news', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingNews(false);
     }, (error) => {
-      console.warn("News listener failed or offline, falling back to cached state:", error);
+      console.warn("News listener notice:", error);
       setLoadingNews(false);
     });
 
-    // 8. Expenses listener
-    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), orderBy('date', 'desc')), (snap) => {
-      if (!snap.empty) {
-        const list: Expense[] = [];
-        snap.forEach(d => {
-          const data = d.data();
-          list.push({ ...data, id: d.id } as Expense);
-        });
-        setExpenses(list);
-        localStorage.setItem('azadi_expenses', JSON.stringify(list));
-      } else {
-        setExpenses([]);
-        localStorage.setItem('azadi_expenses', JSON.stringify([]));
-      }
-      recordSyncEvent('expenses', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
-      setLoadingExpenses(false);
-    }, (error) => {
-      console.warn("Expenses listener failed or offline, falling back to cached state:", error);
-      setLoadingExpenses(false);
-    });
-
-    // 9. Testimonials listener
-    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), orderBy('createdAt', 'desc')), (snap) => {
+    // Testimonials listener (limit 15)
+    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), orderBy('createdAt', 'desc'), limit(15)), (snap) => {
       if (!snap.empty) {
         const list: Testimonial[] = [];
         snap.forEach(d => {
@@ -759,51 +730,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSyncEvent('testimonials', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingTestimonials(false);
     }, (error) => {
-      console.warn("Testimonials listener failed or offline:", error);
+      console.warn("Testimonials listener notice:", error);
       setLoadingTestimonials(false);
     });
-
-    // 10. Audit logs & Private Donor Info listeners (only when authenticated/admin)
-    let unsubAuditLogs: () => void = () => {};
-    let unsubPrivateInfo: () => void = () => {};
-
-    if (isAdmin) {
-      // Auto-migrate any legacy flat donation documents
-      runDonationDataMigration();
-
-      unsubPrivateInfo = onSnapshot(query(collectionGroup(db, 'private_info')), (pSnap) => {
-        const newMap = new Map<string, PrivateDonorInfo>();
-        pSnap.forEach(pDoc => {
-          const parentId = pDoc.ref.parent.parent?.id;
-          if (parentId) {
-            newMap.set(parentId, pDoc.data() as PrivateDonorInfo);
-          }
-        });
-        setPrivateDonorMap(newMap);
-      }, (err) => {
-        console.warn("Private info listener notice:", err);
-      });
-
-      unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc')), (snap) => {
-        if (!snap.empty) {
-          const list: AuditLog[] = [];
-          snap.forEach(d => {
-            const data = d.data();
-            list.push({ ...data, id: d.id } as AuditLog);
-          });
-          setAuditLogs(list);
-        } else {
-          setAuditLogs([]);
-        }
-        recordSyncEvent('audit_logs', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
-        setLoadingAuditLogs(false);
-      }, (error) => {
-        console.warn("Audit logs listener failed:", error);
-        setLoadingAuditLogs(false);
-      });
-    } else {
-      setLoadingAuditLogs(false);
-    }
 
     return () => {
       unsubSettings();
@@ -815,10 +744,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubEvents();
       unsubNotices();
       unsubNews();
-      unsubExpenses();
       unsubTestimonials();
-      unsubAuditLogs();
+    };
+  }, []);
+
+  // 2. Admin / Authenticated Restricted Real-time Listeners (Mounts only when admin authenticated)
+  useEffect(() => {
+    if (!isAdmin) {
+      setLoadingAuditLogs(false);
+      setLoadingExpenses(false);
+      return;
+    }
+
+    // Auto-migrate legacy flat donation documents
+    runDonationDataMigration();
+
+    // Expenses listener
+    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), orderBy('date', 'desc'), limit(30)), (snap) => {
+      if (!snap.empty) {
+        const list: Expense[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as Expense);
+        });
+        setExpenses(list);
+        localStorage.setItem('azadi_expenses', JSON.stringify(list));
+      } else {
+        setExpenses([]);
+        localStorage.setItem('azadi_expenses', JSON.stringify([]));
+      }
+      recordSyncEvent('expenses', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setLoadingExpenses(false);
+    }, (error) => {
+      console.warn("Expenses listener notice:", error);
+      setLoadingExpenses(false);
+    });
+
+    // Private donor info collectionGroup listener
+    const unsubPrivateInfo = onSnapshot(query(collectionGroup(db, 'private_info')), (pSnap) => {
+      const newMap = new Map<string, PrivateDonorInfo>();
+      pSnap.forEach(pDoc => {
+        const parentId = pDoc.ref.parent.parent?.id;
+        if (parentId) {
+          newMap.set(parentId, pDoc.data() as PrivateDonorInfo);
+        }
+      });
+      setPrivateDonorMap(newMap);
+    }, (err) => {
+      console.warn("Private info listener notice:", err);
+    });
+
+    // Audit logs listener
+    const unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(30)), (snap) => {
+      if (!snap.empty) {
+        const list: AuditLog[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({ ...data, id: d.id } as AuditLog);
+        });
+        setAuditLogs(list);
+      } else {
+        setAuditLogs([]);
+      }
+      recordSyncEvent('audit_logs', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setLoadingAuditLogs(false);
+    }, (error) => {
+      console.warn("Audit logs listener notice:", error);
+      setLoadingAuditLogs(false);
+    });
+
+    return () => {
+      unsubExpenses();
       unsubPrivateInfo();
+      unsubAuditLogs();
     };
   }, [isAdmin]);
 
@@ -883,12 +881,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const email = emailInput.includes('@') ? emailInput.trim() : `${emailInput.toLowerCase().trim()}@azadi.org`;
     try {
-      await sendPasswordResetEmail(auth, email);
+      const actionCodeSettings = {
+        url: `${window.location.origin}/admin`,
+        handleCodeInApp: true,
+      };
+      try {
+        await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      } catch (innerErr: any) {
+        if (innerErr?.code === 'auth/unauthorized-continue-uri' || innerErr?.code === 'auth/invalid-continue-uri') {
+          console.warn("Continue URL not authorized in Firebase Console, falling back to default action handler URL:", innerErr);
+          await sendPasswordResetEmail(auth, email);
+        } else {
+          throw innerErr;
+        }
+      }
       return {
         success: true,
         message: lang === 'bn' 
-          ? `${email} ঠিকানায় পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে! আপনার ইমেলের ইনবক্স অথবা স্প্যাম ফোল্ডার চেক করুন।` 
-          : `Password reset link sent to ${email}! Please check your email inbox or spam folder.`
+          ? `${email} ঠিকানায় পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে! অনুগ্রহ করে আপনার ইনবক্স থেকে সর্বশেষ ইমেলের রিসেট লিংকে ক্লিক করুন (পুরনো লিংকগুলো অকার্যকর হবে)।` 
+          : `Password reset link sent to ${email}! Please check your inbox and click the reset link in the NEWEST email received (older links become invalid).`
       };
     } catch (err: any) {
       console.error("Password reset error:", err);
@@ -899,8 +910,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         msg = lang === 'bn' ? 'ইমেল এড্রেসটি সঠিক নয়।' : 'Invalid email address format.';
       } else if (err.code === 'auth/too-many-requests') {
         msg = lang === 'bn' ? 'অনেক বেশি চেষ্টার কারণে সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।' : 'Too many requests. Please wait a while before trying again.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = lang === 'bn' ? 'নেটওয়ার্ক কানেকশন সমস্যা। ইন্টারনেট যাচাই করে পুনরায় চেষ্টা করুন।' : 'Network connection failed. Please check your internet connection.';
+      } else if (err.code === 'auth/user-disabled') {
+        msg = lang === 'bn' ? 'এই অ্যাডমিন অ্যাকাউন্টটি নিষ্ক্রিয় করা আছে।' : 'This account has been disabled.';
       }
       return { success: false, message: msg };
+    }
+  };
+
+  const verifyResetCode = async (oobCode: string): Promise<{ success: boolean; email?: string; message?: string; errorCode?: string }> => {
+    if (!oobCode || !oobCode.trim()) {
+      return {
+        success: false,
+        message: lang === 'bn' ? 'রিসেট কোড পাওয়া যায়নি।' : 'Reset action code is missing.',
+        errorCode: 'auth/invalid-action-code'
+      };
+    }
+    try {
+      const email = await verifyPasswordResetCode(auth, oobCode);
+      return { success: true, email };
+    } catch (err: any) {
+      console.error("verifyPasswordResetCode error:", err);
+      let msg = err.message || 'Invalid or expired password reset link.';
+      if (err.code === 'auth/expired-action-code') {
+        msg = lang === 'bn' 
+          ? 'পাসওয়ার্ড রিসেট লিংকটির মেয়াদ শেষ হয়ে গেছে। অনুগ্রহ করে নতুন একটি রিসেট লিংকের জন্য অনুরোধ করুন।' 
+          : 'The password reset link has expired. Please request a new password reset link.';
+      } else if (err.code === 'auth/invalid-action-code') {
+        msg = lang === 'bn' 
+          ? 'পাসওয়ার্ড রিসেট লিংকটি সঠিক নয় অথবা ইতিমধ্যে ব্যবহৃত হয়েছে। অনুগ্রহ করে নতুন একটি রিসেট লিংকের জন্য অনুরোধ করুন।' 
+          : 'This password reset link is invalid or has already been used. Please request a new one.';
+      } else if (err.code === 'auth/user-disabled') {
+        msg = lang === 'bn' ? 'এই অ্যাডমিন অ্যাকাউন্টটি নিষ্ক্রিয় করা আছে।' : 'This administrator account has been disabled.';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = lang === 'bn' ? 'এই রিসেট কোডের বিপরীতে কোনো ইউজার খুঁজে পাওয়া যায়নি।' : 'No account found matching this action code.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = lang === 'bn' ? 'নেটওয়ার্ক সংযোগ ব্যর্থ হয়েছে। ইন্টারনেট যাচাই করুন।' : 'Network connection failed. Please check your internet connection.';
+      }
+      return { success: false, message: msg, errorCode: err.code || 'unknown' };
+    }
+  };
+
+  const confirmNewPassword = async (oobCode: string, newPassword: string): Promise<{ success: boolean; message: string; errorCode?: string }> => {
+    if (!newPassword || newPassword.length < 6) {
+      return {
+        success: false,
+        message: lang === 'bn' ? 'পাসওয়ার্ড অত্যন্ত দুর্বল। অন্তত ৬টি অক্ষর ব্যবহার করুন।' : 'Password is too weak. Please use at least 6 characters.',
+        errorCode: 'auth/weak-password'
+      };
+    }
+    try {
+      await confirmPasswordReset(auth, oobCode, newPassword);
+      return {
+        success: true,
+        message: lang === 'bn' 
+          ? 'পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে! এখন আপনার নতুন পাসওয়ার্ড দিয়ে লগইন করুন।' 
+          : 'Password updated successfully! You can now log in with your new password.'
+      };
+    } catch (err: any) {
+      console.error("confirmPasswordReset error:", err);
+      let msg = err.message || 'Failed to update password.';
+      if (err.code === 'auth/expired-action-code') {
+        msg = lang === 'bn' 
+          ? 'পাসওয়ার্ড রিসেট লিংকটির মেয়াদ শেষ হয়ে গেছে। অনুগ্রহ করে আবার রিসেটের অনুরোধ পাঠান।' 
+          : 'The password reset link has expired. Please request a new reset link.';
+      } else if (err.code === 'auth/invalid-action-code') {
+        msg = lang === 'bn' 
+          ? 'এই পাসওয়ার্ড রিসেট লিংকটি ইতিমধ্যে ব্যবহৃত হয়েছে বা অকার্যকর।' 
+          : 'This password reset link is invalid or has already been used.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = lang === 'bn' ? 'পাসওয়ার্ড অত্যন্ত দুর্বল। অন্তত ৬টি অক্ষর ব্যবহার করুন।' : 'Password is too weak. Please use at least 6 characters.';
+      } else if (err.code === 'auth/user-disabled') {
+        msg = lang === 'bn' ? 'আপনার অ্যাডমিন অ্যাকাউন্টটি নিষ্ক্রিয় করা আছে।' : 'This administrator account has been disabled.';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = lang === 'bn' ? 'ইউজার অ্যাকাউন্ট খুঁজে পাওয়া যায়নি।' : 'No account found matching this request.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = lang === 'bn' ? 'নেটওয়ার্ক ত্রুটি! ইন্টারনেট কানেকশন চেক করুন।' : 'Network connection error. Please check your internet connection and try again.';
+      }
+      return { success: false, message: msg, errorCode: err.code || 'unknown' };
     }
   };
 
@@ -1125,6 +1213,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Safe migration helper: moves legacy flat donation fields to private_info subcollection
   const runDonationDataMigration = async () => {
     if (!auth.currentUser) return;
+    if (localStorage.getItem('azadi_donation_migration_completed') === 'true') return;
     try {
       const snap = await getDocs(collection(db, 'donations'));
       let migratedCount = 0;
@@ -1166,6 +1255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log(`[DATA MIGRATION] Migrated ${migratedCount} donation records to private subcollections.`);
       }
       await updatePublicStatsAggregate(allDocs);
+      localStorage.setItem('azadi_donation_migration_completed', 'true');
     } catch (err) {
       console.warn("[DATA MIGRATION] Migration check notice:", err);
     }
@@ -1413,58 +1503,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (leader.id) {
         // This is an update (or a restore of an item with pre-defined ID)
         const leaderRef = doc(db, 'leadership', leader.id);
-        const snap = await getDoc(leaderRef);
         const updatedLeader = {
           ...leader, // Keep 'id' inside the data to satisfy firestore security rules
           updatedAt: new Date().toISOString()
         };
 
-        if (snap.exists()) {
-          const serverData = snap.data() as Leadership;
-          if (originalLeader) {
-            // Optimistic concurrency check (OCC) with sanitized and trimmed fields to prevent false conflicts
-            const serverUpdatedAt = (serverData as any).updatedAt || serverData.createdAt || '';
-            const originalUpdatedAt = (originalLeader as any).updatedAt || originalLeader.createdAt || '';
+        if (originalLeader) {
+          try {
+            const snap = await getDoc(leaderRef);
+            if (snap.exists()) {
+              const serverData = snap.data() as Leadership;
+              // Optimistic concurrency check (OCC) with sanitized and trimmed fields to prevent false conflicts
+              const serverUpdatedAt = (serverData as any).updatedAt || serverData.createdAt || '';
+              const originalUpdatedAt = (originalLeader as any).updatedAt || originalLeader.createdAt || '';
 
-            const cleanStr = (val: any) => String(val || '').trim();
-            const cleanNum = (val: any) => Number(val || 0);
+              const cleanStr = (val: any) => String(val || '').trim();
+              const cleanNum = (val: any) => Number(val || 0);
 
-            const isModifiedOnServer = serverUpdatedAt !== originalUpdatedAt ||
-              cleanStr(serverData.nameEn) !== cleanStr(originalLeader.nameEn) ||
-              cleanStr(serverData.nameBn) !== cleanStr(originalLeader.nameBn) ||
-              cleanStr(serverData.designationEn) !== cleanStr(originalLeader.designationEn) ||
-              cleanStr(serverData.designationBn) !== cleanStr(originalLeader.designationBn) ||
-              cleanStr(serverData.category) !== cleanStr(originalLeader.category) ||
-              cleanStr(serverData.status) !== cleanStr(originalLeader.status) ||
-              cleanNum(serverData.order) !== cleanNum(originalLeader.order) ||
-              cleanStr(serverData.image) !== cleanStr(originalLeader.image) ||
-              cleanStr(serverData.phone) !== cleanStr(originalLeader.phone) ||
-              cleanStr(serverData.subDesignationEn) !== cleanStr(originalLeader.subDesignationEn) ||
-              cleanStr(serverData.subDesignationBn) !== cleanStr(originalLeader.subDesignationBn) ||
-              cleanStr(serverData.messageEn) !== cleanStr(originalLeader.messageEn) ||
-              cleanStr(serverData.messageBn) !== cleanStr(originalLeader.messageBn);
+              const isModifiedOnServer = serverUpdatedAt !== originalUpdatedAt ||
+                cleanStr(serverData.nameEn) !== cleanStr(originalLeader.nameEn) ||
+                cleanStr(serverData.nameBn) !== cleanStr(originalLeader.nameBn) ||
+                cleanStr(serverData.designationEn) !== cleanStr(originalLeader.designationEn) ||
+                cleanStr(serverData.designationBn) !== cleanStr(originalLeader.designationBn) ||
+                cleanStr(serverData.category) !== cleanStr(originalLeader.category) ||
+                cleanStr(serverData.status) !== cleanStr(originalLeader.status) ||
+                cleanNum(serverData.order) !== cleanNum(originalLeader.order) ||
+                cleanStr(serverData.image) !== cleanStr(originalLeader.image) ||
+                cleanStr(serverData.phone) !== cleanStr(originalLeader.phone) ||
+                cleanStr(serverData.subDesignationEn) !== cleanStr(originalLeader.subDesignationEn) ||
+                cleanStr(serverData.subDesignationBn) !== cleanStr(originalLeader.subDesignationBn) ||
+                cleanStr(serverData.messageEn) !== cleanStr(originalLeader.messageEn) ||
+                cleanStr(serverData.messageBn) !== cleanStr(originalLeader.messageBn);
 
-            if (isModifiedOnServer) {
-              throw new Error('EDIT_CONFLICT');
+              if (isModifiedOnServer) {
+                throw new Error('EDIT_CONFLICT');
+              }
+            } else {
+              throw new Error('DOCUMENT_NOT_FOUND');
             }
-          }
-
-          // Single write update
-          await withSync(() => updateDoc(leaderRef, updatedLeader as any));
-        } else {
-          if (originalLeader) {
-            // This was an edit of an existing record, but it got deleted on server
-            throw new Error('DOCUMENT_NOT_FOUND');
-          } else {
-            // No original edit context exists; this is a backup restore or seeder, preserve ID
-            const newLeaderData = {
-              ...leader, // Keep 'id' inside the data to satisfy firestore security rules
-              createdAt: leader.createdAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
-            await withSync(() => setDoc(leaderRef, newLeaderData as any));
+          } catch (docErr: any) {
+            if (docErr.message === 'EDIT_CONFLICT' || docErr.message === 'DOCUMENT_NOT_FOUND') {
+              throw docErr;
+            }
+            // If getDoc failed due to network / offline state, log warning and proceed with setDoc update
+            console.warn("[saveLeader] getDoc check unavailable, proceeding with direct setDoc write:", docErr);
           }
         }
+
+        // Single write update using setDoc merge which works whether document exists or not, and works offline
+        await withSync(() => setDoc(leaderRef, updatedLeader as any, { merge: true }));
       } else {
         // Create a new document with Firestore's native auto-generated document ID (single write)
         const docRef = doc(collection(db, 'leadership'));
@@ -1759,6 +1846,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTheme, 
       login,
       resetAdminPassword,
+      verifyResetCode,
+      confirmNewPassword,
       loginWithGoogle,
       logout,
       

@@ -39,11 +39,11 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
     }
   }
 
-  // 1. Google Drive Image optimization: Rewrite to Google's CDN service
+  // 1. Google Drive Image optimization: Rewrite to Google's CDN service with size parameter
   if (/drive\.google\.com/i.test(trimmed)) {
     const fileId = extractGoogleDriveId(trimmed);
     if (fileId) {
-      return `https://lh3.googleusercontent.com/d/${fileId}?t=${Date.now()}`;
+      return `https://lh3.googleusercontent.com/d/${fileId}=s${width}`;
     }
   }
 
@@ -69,19 +69,12 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 300
   const isLocalHost = trimmed.includes('localhost') || trimmed.includes('127.0.0.1') || trimmed.includes('0.0.0.0');
   const isGoogleOrFirebase = trimmed.includes('firebasestorage.googleapis.com') || trimmed.includes('googleusercontent.com') || trimmed.includes('googleapis.com');
   if (isLocalHost || isGoogleOrFirebase) {
-    try {
-      const urlObj = new URL(trimmed);
-      urlObj.searchParams.set('t', String(Date.now()));
-      return urlObj.toString();
-    } catch {
-      const separator = trimmed.includes('?') ? '&' : '?';
-      return `${trimmed}${separator}t=${Date.now()}`;
-    }
+    return trimmed;
   }
 
   // 3. General public external imagery: Route through high-density images.weserv.nl proxy
   try {
-    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&output=webp&q=80&we${tParam}`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&output=webp&q=80${tParam}`;
   } catch (e) {
     return trimmed;
   }
