@@ -9,7 +9,7 @@ import {
   DownloadCloud, X, Share, BellRing, ChevronRight, ChevronDown,
   PlusSquare, ArrowUp, PieChart, Home, Sparkles, Lock, Menu,
   Award, Shield, ExternalLink, CheckCircle2, Image as ImageIcon,
-  Info, Newspaper, Contact, MoreHorizontal
+  Info, Newspaper, Contact, MoreHorizontal, FileText, MessageSquare, History, Settings, LayoutDashboard
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -37,6 +37,18 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // Prevent body scrolling when mobile menu drawer is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   // Close mobile drawer and dropdown on route change
   useEffect(() => {
@@ -156,25 +168,53 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   }
 
   // Define responsive groups for navigation items to prevent horizontal overflow
-  // Group 1: Always visible on desktop (lg: 1024px+)
+  // Public Group 1: Always visible on desktop (lg: 1024px+)
   const primaryNavItems = [
     { label: 'home', path: '/', icon: <Home size={15} /> },
     { label: 'about', path: '/about', icon: <Info size={15} /> },
     { label: 'events', path: '/events', icon: <Sparkles size={15} /> },
-    { label: 'news', path: '/news', icon: <Newspaper size={15} /> },
+    { label: 'notices', path: '/notices', icon: <BellRing size={15} /> },
   ];
 
-  // Group 2: Visible on desktop xl (1280px+)
+  // Public Group 2: Visible on desktop xl (1280px+)
   const xlNavItems = [
-    { label: 'notices', path: '/notices', icon: <BellRing size={15} /> },
+    { label: 'news', path: '/news', icon: <Newspaper size={15} /> },
     { label: 'gallery', path: '/gallery', icon: <ImageIcon size={15} /> },
   ];
 
-  // Group 3: Visible on desktop 2xl (1536px+)
+  // Public Group 3: Visible on desktop 2xl (1536px+)
   const xxlNavItems = [
     { label: 'leadership', path: '/leadership', icon: <Users size={15} /> },
     { label: 'transparency', path: '/transparency', icon: <PieChart size={15} /> },
     { label: 'contact', path: '/contact', icon: <Contact size={15} /> },
+  ];
+
+  // Admin Group 1: Visible on lg (1024px+)
+  const primaryAdminNavItems = [
+    { label: 'dashboard', path: '/admin', icon: <LayoutDashboard size={15} /> },
+    { label: 'leadership', path: '/admin/leadership', icon: <Users size={15} /> },
+    { label: 'donation', path: '/admin/donations', icon: <Heart size={15} /> },
+    { label: 'events', path: '/admin/events', icon: <Calendar size={15} /> },
+  ];
+
+  // Admin Group 2: Visible on xl (1280px+)
+  const xlAdminNavItems = [
+    { label: 'notices', path: '/admin/notices', icon: <BellRing size={15} /> },
+    { label: 'news', path: '/admin/news', icon: <Newspaper size={15} /> },
+    { label: 'letterhead', path: '/admin/letterhead', icon: <FileText size={15} /> },
+  ];
+
+  // Admin Group 3: Visible on 2xl (1536px+)
+  const xxlAdminNavItems = [
+    { label: 'testimonials', path: '/admin/testimonials', icon: <MessageSquare size={15} /> },
+    { label: 'reports', path: '/admin/reports', icon: <PieChart size={15} /> },
+  ];
+
+  // Admin Group 4: Always inside Dropdown
+  const dropdownOnlyAdminNavItems = [
+    { label: 'auditLogs', path: '/admin/audit', icon: <History size={15} /> },
+    { label: 'settings', path: '/admin/settings', icon: <Settings size={15} /> },
+    { label: 'system', path: '/admin/system', icon: <Shield size={15} /> },
   ];
 
   return (
@@ -269,206 +309,258 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
       </div>
 
       {/* MAIN HEADER & NAVIGATION BAR */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-[#0b1329]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 no-print shadow-sm transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-3 w-full">
+      <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-[#0b1329]/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 no-print shadow-sm transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3 w-full">
           
-          {/* Logo & Brand Identity */}
-          <Link to="/" className="flex items-center gap-2 sm:gap-3 group flex-1 min-w-0 transition-transform active:scale-[0.98]">
-            <OrganizationSeal className="w-8 h-8 sm:w-10 sm:h-10 shrink-0" />
-            <div className="flex flex-col justify-center min-w-0">
-              <h1 className="text-[11px] xs:text-xs sm:text-sm lg:text-sm xl:text-base font-black uppercase leading-tight text-slate-900 dark:text-white truncate bengali tracking-tight">
+          {/* AREA 1: LEFT - Logo & Brand Identity */}
+          <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 min-w-0 transition-transform active:scale-[0.98]">
+            <OrganizationSeal className="w-8 h-8 sm:w-9 sm:h-9 shrink-0" />
+            <div className="flex flex-col justify-center min-w-0 max-w-[170px] sm:max-w-[210px] lg:max-w-[190px] xl:max-w-[240px] 2xl:max-w-none">
+              <h1 className="text-[11px] sm:text-xs xl:text-sm font-black uppercase leading-tight text-slate-900 dark:text-white bengali tracking-tight">
                 {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
               </h1>
-              <p className="text-[9px] sm:text-[10px] text-blue-700 dark:text-amber-400 font-bold uppercase truncate bengali tracking-wider mt-0.5 hidden xl:block">
+              <p className="text-[9px] text-blue-700 dark:text-amber-400 font-bold uppercase bengali tracking-wider mt-0.5 hidden 2xl:block whitespace-nowrap">
                 {lang === 'bn' ? settings?.sloganBn || 'শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া' : settings?.sloganEn || 'Education · Unity · Service · Peace · Sports'}
               </p>
             </div>
           </Link>
 
-          {/* Responsive Desktop Navigation Links - Non-Overflowing Layout */}
-          {isAdmin && !isPublicPage ? (
-            <nav className="hidden lg:flex flex-1 min-w-0 items-center justify-center gap-1 shrink-0 px-2">
-              {ADMIN_NAV_ITEMS.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link 
-                    key={item.path} 
-                    to={item.path} 
-                    className={`text-xs font-bold transition-all px-2.5 py-1.5 rounded-xl flex items-center gap-1 uppercase tracking-wide group shrink-0 ${
-                      isActive 
-                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
-                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
-                    } bengali`}
-                  >
-                    <span>{t[item.label as keyof typeof t] as string}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          ) : (
-            <nav className="hidden lg:flex flex-1 min-w-0 items-center justify-center gap-1 xl:gap-1.5 px-2">
-              {/* Always visible on lg screens (1024px+) */}
-              {primaryNavItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link 
-                    key={item.path} 
-                    to={item.path} 
-                    className={`text-xs font-bold transition-all px-2.5 xl:px-3 py-2 rounded-xl flex items-center gap-1.5 uppercase tracking-wide group shrink-0 ${
-                      isActive 
-                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
-                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
-                    } bengali`}
-                  >
-                    <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
-                      {React.cloneElement(item.icon, { size: 15 })}
-                    </span>
-                    <span className="whitespace-nowrap">{t[item.label as keyof typeof t] as string}</span>
-                  </Link>
-                );
-              })}
-
-              {/* Visible on xl screens (1280px+) */}
-              {xlNavItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link 
-                    key={item.path} 
-                    to={item.path} 
-                    className={`hidden xl:flex text-xs font-bold transition-all px-2.5 xl:px-3 py-2 rounded-xl items-center gap-1.5 uppercase tracking-wide group shrink-0 ${
-                      isActive 
-                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
-                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
-                    } bengali`}
-                  >
-                    <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
-                      {React.cloneElement(item.icon, { size: 15 })}
-                    </span>
-                    <span className="whitespace-nowrap">{t[item.label as keyof typeof t] as string}</span>
-                  </Link>
-                );
-              })}
-
-              {/* Visible on 2xl screens (1536px+) */}
-              {xxlNavItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link 
-                    key={item.path} 
-                    to={item.path} 
-                    className={`hidden 2xl:flex text-xs font-bold transition-all px-2.5 xl:px-3 py-2 rounded-xl items-center gap-1.5 uppercase tracking-wide group shrink-0 ${
-                      isActive 
-                      ? 'text-white bg-blue-700 shadow-md shadow-blue-700/20' 
-                      : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
-                    } bengali`}
-                  >
-                    <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
-                      {React.cloneElement(item.icon, { size: 15 })}
-                    </span>
-                    <span className="whitespace-nowrap">{t[item.label as keyof typeof t] as string}</span>
-                  </Link>
-                );
-              })}
-
-              {/* Desktop 'More' Dropdown for smaller desktop viewports */}
-              <div className="relative 2xl:hidden shrink-0" ref={moreMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                  className={`text-xs font-bold transition-all px-2.5 py-2 rounded-xl flex items-center gap-1 uppercase tracking-wide border border-transparent ${
-                    moreMenuOpen
-                    ? 'bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-amber-400 border-blue-200 dark:border-slate-700'
+          {/* AREA 2: CENTER - Responsive Primary Navigation */}
+          <nav className="hidden lg:flex flex-1 min-w-0 items-center justify-end xl:justify-center gap-0.5 xl:gap-1.5 px-1 lg:px-2">
+            {/* Always visible on lg (1024px+) */}
+            {primaryNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link 
+                  key={item.path} 
+                  to={item.path} 
+                  className={`text-[10px] xl:text-[11px] 2xl:text-xs font-bold transition-all px-1.5 xl:px-2.5 py-1.5 rounded-lg flex items-center gap-1 xl:gap-1.5 uppercase tracking-wider group shrink-0 ${
+                    isActive 
+                    ? 'text-white bg-blue-700 shadow-sm' 
                     : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
                   } bengali`}
-                  aria-expanded={moreMenuOpen}
-                  aria-haspopup="true"
                 >
-                  <MoreHorizontal size={16} />
-                  <span>{(t as any).more || (lang === 'bn' ? 'আরও' : 'More')}</span>
-                  <ChevronDown size={14} className={`transition-transform duration-200 ${moreMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
+                  <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
+                    {React.cloneElement(item.icon, { size: 13 })}
+                  </span>
+                  <span className="whitespace-nowrap">{t[item.label as keyof typeof t] as string}</span>
+                </Link>
+              );
+            })}
 
-                {/* Dropdown Menu */}
-                {moreMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    {/* Items hidden on lg but shown on xl (so show in dropdown when < xl) */}
-                    {xlNavItems.map((item) => {
-                      const isActive = location.pathname === item.path;
-                      return (
-                        <Link
-                          key={item.path}
-                          to={item.path}
-                          onClick={() => setMoreMenuOpen(false)}
-                          className={`xl:hidden flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali ${
-                            isActive ? 'text-blue-700 dark:text-amber-400 bg-blue-50/50 dark:bg-slate-800/50' : 'text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <span className="text-slate-400 dark:text-slate-400">{React.cloneElement(item.icon, { size: 15 })}</span>
-                          <span>{t[item.label as keyof typeof t] as string}</span>
-                        </Link>
-                      );
-                    })}
+            {/* Visible on xl (1280px+) */}
+            {xlNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link 
+                  key={item.path} 
+                  to={item.path} 
+                  className={`hidden xl:flex text-[10px] xl:text-[11px] 2xl:text-xs font-bold transition-all px-1.5 xl:px-2.5 py-1.5 rounded-lg items-center gap-1 xl:gap-1.5 uppercase tracking-wider group shrink-0 ${
+                    isActive 
+                    ? 'text-white bg-blue-700 shadow-sm' 
+                    : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                  } bengali`}
+                >
+                  <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
+                    {React.cloneElement(item.icon, { size: 13 })}
+                  </span>
+                  <span className="whitespace-nowrap">{t[item.label as keyof typeof t] as string}</span>
+                </Link>
+              );
+            })}
 
-                    {/* Items hidden on lg & xl (so show in dropdown when < 2xl) */}
-                    {xxlNavItems.map((item) => {
-                      const isActive = location.pathname === item.path;
-                      return (
-                        <Link
-                          key={item.path}
-                          to={item.path}
-                          onClick={() => setMoreMenuOpen(false)}
-                          className={`flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali ${
-                            isActive ? 'text-blue-700 dark:text-amber-400 bg-blue-50/50 dark:bg-slate-800/50' : 'text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <span className="text-slate-400 dark:text-slate-400">{React.cloneElement(item.icon, { size: 15 })}</span>
-                          <span>{t[item.label as keyof typeof t] as string}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </nav>
-          )}
+            {/* Visible on 2xl (1536px+) */}
+            {xxlNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link 
+                  key={item.path} 
+                  to={item.path} 
+                  className={`hidden 2xl:flex text-[10px] xl:text-[11px] 2xl:text-xs font-bold transition-all px-1.5 xl:px-2.5 py-1.5 rounded-lg items-center gap-1 xl:gap-1.5 uppercase tracking-wider group shrink-0 ${
+                    isActive 
+                    ? 'text-white bg-blue-700 shadow-sm' 
+                    : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                  } bengali`}
+                >
+                  <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-amber-300' : 'text-slate-400 dark:text-slate-400 group-hover:text-blue-600'}`}>
+                    {React.cloneElement(item.icon, { size: 13 })}
+                  </span>
+                  <span className="whitespace-nowrap">{t[item.label as keyof typeof t] as string}</span>
+                </Link>
+              );
+            })}
 
-          {/* Action Controls & Donate CTA - ALWAYS Visible and Unclipped */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 z-10">
-            {/* Header Donate Button (Desktop & Tablet) */}
+            {/* Desktop 'More' Dropdown for secondary pages */}
+            <div className="relative 2xl:hidden shrink-0" ref={moreMenuRef}>
+              <button
+                type="button"
+                onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                className={`text-[10px] xl:text-[11px] 2xl:text-xs font-bold transition-all px-1.5 xl:px-2.5 py-1.5 rounded-lg flex items-center gap-1 uppercase tracking-wider border border-transparent ${
+                  moreMenuOpen
+                  ? 'bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-amber-400 border-blue-200 dark:border-slate-700'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-amber-400 hover:bg-blue-50/60 dark:hover:bg-slate-800/60'
+                } bengali cursor-pointer`}
+                aria-expanded={moreMenuOpen}
+                aria-haspopup="true"
+              >
+                <MoreHorizontal size={14} />
+                <span>{(t as any).more || (lang === 'bn' ? 'আরও' : 'More')}</span>
+                <ChevronDown size={12} className={`transition-transform duration-200 ${moreMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {moreMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {/* Items hidden on lg (< xl) */}
+                  {xlNavItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMoreMenuOpen(false)}
+                        className={`xl:hidden flex items-center gap-2.5 px-4 py-2 text-xs font-bold hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali ${
+                          isActive ? 'text-blue-700 dark:text-amber-400 bg-blue-50/50 dark:bg-slate-800/50' : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <span className="text-slate-400 dark:text-slate-400">{React.cloneElement(item.icon, { size: 15 })}</span>
+                        <span>{t[item.label as keyof typeof t] as string}</span>
+                      </Link>
+                    );
+                  })}
+
+                  {/* Items hidden on lg & xl (< 2xl) */}
+                  {xxlNavItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMoreMenuOpen(false)}
+                        className={`flex items-center gap-2.5 px-4 py-2 text-xs font-bold hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali ${
+                          isActive ? 'text-blue-700 dark:text-amber-400 bg-blue-50/50 dark:bg-slate-800/50' : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <span className="text-slate-400 dark:text-slate-400">{React.cloneElement(item.icon, { size: 15 })}</span>
+                        <span>{t[item.label as keyof typeof t] as string}</span>
+                      </Link>
+                    );
+                  })}
+
+                  {/* Additional Secondary Links */}
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <Link
+                    to="/contact"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali"
+                  >
+                    <Contact size={15} className="text-slate-400" />
+                    <span>{t.contact as string}</span>
+                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setMoreMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-blue-700 dark:text-amber-400 hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali"
+                    >
+                      <LayoutDashboard size={15} />
+                      <span>{lang === 'bn' ? 'এডমিন ড্যাশবোর্ড' : 'Admin Dashboard'}</span>
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          </nav>
+
+          {/* AREA 3: RIGHT - Action Controls & Donate CTA */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 z-10">
+            {/* Admin Dashboard Badge (if logged in as Admin) */}
+            {isAdmin && (
+              <Link 
+                to="/admin"
+                className="hidden xl:flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white font-bold text-[11px] uppercase tracking-wide px-2.5 h-8 rounded-lg shadow-sm transition-all shrink-0 bengali"
+                title="Admin Dashboard"
+              >
+                <Shield size={13} className="text-amber-400" />
+                <span>{lang === 'bn' ? 'এডমিন' : 'Admin'}</span>
+              </Link>
+            )}
+
+            {/* Header Donate Button (Desktop & Tablet) - Compact & Sleek */}
             <Link 
               to="/donation"
-              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider px-3.5 py-2 rounded-xl shadow-md shadow-amber-500/20 hover:shadow-amber-500/40 transition-all hover:scale-[1.03] active:scale-95 shrink-0 h-8 sm:h-9"
+              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-[11px] uppercase tracking-wider px-2.5 sm:px-3 h-8 rounded-lg shadow-sm hover:shadow-amber-500/25 transition-all hover:scale-[1.02] active:scale-95 shrink-0"
             >
-              <Heart size={14} fill="currentColor" className="text-slate-950 animate-pulse" />
-              <span>{t.donate as string}</span>
+              <Heart size={13} fill="currentColor" className="text-slate-950 shrink-0" />
+              <span className="whitespace-nowrap">{t.donate as string}</span>
             </Link>
 
-            {/* Compact Language Switcher Control */}
+            {/* Single Compact Button Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Theme Toggle Button */}
+            {/* Circular/Rounded Theme Toggle Button */}
             <button 
               id="theme-toggle-btn"
               type="button"
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
-              className="w-8 h-8 sm:w-8.5 sm:h-8.5 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-amber-400 border border-slate-200 dark:border-slate-800 transition-all shadow-sm cursor-pointer shrink-0"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-amber-400 border border-slate-200 dark:border-slate-800 transition-all shadow-sm cursor-pointer shrink-0"
               title={theme === 'light' ? (t.themeDark as string) : (t.themeLight as string)}
               aria-label={theme === 'light' ? (t.themeDark as string) : (t.themeLight as string)}
             >
               {theme === 'light' ? <Moon size={15} /> : <Sun size={15} className="text-amber-400" />}
             </button>
 
-            {/* Mobile Hamburger Drawer Trigger */}
+            {/* Mobile Hamburger Trigger */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden w-8 h-8 sm:w-8.5 sm:h-8.5 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all shrink-0"
+              className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
               aria-label="Toggle Mobile Menu"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
+
+        {/* ADMIN SUB-NAVBAR (Visible only when Admin is navigating inside /admin/* routes) */}
+        {isAdmin && !isPublicPage && (
+          <div className="bg-slate-900 text-white border-t border-slate-800 px-4 py-2 overflow-x-auto scrollbar-none shadow-inner">
+            <div className="max-w-7xl mx-auto flex items-center gap-1.5 text-xs font-bold whitespace-nowrap">
+              <span className="text-amber-400 font-black flex items-center gap-1 mr-2 shrink-0">
+                <Shield size={13} />
+                <span>{lang === 'bn' ? 'এডমিন প্যানেল:' : 'Admin Panel:'}</span>
+              </span>
+              {[
+                { label: 'dashboard', path: '/admin', icon: <LayoutDashboard size={13} /> },
+                { label: 'leadership', path: '/admin/leadership', icon: <Users size={13} /> },
+                { label: 'donation', path: '/admin/donations', icon: <Heart size={13} /> },
+                { label: 'events', path: '/admin/events', icon: <Calendar size={13} /> },
+                { label: 'notices', path: '/admin/notices', icon: <BellRing size={13} /> },
+                { label: 'news', path: '/admin/news', icon: <Newspaper size={13} /> },
+                { label: 'letterhead', path: '/admin/letterhead', icon: <FileText size={13} /> },
+                { label: 'testimonials', path: '/admin/testimonials', icon: <MessageSquare size={13} /> },
+                { label: 'reports', path: '/admin/reports', icon: <PieChart size={13} /> },
+                { label: 'auditLogs', path: '/admin/audit', icon: <History size={13} /> },
+                { label: 'settings', path: '/admin/settings', icon: <Settings size={13} /> },
+              ].map(item => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                      isActive 
+                        ? 'bg-blue-600 text-white shadow-sm' 
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{t[item.label as keyof typeof t] as string}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* MOBILE FULL DRAWER MENU OVERLAY */}
@@ -542,6 +634,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center justify-between p-3.5 rounded-2xl font-bold text-sm transition-all bengali ${
                     isActive
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
@@ -562,6 +655,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <div className="pt-4 mt-4 border-t border-slate-800/80 space-y-3">
               <Link
                 to="/donation"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 text-sm uppercase tracking-wider bengali"
               >
                 <Heart size={18} fill="currentColor" />

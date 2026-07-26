@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { 
-  Users, Award, Phone, Mail, Search, ShieldCheck, 
-  Check, Info, User, ChevronRight, Star, Heart
+  Users, Award, Phone, Mail, Search,
+  Check, Info, User, ChevronRight, ShieldCheck, Heart, Sparkles
 } from 'lucide-react';
 import { MemberImage } from '../components/MemberImage';
 import { SkeletonLoader } from '../components/SkeletonLoader';
@@ -17,44 +17,66 @@ export const Leadership: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Sort leadership items by order
-  const sortedLeadership = useMemo(() => {
-    return [...leadership].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  // Filter out inactive members for public display and sort by order
+  const activeLeadership = useMemo(() => {
+    return leadership
+      .filter(m => m.status !== 'inactive')
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
   }, [leadership]);
 
-  // Extract unique categories
-  const categories = useMemo(() => {
+  // Extract unique categories present in the active leadership list
+  const availableCategories = useMemo(() => {
     const cats = new Set<string>();
-    leadership.forEach(m => {
+    activeLeadership.forEach(m => {
       if (m.category) cats.add(m.category);
     });
     return Array.from(cats);
-  }, [leadership]);
+  }, [activeLeadership]);
 
-  // Filtered list
+  // Helper for human-readable category titles in Bengali and English
+  const getCategoryLabel = (cat: string) => {
+    switch (cat.toLowerCase()) {
+      case 'leader':
+        return lang === 'bn' ? 'পরিচালনা পর্ষদ' : 'Executive Committee';
+      case 'executive':
+        return lang === 'bn' ? 'কার্যনির্বাহী সদস্য' : 'Executive Members';
+      case 'advisor':
+        return lang === 'bn' ? 'উপদেষ্টা পরিষদ' : 'Advisory Council';
+      case 'volunteer':
+        return lang === 'bn' ? 'স্বেচ্ছাসেবক' : 'Volunteers';
+      case 'member':
+        return lang === 'bn' ? 'সাধারণ সদস্য' : 'General Members';
+      default:
+        return cat;
+    }
+  };
+
+  // Filter members by category and search query
   const filteredLeadership = useMemo(() => {
-    return sortedLeadership.filter(m => {
+    return activeLeadership.filter(m => {
       const nameBn = m.nameBn || '';
       const nameEn = m.nameEn || '';
       const designationBn = m.designationBn || '';
       const designationEn = m.designationEn || '';
 
-      const matchesSearch = 
-        nameBn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        designationBn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        designationEn.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.toLowerCase().trim();
+
+      const matchesSearch = !query || 
+        nameBn.toLowerCase().includes(query) ||
+        nameEn.toLowerCase().includes(query) ||
+        designationBn.toLowerCase().includes(query) ||
+        designationEn.toLowerCase().includes(query);
 
       const matchesCategory = 
         selectedCategory === 'all' || m.category === selectedCategory;
 
       return matchesSearch && matchesCategory;
     });
-  }, [sortedLeadership, searchQuery, selectedCategory]);
+  }, [activeLeadership, searchQuery, selectedCategory]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 bengali animate-in fade-in duration-500">
-      {/* Page Hero */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 bengali animate-in fade-in duration-500 overflow-x-hidden">
+      {/* Page Hero Header */}
       <PageHero
         icon={<Users size={20} />}
         badgeBn="সংস্থার পরিচালনা পর্ষদ"
@@ -68,123 +90,155 @@ export const Leadership: React.FC = () => {
         ]}
       />
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="mb-12 flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft">
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+      {/* Filter Tabs & Search Control Container */}
+      <div className="mb-10 bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+        {/* Category Selector Tabs */}
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-none">
           <button
+            type="button"
             onClick={() => setSelectedCategory('all')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               selectedCategory === 'all'
-                ? 'bg-blue-700 dark:bg-blue-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             {selectedCategory === 'all' && <Check size={14} className="text-amber-400" />}
-            <span>{lang === 'bn' ? `সকল সদস্য (${sortedLeadership.length})` : `All Members (${sortedLeadership.length})`}</span>
+            <span>
+              {lang === 'bn' 
+                ? `সকল সদস্য (${activeLeadership.length})` 
+                : `All Members (${activeLeadership.length})`}
+            </span>
           </button>
 
-          {categories.map(cat => (
+          {availableCategories.map(cat => (
             <button
               key={cat}
+              type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-blue-700 dark:bg-blue-600 text-white shadow-md'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                  ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {selectedCategory === cat && <Check size={14} className="text-amber-400" />}
-              <span>{cat}</span>
+              <span>{getCategoryLabel(cat)}</span>
             </button>
           ))}
         </div>
 
-        <div className="relative w-full md:w-72">
+        {/* Live Search Input */}
+        <div className="relative w-full md:w-72 shrink-0">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={lang === 'bn' ? 'সদস্য খুঁজুন...' : 'Search leadership...'}
-            className="w-full pl-11 pr-4 py-2.5 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 dark:text-white"
+            placeholder={lang === 'bn' ? 'সদস্য বা পদবী দিয়ে খুঁজুন...' : 'Search by name or title...'}
+            className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 dark:text-white transition-all"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Leadership Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {loadingLeadership ? (
-          <div className="col-span-full">
-            <SkeletonLoader variant="card" count={4} />
-          </div>
-        ) : filteredLeadership.length > 0 ? (
-          filteredLeadership.map((member) => {
-            const name = lang === 'bn' ? member.nameBn : member.nameEn;
+      {/* Leadership Member Cards Grid */}
+      {loadingLeadership ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+          <SkeletonLoader variant="card" count={8} />
+        </div>
+      ) : filteredLeadership.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+          {filteredLeadership.map((member) => {
+            const rawNameBn = member.nameBn || '';
+            const rawNameEn = member.nameEn || '';
+            const isVacant = rawNameEn === 'Currently Vacant' || rawNameBn === 'বর্তমানে খালি' || (!rawNameBn && !rawNameEn);
+
+            const displayName = isVacant
+              ? (lang === 'bn' ? 'খালি পদ' : 'Vacant Position')
+              : (lang === 'bn' ? rawNameBn : rawNameEn);
+
             const designation = lang === 'bn' ? member.designationBn : member.designationEn;
-            const bio = lang === 'bn' ? member.bioBn : member.bioEn;
+            const subDesignation = lang === 'bn' ? member.subDesignationBn : member.subDesignationEn;
+            const message = lang === 'bn' ? member.messageBn : member.messageEn;
+            const imageUrl = member.image || (member as any).photo;
 
             return (
               <div
                 key={member.id}
-                className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-soft hover:shadow-heavy transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden hover:-translate-y-2"
+                className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden"
               >
                 {/* Decorative Top Accent */}
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-700 via-blue-500 to-amber-500 opacity-80" />
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-700 via-blue-500 to-amber-500" />
 
                 {/* Portrait Frame */}
-                <div className="relative mt-4 mb-6">
-                  <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-blue-600/20 dark:border-amber-400/20 shadow-lg group-hover:scale-105 transition-transform duration-500 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+                <div className="relative mt-2 mb-4">
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-blue-600/20 dark:border-amber-400/20 group-hover:border-blue-600 dark:group-hover:border-amber-400 shadow-md group-hover:scale-105 transition-all duration-300 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
                     <MemberImage
-                      src={member.image || (member as any).photo}
-                      alt={name}
+                      src={imageUrl}
+                      alt={displayName}
+                      isVacant={isVacant}
                       widthPreset="medium"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-full"
                     />
                   </div>
 
                   {member.category && (
                     <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-slate-900 text-amber-300 text-[10px] font-black uppercase tracking-wider rounded-full shadow-md whitespace-nowrap border border-amber-400/30">
-                      {member.category}
+                      {getCategoryLabel(member.category)}
                     </span>
                   )}
                 </div>
 
-                {/* Member Details */}
-                <div className="space-y-2 flex-1 w-full flex flex-col justify-between">
+                {/* Details Section */}
+                <div className="flex-1 w-full flex flex-col justify-between space-y-3 mt-1">
                   <div className="space-y-1">
-                    <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
-                      {name}
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                      {displayName}
                     </h3>
-                    <p className="text-xs sm:text-sm font-bold text-blue-700 dark:text-amber-400 uppercase tracking-wider">
+                    <p className="text-xs sm:text-sm font-bold text-blue-700 dark:text-amber-400 uppercase tracking-wide">
                       {designation}
                     </p>
+                    {subDesignation && (
+                      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        {subDesignation}
+                      </p>
+                    )}
                   </div>
 
-                  {bio && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed line-clamp-3 pt-2">
-                      {bio}
+                  {message && !isVacant && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed italic pt-2 border-t border-slate-100 dark:border-slate-800">
+                      "{message}"
                     </p>
                   )}
 
-                  {/* Contact Links */}
-                  {(member.phone || member.email) && (
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-3">
+                  {/* Direct Contact Links */}
+                  {(member.phone || (member as any).email) && !isVacant && (
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2">
                       {member.phone && (
                         <a
                           href={`tel:${member.phone}`}
-                          title={`Call ${name}`}
-                          className="p-2.5 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-amber-400 rounded-xl hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+                          title={`Call ${displayName}`}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-amber-400 rounded-xl hover:bg-blue-700 hover:text-white dark:hover:bg-amber-500 dark:hover:text-slate-950 transition-all cursor-pointer"
                         >
-                          <Phone size={15} />
+                          <Phone size={14} />
                         </a>
                       )}
-                      {member.email && (
+                      {(member as any).email && (
                         <a
-                          href={`mailto:${member.email}`}
-                          title={`Email ${name}`}
-                          className="p-2.5 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-amber-400 rounded-xl hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+                          href={`mailto:${(member as any).email}`}
+                          title={`Email ${displayName}`}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-amber-400 rounded-xl hover:bg-blue-700 hover:text-white dark:hover:bg-amber-500 dark:hover:text-slate-950 transition-all cursor-pointer"
                         >
-                          <Mail size={15} />
+                          <Mail size={14} />
                         </a>
                       )}
                     </div>
@@ -192,22 +246,23 @@ export const Leadership: React.FC = () => {
                 </div>
               </div>
             );
-          })
-        ) : (
-          <div className="col-span-full py-16 text-center bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 space-y-4">
-            <Users size={48} className="mx-auto text-slate-400 opacity-50" />
-            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
-              {lang === 'bn' ? 'কোনো সদস্য পাওয়া যায়নি' : 'No Leadership Members Found'}
-            </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {lang === 'bn' ? 'অনুগ্রহ করে ভিন্ন অনুসন্ধানী শব্দ ব্যবহার করুন।' : 'Try searching for another name or category.'}
-            </p>
-          </div>
-        )}
-      </div>
+          })}
+        </div>
+      ) : (
+        <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 space-y-4">
+          <Users size={48} className="mx-auto text-slate-400 opacity-50" />
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+            {lang === 'bn' ? 'কোনো সদস্য পাওয়া যায়নি' : 'No Leadership Members Found'}
+          </h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            {lang === 'bn' ? 'অনুগ্রহ করে ভিন্ন অনুসন্ধানী শব্দ বা ক্যাটাগরি ব্যবহার করুন।' : 'Try searching for another name or selecting a different category.'}
+          </p>
+        </div>
+      )}
 
-      {/* Institutional CTA */}
+      {/* Bottom Institutional CTA */}
       <PageCTA />
     </div>
   );
 };
+

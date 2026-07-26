@@ -96,6 +96,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/events" element={<Events />} />
         <Route path="/leadership" element={<Leadership />} />
+        <Route path="/leaders" element={<Leadership />} />
         <Route path="/donation" element={<Donation />} />
         <Route path="/donation-history" element={<DonationHistory />} />
         <Route path="/impact" element={<Impact />} />

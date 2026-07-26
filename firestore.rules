@@ -186,7 +186,7 @@ service cloud.firestore {
     // Events Validation
     function isValidEvent(data) {
       return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'descriptionEn', 'descriptionBn', 'locationEn', 'locationBn', 'date', 'image'])
-        && (data.keys().size() == 9 || (data.keys().size() == 10 && data.keys().hasAny(['meetUrl'])))
+        && (data.keys().size() >= 9 && data.keys().size() <= 16)
         && (!data.keys().hasAny(['meetUrl']) || (data.meetUrl is string && data.meetUrl.size() <= 1000))
         && data.id is string && data.id.size() <= 128
         && data.titleEn is string && data.titleEn.size() <= 200
@@ -209,7 +209,7 @@ service cloud.firestore {
     // Notices Validation
     function isValidNotice(data) {
       return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'contentEn', 'contentBn', 'date', 'isUrgent'])
-        && data.keys().size() == 7
+        && (data.keys().size() >= 7 && data.keys().size() <= 12)
         && data.id is string && data.id.size() <= 128
         && data.titleEn is string && data.titleEn.size() <= 200
         && data.titleBn is string && data.titleBn.size() <= 200
@@ -229,7 +229,7 @@ service cloud.firestore {
     // News Validation
     function isValidNews(data) {
       return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'contentEn', 'contentBn', 'date', 'image'])
-        && data.keys().size() == 7
+        && (data.keys().size() >= 7 && data.keys().size() <= 12)
         && data.id is string && data.id.size() <= 128
         && data.titleEn is string && data.titleEn.size() <= 200
         && data.titleBn is string && data.titleBn.size() <= 200

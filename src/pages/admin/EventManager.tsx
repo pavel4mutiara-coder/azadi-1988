@@ -127,15 +127,20 @@ export const EventManager: React.FC = () => {
     alert(lang === 'bn' ? 'গুগল মিট লিংক সফলভাবে তৈরি করা হয়েছে!' : 'Unique Google Meet scheduled successfully!');
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      saveEvent({ ...formData, id: editingId } as Event);
-    } else {
-      const newId = `event_${Date.now()}`;
-      saveEvent({ ...formData, id: newId } as Event);
+    try {
+      if (editingId) {
+        await saveEvent({ ...formData, id: editingId } as Event);
+      } else {
+        const newId = `event_${Date.now()}`;
+        await saveEvent({ ...formData, id: newId } as Event);
+      }
+      resetForm();
+    } catch (err) {
+      console.error("Save event failed:", err);
+      alert(lang === 'bn' ? 'ইভেন্ট সংরক্ষণ করতে ব্যর্থ হয়েছে!' : 'Failed to save event!');
     }
-    resetForm();
   };
 
   const resetForm = () => {
