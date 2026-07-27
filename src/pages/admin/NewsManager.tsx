@@ -102,15 +102,20 @@ export const NewsManager: React.FC = () => {
     setFormData(prev => ({ ...prev, image: '' }));
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      saveNews({ ...formData, id: editingId } as News);
-    } else {
-      const newId = `news_${Date.now()}`;
-      saveNews({ ...formData, id: newId } as News);
+    try {
+      if (editingId) {
+        await saveNews({ ...formData, id: editingId } as News);
+      } else {
+        const newId = `news_${Date.now()}`;
+        await saveNews({ ...formData, id: newId } as News);
+      }
+      resetForm();
+    } catch (err) {
+      console.error("Save news failed:", err);
+      alert(lang === 'bn' ? 'সংবাদ সংরক্ষণ করতে ব্যর্থ হয়েছে!' : 'Failed to save news!');
     }
-    resetForm();
   };
 
   const resetForm = () => {
@@ -124,9 +129,14 @@ export const NewsManager: React.FC = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি এই সংবাদটি মুছে ফেলতে চান?' : 'Do you want to delete this news?')) {
-      deleteNews(id);
+      try {
+        await deleteNews(id);
+      } catch (err) {
+        console.error("Delete news failed:", err);
+        alert(lang === 'bn' ? 'সংবাদ মুছে ফেলতে ব্যর্থ হয়েছে!' : 'Failed to delete news!');
+      }
     }
   };
 

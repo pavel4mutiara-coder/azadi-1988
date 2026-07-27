@@ -156,9 +156,14 @@ export const EventManager: React.FC = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি এটি মুছে ফেলতে চান?' : 'Delete this event?')) {
-      deleteEvent(id);
+      try {
+        await deleteEvent(id);
+      } catch (err) {
+        console.error("Delete event failed:", err);
+        alert(lang === 'bn' ? 'ইভেন্ট মুছে ফেলতে ব্যর্থ হয়েছে!' : 'Failed to delete event!');
+      }
     }
   };
 

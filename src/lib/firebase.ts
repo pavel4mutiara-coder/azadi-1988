@@ -19,7 +19,7 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
-}, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+}, (firebaseConfig as any).firestoreDatabaseId || '(default)');
 
 let authInstance: Auth;
 try {

@@ -26,18 +26,23 @@ export const NoticeManager: React.FC = () => {
     return diffMs <= 24 * 60 * 60 * 1000;
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const isUrgentAuto = formData.isUrgent || isDateWithin24Hours(formData.date);
     const finalData = { ...formData, isUrgent: isUrgentAuto };
 
-    if (editingId) {
-      saveNotice({ ...finalData, id: editingId } as Notice);
-    } else {
-      const newId = `notice_${Date.now()}`;
-      saveNotice({ ...finalData, id: newId } as Notice);
+    try {
+      if (editingId) {
+        await saveNotice({ ...finalData, id: editingId } as Notice);
+      } else {
+        const newId = `notice_${Date.now()}`;
+        await saveNotice({ ...finalData, id: newId } as Notice);
+      }
+      resetForm();
+    } catch (err) {
+      console.error("Save notice failed:", err);
+      alert(lang === 'bn' ? 'নোটিশ সংরক্ষণ করতে ব্যর্থ হয়েছে!' : 'Failed to save notice!');
     }
-    resetForm();
   };
 
   const resetForm = () => {
@@ -51,9 +56,14 @@ export const NoticeManager: React.FC = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি এই নোটিশটি মুছে ফেলতে চান?' : 'Do you want to delete this notice?')) {
-      deleteNotice(id);
+      try {
+        await deleteNotice(id);
+      } catch (err) {
+        console.error("Delete notice failed:", err);
+        alert(lang === 'bn' ? 'নোটিশ মুছে ফেলতে ব্যর্থ হয়েছে!' : 'Failed to delete notice!');
+      }
     }
   };
 

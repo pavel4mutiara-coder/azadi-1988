@@ -607,14 +607,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn("Public stats listener notice:", err);
     });
 
-    // Donations listener (Public safe - limited to 20 for fast page startup)
-    const unsubDonations = onSnapshot(query(collection(db, 'donations'), orderBy('date', 'desc'), limit(20)), (snap) => {
+    // Donations listener (Public safe - limited to 100 for fast page startup)
+    const unsubDonations = onSnapshot(query(collection(db, 'donations'), limit(100)), (snap) => {
       if (!snap.empty) {
         const list: Donation[] = [];
         snap.forEach(d => {
           const item = d.data();
           list.push({ ...item, id: d.id } as Donation);
         });
+        list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         setRawDonations(list);
         localStorage.setItem('azadi_donations', JSON.stringify(list));
       } else {
@@ -628,11 +629,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingDonations(false);
     });
 
-    // Leadership listener (limit 30)
-    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), orderBy('order', 'asc'), limit(30)), (snap) => {
+    // Leadership listener (limit 100)
+    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), limit(100)), (snap) => {
       if (snap.empty) {
-        localStorage.setItem('azadi_leadership', JSON.stringify(STATIC_LEADERSHIP));
-        setLeadership(STATIC_LEADERSHIP);
+        localStorage.setItem('azadi_leadership', JSON.stringify([]));
+        setLeadership([]);
       } else {
         const list: Leadership[] = [];
         snap.forEach((d) => {
@@ -645,8 +646,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSyncEvent('leadership', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
       setLoadingLeadership(false);
     }, (error) => {
-      console.warn("Leadership listener notice, using static fallback:", error);
-      setLeadership(STATIC_LEADERSHIP);
+      console.warn("Leadership listener notice:", error);
       setLoadingLeadership(false);
     });
 
@@ -716,14 +716,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingNews(false);
     });
 
-    // Testimonials listener (limit 15)
-    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), orderBy('createdAt', 'desc'), limit(15)), (snap) => {
+    // Testimonials listener (limit 100)
+    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), limit(100)), (snap) => {
       if (!snap.empty) {
         const list: Testimonial[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as Testimonial);
         });
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         setTestimonials(list);
         localStorage.setItem('azadi_testimonials', JSON.stringify(list));
       } else {
@@ -763,13 +764,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     runDonationDataMigration();
 
     // Expenses listener
-    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), orderBy('date', 'desc'), limit(30)), (snap) => {
+    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), limit(100)), (snap) => {
       if (!snap.empty) {
         const list: Expense[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as Expense);
         });
+        list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         setExpenses(list);
         localStorage.setItem('azadi_expenses', JSON.stringify(list));
       } else {
@@ -798,13 +800,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // Audit logs listener
-    const unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(30)), (snap) => {
+    const unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), limit(100)), (snap) => {
       if (!snap.empty) {
         const list: AuditLog[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as AuditLog);
         });
+        list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
         setAuditLogs(list);
       } else {
         setAuditLogs([]);
@@ -1125,6 +1128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `testimonials/${item.id}`);
+      throw error;
     }
   };
 
@@ -1135,6 +1139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('DELETE_TESTIMONIAL', 'testimonials', id);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `testimonials/${id}`);
+      throw error;
     }
   };
 
@@ -1433,6 +1438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: newSettings.nameEn });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/config');
+      throw error;
     }
   };
 
@@ -1443,6 +1449,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('LETTERHEAD_CONFIGURATION_UPDATE', { leaderName: newLetterhead.leaderName });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/letterhead');
+      throw error;
     }
   };
 
@@ -1453,6 +1460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('VERSION_CONFIGURATION_UPDATE', { latestVersion: newVersionConfig.latestVersion });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/version');
+      throw error;
     }
   };
 
@@ -1594,6 +1602,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const saveEvent = async (event: Event) => {
+    const prevList = [...events];
     try {
       recordSyncEvent('events', 'local');
       const cleanEvent: Event = {
@@ -1609,38 +1618,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...(event.meetUrl ? { meetUrl: event.meetUrl } : {})
       };
 
+      await withSync(() => setDoc(doc(db, 'events', cleanEvent.id), cleanEvent));
       setEvents(prev => {
         const exists = prev.some(e => e.id === cleanEvent.id);
         const updated = exists ? prev.map(e => e.id === cleanEvent.id ? cleanEvent : e) : [cleanEvent, ...prev];
         localStorage.setItem('azadi_events', JSON.stringify(updated));
         return updated;
       });
-
-      await withSync(() => setDoc(doc(db, 'events', cleanEvent.id), cleanEvent));
       await logAuditTrail('SAVE_EVENT', 'events', cleanEvent.id, { titleEn: cleanEvent.titleEn });
     } catch (error) {
+      setEvents(prevList);
+      localStorage.setItem('azadi_events', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.WRITE, `events/${event.id}`);
       throw error;
     }
   };
 
   const deleteEvent = async (id: string) => {
+    const prevList = [...events];
     try {
       recordSyncEvent('events', 'local');
+      await withSync(() => deleteDoc(doc(db, 'events', id)));
       setEvents(prev => {
         const updated = prev.filter(e => e.id !== id);
         localStorage.setItem('azadi_events', JSON.stringify(updated));
         return updated;
       });
-      await withSync(() => deleteDoc(doc(db, 'events', id)));
       await logAuditTrail('DELETE_EVENT', 'events', id);
     } catch (error) {
+      setEvents(prevList);
+      localStorage.setItem('azadi_events', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
       throw error;
     }
   };
 
   const saveNotice = async (notice: Notice) => {
+    const prevList = [...notices];
     try {
       recordSyncEvent('notices', 'local');
       const cleanNotice: Notice = {
@@ -1653,38 +1667,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isUrgent: Boolean(notice.isUrgent)
       };
 
+      await withSync(() => setDoc(doc(db, 'notices', cleanNotice.id), cleanNotice));
       setNotices(prev => {
         const exists = prev.some(n => n.id === cleanNotice.id);
         const updated = exists ? prev.map(n => n.id === cleanNotice.id ? cleanNotice : n) : [cleanNotice, ...prev];
         localStorage.setItem('azadi_notices', JSON.stringify(updated));
         return updated;
       });
-
-      await withSync(() => setDoc(doc(db, 'notices', cleanNotice.id), cleanNotice));
       await logAuditTrail('SAVE_NOTICE', 'notices', cleanNotice.id, { titleEn: cleanNotice.titleEn });
     } catch (error) {
+      setNotices(prevList);
+      localStorage.setItem('azadi_notices', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.WRITE, `notices/${notice.id}`);
       throw error;
     }
   };
 
   const deleteNotice = async (id: string) => {
+    const prevList = [...notices];
     try {
       recordSyncEvent('notices', 'local');
+      await withSync(() => deleteDoc(doc(db, 'notices', id)));
       setNotices(prev => {
         const updated = prev.filter(n => n.id !== id);
         localStorage.setItem('azadi_notices', JSON.stringify(updated));
         return updated;
       });
-      await withSync(() => deleteDoc(doc(db, 'notices', id)));
       await logAuditTrail('DELETE_NOTICE', 'notices', id);
     } catch (error) {
+      setNotices(prevList);
+      localStorage.setItem('azadi_notices', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
       throw error;
     }
   };
 
   const saveNews = async (item: News) => {
+    const prevList = [...news];
     try {
       recordSyncEvent('news', 'local');
       const cleanNews: News = {
@@ -1697,32 +1716,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         image: item.image || ''
       };
 
+      await withSync(() => setDoc(doc(db, 'news', cleanNews.id), cleanNews));
       setNews(prev => {
         const exists = prev.some(n => n.id === cleanNews.id);
         const updated = exists ? prev.map(n => n.id === cleanNews.id ? cleanNews : n) : [cleanNews, ...prev];
         localStorage.setItem('azadi_news', JSON.stringify(updated));
         return updated;
       });
-
-      await withSync(() => setDoc(doc(db, 'news', cleanNews.id), cleanNews));
       await logAuditTrail('SAVE_NEWS', 'news', cleanNews.id, { titleEn: cleanNews.titleEn });
     } catch (error) {
+      setNews(prevList);
+      localStorage.setItem('azadi_news', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.WRITE, `news/${item.id}`);
       throw error;
     }
   };
 
   const deleteNews = async (id: string) => {
+    const prevList = [...news];
     try {
       recordSyncEvent('news', 'local');
+      await withSync(() => deleteDoc(doc(db, 'news', id)));
       setNews(prev => {
         const updated = prev.filter(n => n.id !== id);
         localStorage.setItem('azadi_news', JSON.stringify(updated));
         return updated;
       });
-      await withSync(() => deleteDoc(doc(db, 'news', id)));
       await logAuditTrail('DELETE_NEWS', 'news', id);
     } catch (error) {
+      setNews(prevList);
+      localStorage.setItem('azadi_news', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
       throw error;
     }
@@ -1782,6 +1805,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `expenses/${item.id}`);
+      throw error;
     }
   };
 
@@ -1791,6 +1815,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await withSync(() => deleteDoc(doc(db, 'expenses', id)));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `expenses/${id}`);
+      throw error;
     }
   };
 
