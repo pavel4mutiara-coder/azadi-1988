@@ -186,8 +186,6 @@ service cloud.firestore {
     // Events Validation
     function isValidEvent(data) {
       return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'descriptionEn', 'descriptionBn', 'locationEn', 'locationBn', 'date', 'image'])
-        && (data.keys().size() >= 9 && data.keys().size() <= 16)
-        && (!data.keys().hasAny(['meetUrl']) || (data.meetUrl is string && data.meetUrl.size() <= 1000))
         && data.id is string && data.id.size() <= 128
         && data.titleEn is string && data.titleEn.size() <= 200
         && data.titleBn is string && data.titleBn.size() <= 200
@@ -196,7 +194,11 @@ service cloud.firestore {
         && data.locationEn is string && data.locationEn.size() <= 5000
         && data.locationBn is string && data.locationBn.size() <= 5000
         && data.date is string
-        && data.image is string;
+        && data.image is string
+        && (!data.keys().hasAny(['meetUrl']) || (data.meetUrl is string && data.meetUrl.size() <= 1000))
+        && (!data.keys().hasAny(['status']) || (data.status is string && data.status.size() <= 50))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is string && data.createdAt.size() <= 100))
+        && (!data.keys().hasAny(['updatedAt']) || (data.updatedAt is string && data.updatedAt.size() <= 100));
     }
 
     match /events/{eventId} {

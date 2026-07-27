@@ -4,7 +4,7 @@ import { TRANSLATIONS } from '../../utils/constants';
 import { Calendar, Plus, Trash2, Edit2, MapPin, Loader2, Video, Clipboard, UploadCloud, Image, X } from 'lucide-react';
 import { Event } from '../../types';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../lib/firebase';
+import { storage, formatFirebaseError } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
 import { getOptimizedImageUrl, compressInputImage } from '../../utils/imageOptimizer';
 
@@ -137,9 +137,11 @@ export const EventManager: React.FC = () => {
         await saveEvent({ ...formData, id: newId } as Event);
       }
       resetForm();
+      alert(lang === 'bn' ? 'ইভেন্ট সফলভাবে সংরক্ষিত হয়েছে!' : 'Event saved successfully to Firestore!');
     } catch (err) {
       console.error("Save event failed:", err);
-      alert(lang === 'bn' ? 'ইভেন্ট সংরক্ষণ করতে ব্যর্থ হয়েছে!' : 'Failed to save event!');
+      const userMessage = formatFirebaseError(err, lang);
+      alert(userMessage);
     }
   };
 
@@ -160,9 +162,11 @@ export const EventManager: React.FC = () => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি এটি মুছে ফেলতে চান?' : 'Delete this event?')) {
       try {
         await deleteEvent(id);
+        alert(lang === 'bn' ? 'ইভেন্ট সফলভাবে মুছে ফেলা হয়েছে!' : 'Event deleted successfully from Firestore!');
       } catch (err) {
         console.error("Delete event failed:", err);
-        alert(lang === 'bn' ? 'ইভেন্ট মুছে ফেলতে ব্যর্থ হয়েছে!' : 'Failed to delete event!');
+        const userMessage = formatFirebaseError(err, lang);
+        alert(userMessage);
       }
     }
   };

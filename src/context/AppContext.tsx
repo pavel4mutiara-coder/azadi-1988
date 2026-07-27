@@ -42,6 +42,7 @@ import {
   handleFirestoreError, 
   OperationType 
 } from '../lib/firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 
@@ -650,27 +651,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingLeadership(false);
     });
 
-    // Events listener
-    const unsubEvents = onSnapshot(query(collection(db, 'events'), limit(100)), (snap) => {
-      if (!snap.empty) {
-        const list: Event[] = [];
+    // Events listener with diagnostic tracking and single source of truth
+    if (import.meta.env.DEV) {
+      console.log("[EVENTS DEBUG] Initializing Firestore Events Listener", {
+        projectId: (firebaseConfig as any)?.projectId || "azadi-social-welfare",
+        databaseId: "(default)"
+      });
+    }
+    const unsubEvents = onSnapshot(
+      query(collection(db, 'events'), limit(100)),
+      { includeMetadataChanges: true },
+      (snap) => {
+        const isFromCache = snap.metadata.fromCache;
+        const hasPendingWrites = snap.metadata.hasPendingWrites;
+
+        if (import.meta.env.DEV) {
+          console.log("[EVENTS DEBUG]", {
+            projectId: (firebaseConfig as any)?.projectId || "azadi-social-welfare",
+            databaseId: "(default)",
+            listenerStarted: true,
+            snapshotReceived: true,
+            snapshotSize: snap.size,
+            fromCache: isFromCache,
+            hasPendingWrites: hasPendingWrites,
+            lastSync: new Date().toISOString()
+          });
+        }
+
+        const firestoreEvents: Event[] = [];
         snap.forEach(d => {
           const data = d.data();
-          list.push({ ...data, id: d.id } as Event);
+          firestoreEvents.push({ ...data, id: d.id } as Event);
         });
-        list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        setEvents(list);
-        localStorage.setItem('azadi_events', JSON.stringify(list));
-      } else {
-        setEvents([]);
-        localStorage.setItem('azadi_events', JSON.stringify([]));
+
+        const sortedEvents = firestoreEvents.sort((a, b) => {
+          const dateA = String(a.date || "");
+          const dateB = String(b.date || "");
+          return dateB.localeCompare(dateA);
+        });
+
+        setEvents(sortedEvents);
+        localStorage.setItem('azadi_events', JSON.stringify(sortedEvents));
+        recordSyncEvent('events', 'firestore', isFromCache ? 'cache' : 'server');
+        setLoadingEvents(false);
+      },
+      (error) => {
+        console.error("[Firestore Events Listener Error]", error);
+        setLoadingEvents(false);
       }
-      recordSyncEvent('events', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
-      setLoadingEvents(false);
-    }, (error) => {
-      console.warn("Events listener notice:", error);
-      setLoadingEvents(false);
-    });
+    );
 
     // Notices listener
     const unsubNotices = onSnapshot(query(collection(db, 'notices'), limit(100)), (snap) => {
@@ -1618,13 +1647,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...(event.meetUrl ? { meetUrl: event.meetUrl } : {})
       };
 
-      await withSync(() => setDoc(doc(db, 'events', cleanEvent.id), cleanEvent));
-      setEvents(prev => {
-        const exists = prev.some(e => e.id === cleanEvent.id);
-        const updated = exists ? prev.map(e => e.id === cleanEvent.id ? cleanEvent : e) : [cleanEvent, ...prev];
-        localStorage.setItem('azadi_events', JSON.stringify(updated));
-        return updated;
-      });
+      // 1. Write to Firestore
+      await withSync(() => setDoc(doc(db, 'events', cleanEvent.id), cleanEvent, { merge: true }));
+      
+      // 2. Confirm write reached Firestore server
+      await getDoc(doc(db, 'events', cleanEvent.id));
+
       await logAuditTrail('SAVE_EVENT', 'events', cleanEvent.id, { titleEn: cleanEvent.titleEn });
     } catch (error) {
       setEvents(prevList);
@@ -1639,11 +1667,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       recordSyncEvent('events', 'local');
       await withSync(() => deleteDoc(doc(db, 'events', id)));
-      setEvents(prev => {
-        const updated = prev.filter(e => e.id !== id);
-        localStorage.setItem('azadi_events', JSON.stringify(updated));
-        return updated;
-      });
       await logAuditTrail('DELETE_EVENT', 'events', id);
     } catch (error) {
       setEvents(prevList);
@@ -1667,13 +1690,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isUrgent: Boolean(notice.isUrgent)
       };
 
-      await withSync(() => setDoc(doc(db, 'notices', cleanNotice.id), cleanNotice));
-      setNotices(prev => {
-        const exists = prev.some(n => n.id === cleanNotice.id);
-        const updated = exists ? prev.map(n => n.id === cleanNotice.id ? cleanNotice : n) : [cleanNotice, ...prev];
-        localStorage.setItem('azadi_notices', JSON.stringify(updated));
-        return updated;
-      });
+      await withSync(() => setDoc(doc(db, 'notices', cleanNotice.id), cleanNotice, { merge: true }));
+      await getDoc(doc(db, 'notices', cleanNotice.id));
       await logAuditTrail('SAVE_NOTICE', 'notices', cleanNotice.id, { titleEn: cleanNotice.titleEn });
     } catch (error) {
       setNotices(prevList);
@@ -1688,11 +1706,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       recordSyncEvent('notices', 'local');
       await withSync(() => deleteDoc(doc(db, 'notices', id)));
-      setNotices(prev => {
-        const updated = prev.filter(n => n.id !== id);
-        localStorage.setItem('azadi_notices', JSON.stringify(updated));
-        return updated;
-      });
       await logAuditTrail('DELETE_NOTICE', 'notices', id);
     } catch (error) {
       setNotices(prevList);
@@ -1716,13 +1729,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         image: item.image || ''
       };
 
-      await withSync(() => setDoc(doc(db, 'news', cleanNews.id), cleanNews));
-      setNews(prev => {
-        const exists = prev.some(n => n.id === cleanNews.id);
-        const updated = exists ? prev.map(n => n.id === cleanNews.id ? cleanNews : n) : [cleanNews, ...prev];
-        localStorage.setItem('azadi_news', JSON.stringify(updated));
-        return updated;
-      });
+      await withSync(() => setDoc(doc(db, 'news', cleanNews.id), cleanNews, { merge: true }));
+      await getDoc(doc(db, 'news', cleanNews.id));
       await logAuditTrail('SAVE_NEWS', 'news', cleanNews.id, { titleEn: cleanNews.titleEn });
     } catch (error) {
       setNews(prevList);
@@ -1737,11 +1745,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       recordSyncEvent('news', 'local');
       await withSync(() => deleteDoc(doc(db, 'news', id)));
-      setNews(prev => {
-        const updated = prev.filter(n => n.id !== id);
-        localStorage.setItem('azadi_news', JSON.stringify(updated));
-        return updated;
-      });
       await logAuditTrail('DELETE_NEWS', 'news', id);
     } catch (error) {
       setNews(prevList);
