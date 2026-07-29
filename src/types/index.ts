@@ -170,6 +170,9 @@ export interface CollectionSyncState {
   status: 'synced' | 'stale' | 'offline' | 'unknown';
   metadataSource: 'server' | 'cache' | 'mock';
   count: number;
+  fromCache?: boolean;
+  hasPendingWrites?: boolean;
+  error?: string | null;
 }
 
 export interface VersionConfig {

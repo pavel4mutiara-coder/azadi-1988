@@ -76,6 +76,7 @@ interface AppState {
   isLoaded: boolean;
   cloudSynced: boolean;
   cloudSyncStatus: 'idle' | 'syncing' | 'error' | 'success';
+  syncError: string | null;
   cloudErrorMessage?: string;
   cloudErrorType?: 'auth' | 'network' | 'other';
   loadingDonations: boolean;
@@ -405,30 +406,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [cloudSynced, setCloudSynced] = useState(true);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('success');
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  const [syncTimestamps, setSyncTimestamps] = useState<Record<string, { firestore: string | null; local: string | null; source: 'server' | 'cache' | 'mock' }>>({
-    settings: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    letterhead: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    donations: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    leadership: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    events: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    notices: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    news: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    expenses: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    testimonials: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    audit_logs: { firestore: null, local: new Date().toISOString(), source: 'mock' },
-    version: { firestore: null, local: new Date().toISOString(), source: 'mock' },
+  const [syncTimestamps, setSyncTimestamps] = useState<Record<string, { 
+    firestore: string | null; 
+    local: string | null; 
+    source: 'server' | 'cache' | 'mock';
+    fromCache: boolean;
+    hasPendingWrites: boolean;
+    error: string | null;
+  }>>({
+    settings: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    letterhead: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    donations: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    leadership: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    events: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    notices: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    news: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    expenses: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    testimonials: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    audit_logs: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    version: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    public_stats: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
+    private_info: { firestore: null, local: new Date().toISOString(), source: 'mock', fromCache: false, hasPendingWrites: false, error: null },
   });
 
-  const recordSyncEvent = (collectionName: string, type: 'firestore' | 'local', source: 'server' | 'cache' | 'mock' = 'server') => {
+  const recordSyncEvent = (
+    collectionName: string, 
+    type: 'firestore' | 'local', 
+    source: 'server' | 'cache' | 'mock' = 'server',
+    meta?: { fromCache?: boolean; hasPendingWrites?: boolean },
+    error: string | null = null
+  ) => {
     setSyncTimestamps(prev => {
-      const current = prev[collectionName] || { firestore: null, local: null, source: 'mock' };
+      const current = prev[collectionName] || { 
+        firestore: null, 
+        local: null, 
+        source: 'mock',
+        fromCache: false,
+        hasPendingWrites: false,
+        error: null
+      };
       return {
         ...prev,
         [collectionName]: {
           firestore: type === 'firestore' ? new Date().toISOString() : current.firestore,
           local: type === 'local' ? new Date().toISOString() : current.local,
-          source: type === 'firestore' ? source : current.source
+          source: type === 'firestore' ? source : current.source,
+          fromCache: meta?.fromCache !== undefined ? meta.fromCache : (source === 'cache'),
+          hasPendingWrites: meta?.hasPendingWrites !== undefined ? meta.hasPendingWrites : current.hasPendingWrites,
+          error: error !== undefined ? error : current.error
         }
       };
     });
@@ -438,7 +465,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let count = 0;
     if (name === 'settings') count = 1;
     else if (name === 'letterhead') count = 1;
-    else if (name === 'donations') count = donations.length;
+    else if (name === 'donations') count = rawDonations.length;
     else if (name === 'leadership') count = leadership.length;
     else if (name === 'events') count = events.length;
     else if (name === 'notices') count = notices.length;
@@ -447,20 +474,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (name === 'testimonials') count = testimonials.length;
     else if (name === 'audit_logs') count = auditLogs.length;
     else if (name === 'version') count = 1;
+    else if (name === 'public_stats') count = publicStats ? 1 : 0;
+    else if (name === 'private_info') count = privateDonorMap.size;
 
     let status: 'synced' | 'stale' | 'offline' | 'unknown' = 'unknown';
-    if (ts.source === 'cache') {
+    if (ts.error) {
+      status = 'offline';
+    } else if (ts.fromCache || ts.source === 'cache') {
       status = 'offline';
     } else if (ts.source === 'mock') {
       status = 'unknown';
-    } else if (ts.firestore && ts.local) {
-      const fTime = new Date(ts.firestore).getTime();
-      const lTime = new Date(ts.local).getTime();
-      if (lTime > fTime + 2000) {
-        status = 'stale';
-      } else {
-        status = 'synced';
-      }
     } else if (ts.firestore) {
       status = 'synced';
     }
@@ -471,7 +494,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localLastUpdated: ts.local,
       status,
       metadataSource: ts.source,
-      count
+      count,
+      fromCache: ts.fromCache,
+      hasPendingWrites: ts.hasPendingWrites,
+      error: ts.error
     };
   });
 
@@ -551,38 +577,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // 1. Core Public Real-time Listeners (Run once on mount and persist throughout session)
   useEffect(() => {
     // Settings listener
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'config'), (snap) => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'config'), { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const data = snap.data() as OrganizationSettings;
         setSettings(data);
         localStorage.setItem('azadi_settings', JSON.stringify(data));
-        recordSyncEvent('settings', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+        recordSyncEvent('settings', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
+        setSyncError(null);
       }
       setLoadingSettings(false);
-    }, () => {
+    }, (error) => {
+      console.warn("Settings listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'settings/config');
+      recordSyncEvent('settings', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingSettings(false);
     });
 
     // Letterhead listener
-    const unsubLetterhead = onSnapshot(doc(db, 'settings', 'letterhead'), (snap) => {
+    const unsubLetterhead = onSnapshot(doc(db, 'settings', 'letterhead'), { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const data = snap.data() as LetterheadConfig;
         setLetterhead(data);
         localStorage.setItem('azadi_letterhead', JSON.stringify(data));
-        recordSyncEvent('letterhead', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+        recordSyncEvent('letterhead', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
+        setSyncError(null);
       }
       setLoadingLetterhead(false);
-    }, () => {
+    }, (error) => {
+      console.warn("Letterhead listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'settings/letterhead');
+      recordSyncEvent('letterhead', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingLetterhead(false);
     });
 
     // Version listener
-    const unsubVersion = onSnapshot(doc(db, 'settings', 'version'), (snap) => {
+    const unsubVersion = onSnapshot(doc(db, 'settings', 'version'), { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const data = snap.data() as VersionConfig;
         setVersionConfig(data);
         localStorage.setItem('azadi_version_config', JSON.stringify(data));
-        recordSyncEvent('version', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+        recordSyncEvent('version', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
+        setSyncError(null);
       } else {
         const seedVersion = async () => {
           try {
@@ -595,59 +632,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setVersionConfig(CURRENT_VERSION);
       }
       setLoadingVersion(false);
-    }, () => {
+    }, (error) => {
+      console.warn("Version listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'settings/version');
+      recordSyncEvent('version', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingVersion(false);
     });
 
     // Public Stats Listener
-    const unsubPublicStats = onSnapshot(doc(db, 'public_stats', 'donations'), (snap) => {
+    const unsubPublicStats = onSnapshot(doc(db, 'public_stats', 'donations'), { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         setPublicStats(snap.data() as PublicDonationStats);
+        recordSyncEvent('public_stats', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
+        setSyncError(null);
       }
-    }, (err) => {
-      console.warn("Public stats listener notice:", err);
+    }, (error) => {
+      console.warn("Public stats listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'public_stats/donations');
+      recordSyncEvent('public_stats', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
     });
 
     // Donations listener (Public safe - limited to 100 for fast page startup)
-    const unsubDonations = onSnapshot(query(collection(db, 'donations'), limit(100)), (snap) => {
+    const unsubDonations = onSnapshot(query(collection(db, 'donations'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: Donation[] = [];
       if (!snap.empty) {
-        const list: Donation[] = [];
         snap.forEach(d => {
           const item = d.data();
           list.push({ ...item, id: d.id } as Donation);
         });
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        setRawDonations(list);
-        localStorage.setItem('azadi_donations', JSON.stringify(list));
-      } else {
-        setRawDonations([]);
-        localStorage.setItem('azadi_donations', JSON.stringify([]));
       }
-      recordSyncEvent('donations', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setRawDonations(list);
+      localStorage.setItem('azadi_donations', JSON.stringify(list));
+      recordSyncEvent('donations', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingDonations(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("Donations snapshot listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'donations');
+      recordSyncEvent('donations', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingDonations(false);
     });
 
     // Leadership listener (limit 100)
-    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), limit(100)), (snap) => {
-      if (snap.empty) {
-        localStorage.setItem('azadi_leadership', JSON.stringify([]));
-        setLeadership([]);
-      } else {
-        const list: Leadership[] = [];
+    const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: Leadership[] = [];
+      if (!snap.empty) {
         snap.forEach((d) => {
           list.push({ ...d.data(), id: d.id } as Leadership);
         });
         list.sort((a, b) => (a.order || 0) - (b.order || 0));
-        localStorage.setItem('azadi_leadership', JSON.stringify(list));
-        setLeadership(list);
       }
-      recordSyncEvent('leadership', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setLeadership(list);
+      localStorage.setItem('azadi_leadership', JSON.stringify(list));
+      recordSyncEvent('leadership', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingLeadership(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("Leadership listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'leadership');
+      recordSyncEvent('leadership', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingLeadership(false);
     });
 
@@ -679,10 +727,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const firestoreEvents: Event[] = [];
-        snap.forEach(d => {
-          const data = d.data();
-          firestoreEvents.push({ ...data, id: d.id } as Event);
-        });
+        if (!snap.empty) {
+          snap.forEach(d => {
+            const data = d.data();
+            firestoreEvents.push({ ...data, id: d.id } as Event);
+          });
+        }
 
         const sortedEvents = firestoreEvents.sort((a, b) => {
           const dateA = String(a.date || "");
@@ -692,78 +742,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setEvents(sortedEvents);
         localStorage.setItem('azadi_events', JSON.stringify(sortedEvents));
-        recordSyncEvent('events', 'firestore', isFromCache ? 'cache' : 'server');
+        recordSyncEvent('events', 'firestore', isFromCache ? 'cache' : 'server', { fromCache: isFromCache, hasPendingWrites });
         setLoadingEvents(false);
+        setSyncError(null);
       },
       (error) => {
         console.error("[Firestore Events Listener Error]", error);
+        handleFirestoreError(error, OperationType.GET, 'events');
+        recordSyncEvent('events', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+        setSyncError(error?.message || String(error));
         setLoadingEvents(false);
       }
     );
 
     // Notices listener
-    const unsubNotices = onSnapshot(query(collection(db, 'notices'), limit(100)), (snap) => {
+    const unsubNotices = onSnapshot(query(collection(db, 'notices'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: Notice[] = [];
       if (!snap.empty) {
-        const list: Notice[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as Notice);
         });
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        setNotices(list);
-        localStorage.setItem('azadi_notices', JSON.stringify(list));
-      } else {
-        setNotices([]);
-        localStorage.setItem('azadi_notices', JSON.stringify([]));
       }
-      recordSyncEvent('notices', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setNotices(list);
+      localStorage.setItem('azadi_notices', JSON.stringify(list));
+      recordSyncEvent('notices', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingNotices(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("Notices listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'notices');
+      recordSyncEvent('notices', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingNotices(false);
     });
 
     // News listener
-    const unsubNews = onSnapshot(query(collection(db, 'news'), limit(100)), (snap) => {
+    const unsubNews = onSnapshot(query(collection(db, 'news'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: News[] = [];
       if (!snap.empty) {
-        const list: News[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as News);
         });
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        setNews(list);
-        localStorage.setItem('azadi_news', JSON.stringify(list));
-      } else {
-        setNews([]);
-        localStorage.setItem('azadi_news', JSON.stringify([]));
       }
-      recordSyncEvent('news', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setNews(list);
+      localStorage.setItem('azadi_news', JSON.stringify(list));
+      recordSyncEvent('news', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingNews(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("News listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'news');
+      recordSyncEvent('news', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingNews(false);
     });
 
     // Testimonials listener (limit 100)
-    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), limit(100)), (snap) => {
+    const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: Testimonial[] = [];
       if (!snap.empty) {
-        const list: Testimonial[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as Testimonial);
         });
         list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-        setTestimonials(list);
-        localStorage.setItem('azadi_testimonials', JSON.stringify(list));
-      } else {
-        setTestimonials([]);
-        localStorage.setItem('azadi_testimonials', JSON.stringify([]));
       }
-      recordSyncEvent('testimonials', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setTestimonials(list);
+      localStorage.setItem('azadi_testimonials', JSON.stringify(list));
+      recordSyncEvent('testimonials', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingTestimonials(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("Testimonials listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'testimonials');
+      recordSyncEvent('testimonials', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingTestimonials(false);
     });
 
@@ -793,29 +850,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     runDonationDataMigration();
 
     // Expenses listener
-    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), limit(100)), (snap) => {
+    const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: Expense[] = [];
       if (!snap.empty) {
-        const list: Expense[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as Expense);
         });
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        setExpenses(list);
-        localStorage.setItem('azadi_expenses', JSON.stringify(list));
-      } else {
-        setExpenses([]);
-        localStorage.setItem('azadi_expenses', JSON.stringify([]));
       }
-      recordSyncEvent('expenses', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setExpenses(list);
+      localStorage.setItem('azadi_expenses', JSON.stringify(list));
+      recordSyncEvent('expenses', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingExpenses(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("Expenses listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'expenses');
+      recordSyncEvent('expenses', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingExpenses(false);
     });
 
     // Private donor info collectionGroup listener
-    const unsubPrivateInfo = onSnapshot(query(collectionGroup(db, 'private_info')), (pSnap) => {
+    const unsubPrivateInfo = onSnapshot(query(collectionGroup(db, 'private_info')), { includeMetadataChanges: true }, (pSnap) => {
       const newMap = new Map<string, PrivateDonorInfo>();
       pSnap.forEach(pDoc => {
         const parentId = pDoc.ref.parent.parent?.id;
@@ -824,27 +882,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
       setPrivateDonorMap(newMap);
-    }, (err) => {
-      console.warn("Private info listener notice:", err);
+      recordSyncEvent('private_info', 'firestore', pSnap.metadata.fromCache ? 'cache' : 'server', { fromCache: pSnap.metadata.fromCache, hasPendingWrites: pSnap.metadata.hasPendingWrites });
+      setSyncError(null);
+    }, (error) => {
+      console.warn("Private info listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'private_info');
+      recordSyncEvent('private_info', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
     });
 
     // Audit logs listener
-    const unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), limit(100)), (snap) => {
+    const unsubAuditLogs = onSnapshot(query(collection(db, 'audit_logs'), limit(100)), { includeMetadataChanges: true }, (snap) => {
+      const list: AuditLog[] = [];
       if (!snap.empty) {
-        const list: AuditLog[] = [];
         snap.forEach(d => {
           const data = d.data();
           list.push({ ...data, id: d.id } as AuditLog);
         });
         list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-        setAuditLogs(list);
-      } else {
-        setAuditLogs([]);
       }
-      recordSyncEvent('audit_logs', 'firestore', snap.metadata.fromCache ? 'cache' : 'server');
+      setAuditLogs(list);
+      recordSyncEvent('audit_logs', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingAuditLogs(false);
+      setSyncError(null);
     }, (error) => {
       console.warn("Audit logs listener notice:", error);
+      handleFirestoreError(error, OperationType.GET, 'audit_logs');
+      recordSyncEvent('audit_logs', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
+      setSyncError(error?.message || String(error));
       setLoadingAuditLogs(false);
     });
 
@@ -1941,6 +2006,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isLoaded, 
       cloudSynced, 
       cloudSyncStatus,
+      syncError,
       loadingDonations,
       loadingLeadership,
       loadingEvents,
@@ -2006,7 +2072,165 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setGoogleAccessToken
     }}>
       {children}
+      {import.meta.env.DEV && <DiagnosticSyncPanel />}
     </AppContext.Provider>
+  );
+};
+
+export const DiagnosticSyncPanel: React.FC = () => {
+  const [isMinimized, setIsMinimized] = useState(true);
+  const { syncHealth, syncError, cloudSyncStatus, retryCloudConnection } = useApp();
+
+  if (!import.meta.env.DEV) {
+    return null;
+  }
+
+  const serverSyncedCount = syncHealth.filter(s => !s.fromCache && s.status === 'synced').length;
+  const cacheCount = syncHealth.filter(s => s.fromCache).length;
+  const pendingWritesCount = syncHealth.filter(s => s.hasPendingWrites).length;
+  const errorCount = syncHealth.filter(s => !!s.error).length;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[9999] font-mono text-xs select-none">
+      {isMinimized ? (
+        <button
+          onClick={() => setIsMinimized(false)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-lg border backdrop-blur-md transition-all ${
+            errorCount > 0 || syncError
+              ? 'bg-red-950/90 text-red-200 border-red-700 hover:bg-red-900'
+              : cacheCount > 0
+              ? 'bg-amber-950/90 text-amber-200 border-amber-700 hover:bg-amber-900'
+              : 'bg-slate-900/90 text-slate-200 border-slate-700 hover:bg-slate-800'
+          }`}
+          title="Click to view real-time Firestore sync diagnostics"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+              errorCount > 0 ? 'bg-red-400' : cacheCount > 0 ? 'bg-amber-400' : 'bg-emerald-400'
+            }`} />
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+              errorCount > 0 ? 'bg-red-500' : cacheCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+            }`} />
+          </span>
+          <span className="font-bold tracking-tight">Firestore DEV Sync</span>
+          <span className="bg-slate-800/90 px-1.5 py-0.5 rounded text-[10px] text-slate-300">
+            {serverSyncedCount} Srv | {cacheCount} Cache
+          </span>
+          {pendingWritesCount > 0 && (
+            <span className="bg-purple-900/80 text-purple-200 px-1.5 py-0.5 rounded text-[10px]">
+              {pendingWritesCount} Pending
+            </span>
+          )}
+        </button>
+      ) : (
+        <div className="w-80 sm:w-96 max-h-[85vh] flex flex-col bg-slate-950 text-slate-100 border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${
+                errorCount > 0 ? 'bg-red-500' : cacheCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+              }`} />
+              <h3 className="font-semibold text-slate-200 text-xs">Firestore Sync Diagnostics</h3>
+              <span className="bg-slate-800 text-slate-400 text-[10px] px-1.5 py-0.5 rounded">DEV</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => retryCloudConnection()}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition-colors"
+                title="Retry Cloud Connection"
+              >
+                ↻
+              </button>
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition-colors"
+                title="Minimize panel"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="p-2.5 bg-slate-900/60 border-b border-slate-800 text-[11px] space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Global Sync Status:</span>
+              <span className={`font-bold uppercase ${
+                cloudSyncStatus === 'success' ? 'text-emerald-400' : 'text-amber-400'
+              }`}>
+                {cloudSyncStatus}
+              </span>
+            </div>
+            {syncError && (
+              <div className="p-2 rounded bg-red-950/90 border border-red-800 text-red-200 text-[10px] break-all leading-tight">
+                ⚠️ <span className="font-bold">Sync Error:</span> {syncError}
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-1 pt-1 text-center text-[10px]">
+              <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
+                <div className="text-slate-400">Server Synced</div>
+                <div className="font-bold text-emerald-400 text-sm">{serverSyncedCount}</div>
+              </div>
+              <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
+                <div className="text-slate-400">From Cache</div>
+                <div className="font-bold text-amber-400 text-sm">{cacheCount}</div>
+              </div>
+              <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
+                <div className="text-slate-400">Pending Writes</div>
+                <div className="font-bold text-purple-400 text-sm">{pendingWritesCount}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2 overflow-y-auto space-y-1.5 max-h-80 divide-y divide-slate-800/40">
+            {syncHealth.map((item) => (
+              <div
+                key={item.collectionName}
+                className="pt-1.5 first:pt-0 flex flex-col gap-1 text-[11px]"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-200">{item.collectionName}</span>
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <span className="text-slate-400 font-mono">({item.count})</span>
+                    {item.fromCache ? (
+                      <span className="bg-amber-950 text-amber-300 border border-amber-800 px-1.5 py-0.5 rounded font-semibold" title="Data served from local browser cache">
+                        fromCache
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-semibold" title="Live data verified from Firestore server">
+                        Server
+                      </span>
+                    )}
+                    {item.hasPendingWrites ? (
+                      <span className="bg-purple-950 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded font-semibold" title="Uncommitted local writes pending">
+                        pendingWrites
+                      </span>
+                    ) : (
+                      <span className="bg-slate-900 text-slate-500 border border-slate-800 px-1.5 py-0.5 rounded">
+                        clean
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {item.error ? (
+                  <div className="text-[10px] text-red-300 bg-red-950/60 p-1.5 rounded border border-red-800/80">
+                    {item.error}
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center text-[10px] text-slate-500">
+                    <span>
+                      {item.firestoreLastUpdated ? `Last: ${new Date(item.firestoreLastUpdated).toLocaleTimeString()}` : 'Not synced'}
+                    </span>
+                    <span className={item.fromCache ? 'text-amber-400 font-medium' : 'text-emerald-400'}>
+                      {item.fromCache ? 'Blocked by Cache / Offline' : 'Live Sync OK'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
