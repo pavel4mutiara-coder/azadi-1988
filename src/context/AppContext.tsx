@@ -2072,7 +2072,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setGoogleAccessToken
     }}>
       {children}
-      {import.meta.env.DEV && <DiagnosticSyncPanel />}
     </AppContext.Provider>
   );
 };
