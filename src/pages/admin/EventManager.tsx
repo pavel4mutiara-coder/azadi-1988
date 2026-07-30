@@ -3,10 +3,10 @@ import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { Calendar, Plus, Trash2, Edit2, MapPin, Loader2, Video, Clipboard, UploadCloud, Image, X } from 'lucide-react';
 import { Event } from '../../types';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage, formatFirebaseError } from '../../lib/firebase';
+import { formatFirebaseError } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
-import { getOptimizedImageUrl, compressInputImage } from '../../utils/imageOptimizer';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { uploadImage } from '../../utils/uploadImage';
 
 export const EventManager: React.FC = () => {
   const { lang, events, saveEvent, deleteEvent } = useApp();
@@ -78,41 +78,21 @@ export const EventManager: React.FC = () => {
     setUploading(true);
     setUploadProgress(0);
     
-    let uploadBlob: Blob = file;
     try {
-      // Compress to maximum 1024x1024 resolution and 80% JPEG quality for fast transfers
-      uploadBlob = await compressInputImage(file, 1024, 1024, 0.8);
-    } catch (compressErr) {
-      console.warn("Client-side image compression bypassed:", compressErr);
+      const downloadUrl = await uploadImage(file, 'events', {
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8,
+        onProgress: (progress) => setUploadProgress(progress)
+      });
+      setFormData(prev => ({ ...prev, image: downloadUrl }));
+    } catch (err: any) {
+      console.error("Event image upload error:", err);
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
     }
-    
-    const fileId = `event_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const storageRef = ref(storage, `events/${fileId}`);
-    const uploadTask = uploadBytesResumable(storageRef, uploadBlob);
-
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        setUploadProgress(progress);
-      }, 
-      (error) => {
-        console.error("Storage upload error:", error);
-        alert(lang === 'bn' ? 'ছবি আপলোড করতে ব্যর্থ হয়েছে!' : 'Failed to upload image!');
-        setUploading(false);
-        setUploadProgress(null);
-      }, 
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          setFormData(prev => ({ ...prev, image: downloadUrl }));
-        } catch (err) {
-          console.error("Error getting download URL:", err);
-        } finally {
-          setUploading(false);
-          setUploadProgress(null);
-        }
-      }
-    );
   };
 
   const handleRemoveImage = () => {

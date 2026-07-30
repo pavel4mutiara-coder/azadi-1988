@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { BellRing, Plus, Trash2, Edit2, Clock } from 'lucide-react';
+import { BellRing, Plus, Trash2, Edit2, Clock, Loader2 } from 'lucide-react';
 import { Notice } from '../../types';
 import { parseLocalDate } from '../../utils/parseLocalDate';
+import { formatFirebaseError } from '../../lib/firebase';
 
 export const NoticeManager: React.FC = () => {
   const { lang, notices, saveNotice, deleteNotice } = useApp();
@@ -26,11 +27,15 @@ export const NoticeManager: React.FC = () => {
     return diffMs <= 24 * 60 * 60 * 1000;
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const isUrgentAuto = formData.isUrgent || isDateWithin24Hours(formData.date);
     const finalData = { ...formData, isUrgent: isUrgentAuto };
 
+    setIsSaving(true);
     try {
       if (editingId) {
         await saveNotice({ ...finalData, id: editingId } as Notice);
@@ -41,7 +46,9 @@ export const NoticeManager: React.FC = () => {
       resetForm();
     } catch (err) {
       console.error("Save notice failed:", err);
-      alert(lang === 'bn' ? 'নোটিশ সংরক্ষণ করতে ব্যর্থ হয়েছে!' : 'Failed to save notice!');
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -58,11 +65,14 @@ export const NoticeManager: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি এই নোটিশটি মুছে ফেলতে চান?' : 'Do you want to delete this notice?')) {
+      setDeletingId(id);
       try {
         await deleteNotice(id);
       } catch (err) {
         console.error("Delete notice failed:", err);
-        alert(lang === 'bn' ? 'নোটিশ মুছে ফেলতে ব্যর্থ হয়েছে!' : 'Failed to delete notice!');
+        alert(formatFirebaseError(err, lang));
+      } finally {
+        setDeletingId(null);
       }
     }
   };

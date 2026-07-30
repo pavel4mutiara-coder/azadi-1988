@@ -7,6 +7,7 @@ import { DonationStatus, Donation, Expense } from '../../types';
 import { ReceiptView } from './ReceiptView';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
+import { formatFirebaseError } from '../../lib/firebase';
 import { 
   Check, 
   X, 
@@ -116,6 +117,12 @@ export const AdminDashboard: React.FC = () => {
   const [deletingDonation, setDeletingDonation] = useState<Donation | null>(null);
   const [deleteConfirmationWord, setDeleteConfirmationWord] = useState('');
 
+  const [isSubmittingCash, setIsSubmittingCash] = useState(false);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+  const [isDeletingDonation, setIsDeletingDonation] = useState(false);
+
   const pendingDonations = donations.filter(d => d.status === DonationStatus.PENDING);
   const approvedDonations = donations.filter(d => d.status === DonationStatus.APPROVED);
   const rejectedDonations = donations.filter(d => d.status === DonationStatus.REJECTED);
@@ -208,90 +215,119 @@ export const AdminDashboard: React.FC = () => {
     return Object.entries(months).sort((a,b) => b[0].localeCompare(a[0])); // Newest month first
   };
 
-  const handleCashSubmit = (e: React.FormEvent) => {
+  const handleCashSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingDonationId) {
-      const existing = donations.find(d => d.id === editingDonationId);
-      const donationData: Donation = {
-        ...existing!,
-        donorName: cashFormData.donorName,
-        isAnonymous: !cashFormData.donorName,
-        amount: Number(cashFormData.amount),
-        phone: cashFormData.phone || existing?.phone || 'N/A',
-        email: cashFormData.email || existing?.email || '',
-        purpose: cashFormData.purpose,
-        paymentMethod: cashFormData.paymentMethod || existing?.paymentMethod || 'Cash',
-        transactionId: cashFormData.transactionId || existing?.transactionId || `CASH-${Date.now()}`,
-        status: cashFormData.status || existing?.status || DonationStatus.APPROVED
-      };
-      addDonation(donationData).then(() => {
+    setIsSubmittingCash(true);
+    try {
+      if (editingDonationId) {
+        const existing = donations.find(d => d.id === editingDonationId);
+        const donationData: Donation = {
+          ...existing!,
+          donorName: cashFormData.donorName,
+          isAnonymous: !cashFormData.donorName,
+          amount: Number(cashFormData.amount),
+          phone: cashFormData.phone || existing?.phone || 'N/A',
+          email: cashFormData.email || existing?.email || '',
+          purpose: cashFormData.purpose,
+          paymentMethod: cashFormData.paymentMethod || existing?.paymentMethod || 'Cash',
+          transactionId: cashFormData.transactionId || existing?.transactionId || `CASH-${Date.now()}`,
+          status: cashFormData.status || existing?.status || DonationStatus.APPROVED
+        };
+        await addDonation(donationData);
         alert(lang === 'bn' ? 'অনুদান সফলভাবে আপডেট করা হয়েছে!' : 'Donation updated successfully!');
-      }).catch((err) => {
-        alert(lang === 'bn' ? 'অনুদান আপডেট করতে সমস্যা হয়েছে।' : 'Error updating donation.');
-      });
-    } else {
-      const donationData: Donation = {
-        donorName: cashFormData.donorName,
-        isAnonymous: !cashFormData.donorName,
-        amount: Number(cashFormData.amount),
-        phone: cashFormData.phone || 'N/A (Cash)',
-        email: cashFormData.email || '',
-        transactionId: cashFormData.transactionId || `CASH-${Date.now()}`,
-        purpose: cashFormData.purpose,
-        paymentMethod: cashFormData.paymentMethod || 'Cash',
-        date: new Date().toISOString(),
-        id: Date.now().toString(),
-        status: cashFormData.status || DonationStatus.APPROVED
-      };
-      addDonation(donationData).then(() => {
+      } else {
+        const donationData: Donation = {
+          donorName: cashFormData.donorName,
+          isAnonymous: !cashFormData.donorName,
+          amount: Number(cashFormData.amount),
+          phone: cashFormData.phone || 'N/A (Cash)',
+          email: cashFormData.email || '',
+          transactionId: cashFormData.transactionId || `CASH-${Date.now()}`,
+          purpose: cashFormData.purpose,
+          paymentMethod: cashFormData.paymentMethod || 'Cash',
+          date: new Date().toISOString(),
+          id: Date.now().toString(),
+          status: cashFormData.status || DonationStatus.APPROVED
+        };
+        await addDonation(donationData);
         alert(lang === 'bn' ? 'নগদ অনুদান ডাটাবেজে সফলভাবে যুক্ত হয়েছে!' : 'Cash donation successfully recorded in the database!');
-      }).catch((err) => {
-        alert(lang === 'bn' ? 'অনুদান যুক্ত করতে সমস্যা হয়েছে।' : 'Error adding donation to the database.');
+      }
+      setCashFormData({
+        donorName: '',
+        amount: '',
+        purpose: t.categories?.[0] || 'General Welfare',
+        phone: '',
+        email: '',
+        paymentMethod: 'Cash',
+        transactionId: '',
+        status: DonationStatus.APPROVED
       });
+      setEditingDonationId(null);
+      setShowCashForm(false);
+    } catch (err) {
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setIsSubmittingCash(false);
     }
-    
-    setCashFormData({
-      donorName: '',
-      amount: '',
-      purpose: t.categories?.[0] || 'General Welfare',
-      phone: '',
-      email: '',
-      paymentMethod: 'Cash',
-      transactionId: '',
-      status: DonationStatus.APPROVED
-    });
-    setEditingDonationId(null);
-    setShowCashForm(false);
   };
 
-  const handleExpenseSubmit = (e: React.FormEvent) => {
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const expenseId = editingExpenseId || `exp_${Date.now()}`;
-    const expenseData: Expense = {
-      id: expenseId,
-      amount: Number(expenseFormData.amount),
-      category: expenseFormData.category,
-      descriptionEn: expenseFormData.descriptionEn,
-      descriptionBn: expenseFormData.descriptionBn,
-      date: expenseFormData.date
-    };
-    addExpense(expenseData).then(() => {
+    setIsSubmittingExpense(true);
+    try {
+      const expenseId = editingExpenseId || `exp_${Date.now()}`;
+      const expenseData: Expense = {
+        id: expenseId,
+        amount: Number(expenseFormData.amount),
+        category: expenseFormData.category,
+        descriptionEn: expenseFormData.descriptionEn,
+        descriptionBn: expenseFormData.descriptionBn,
+        date: expenseFormData.date
+      };
+      await addExpense(expenseData);
       alert(editingExpenseId 
         ? (lang === 'bn' ? 'ব্যয়ের হিসাব সফলভাবে আপডেট হয়েছে!' : 'Expense updated successfully!')
         : (lang === 'bn' ? 'ব্যয়ের হিসাব সফলভাবে সংরক্ষিত হয়েছে!' : 'Expense recorded successfully!')
       );
-    }).catch((err) => {
-      alert(lang === 'bn' ? 'ব্যয় সংরক্ষণে ব্যর্থ হয়েছে।' : 'Error saving expense.');
-    });
-    setExpenseFormData({
-      amount: '',
-      category: 'Education',
-      descriptionEn: '',
-      descriptionBn: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setEditingExpenseId(null);
-    setShowExpenseForm(false);
+      setExpenseFormData({
+        amount: '',
+        category: 'Education',
+        descriptionEn: '',
+        descriptionBn: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+      setEditingExpenseId(null);
+      setShowExpenseForm(false);
+    } catch (err) {
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setIsSubmittingExpense(false);
+    }
+  };
+
+  const handleUpdateDonationStatus = async (id: string, status: DonationStatus) => {
+    setUpdatingStatusId(id);
+    try {
+      await updateDonation(id, status);
+    } catch (err) {
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm(lang === 'bn' ? 'আপনি কি আসলেই এই খরচের এন্ট্রিটি মুছে ফেলতে চান?' : 'Are you sure you want to delete this expense entry?')) {
+      return;
+    }
+    setDeletingExpenseId(id);
+    try {
+      await deleteExpense(id);
+    } catch (err) {
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setDeletingExpenseId(null);
+    }
   };
 
   const handleEditDonation = (d: Donation) => {
@@ -602,18 +638,20 @@ export const AdminDashboard: React.FC = () => {
                           {d.status === DonationStatus.PENDING && (
                             <span className="inline-flex gap-1">
                               <button 
-                                onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} 
+                                onClick={() => handleUpdateDonationStatus(d.id, DonationStatus.APPROVED)} 
+                                disabled={updatingStatusId === d.id}
                                 title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
-                                className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-all"
+                                className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-all disabled:opacity-50"
                               >
-                                <Check size={12} />
+                                {updatingStatusId === d.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                               </button>
                               <button 
-                                onClick={() => updateDonation(d.id, DonationStatus.REJECTED)} 
+                                onClick={() => handleUpdateDonationStatus(d.id, DonationStatus.REJECTED)} 
+                                disabled={updatingStatusId === d.id}
                                 title={lang === 'bn' ? 'প্রত্যাখ্যান করুন' : 'Reject'}
-                                className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg transition-all"
+                                className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg transition-all disabled:opacity-50"
                               >
-                                <X size={12} />
+                                {updatingStatusId === d.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
                               </button>
                             </span>
                           )}
@@ -628,11 +666,12 @@ export const AdminDashboard: React.FC = () => {
                           )}
                           {d.status === DonationStatus.REJECTED && (
                             <button 
-                              onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} 
+                              onClick={() => handleUpdateDonationStatus(d.id, DonationStatus.APPROVED)} 
+                              disabled={updatingStatusId === d.id}
                               title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
-                              className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-all inline-flex"
+                              className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-all inline-flex disabled:opacity-50"
                             >
-                              <Check size={12} />
+                              {updatingStatusId === d.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                             </button>
                           )}
                           <button 
@@ -720,18 +759,20 @@ export const AdminDashboard: React.FC = () => {
                         {d.status === DonationStatus.PENDING && (
                           <>
                             <button 
-                              onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} 
+                              onClick={() => handleUpdateDonationStatus(d.id, DonationStatus.APPROVED)} 
+                              disabled={updatingStatusId === d.id}
                               title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
-                              className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl transition-all"
+                              className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl transition-all disabled:opacity-50"
                             >
-                              <Check size={14} />
+                              {updatingStatusId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                             </button>
                             <button 
-                              onClick={() => updateDonation(d.id, DonationStatus.REJECTED)} 
+                              onClick={() => handleUpdateDonationStatus(d.id, DonationStatus.REJECTED)} 
+                              disabled={updatingStatusId === d.id}
                               title={lang === 'bn' ? 'প্রত্যাখ্যান করুন' : 'Reject'}
-                              className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl transition-all"
+                              className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl transition-all disabled:opacity-50"
                             >
-                              <X size={14} />
+                              {updatingStatusId === d.id ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
                             </button>
                           </>
                         )}
@@ -746,11 +787,12 @@ export const AdminDashboard: React.FC = () => {
                         )}
                         {d.status === DonationStatus.REJECTED && (
                           <button 
-                            onClick={() => updateDonation(d.id, DonationStatus.APPROVED)} 
+                            onClick={() => handleUpdateDonationStatus(d.id, DonationStatus.APPROVED)} 
+                            disabled={updatingStatusId === d.id}
                             title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
-                            className="p-2 bg-emerald-50 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl"
+                            className="p-2 bg-emerald-50 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl disabled:opacity-50"
                           >
-                            <Check size={14} />
+                            {updatingStatusId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                           </button>
                         )}
                         <button 
@@ -914,12 +956,8 @@ export const AdminDashboard: React.FC = () => {
                               <button onClick={() => handleEditExpense(e)} title={lang === 'bn' ? 'সম্পাদনা করুন' : 'Edit Expense'} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors inline-flex">
                                 <Edit2 size={12} />
                               </button>
-                              <button onClick={() => {
-                                if (confirm(lang === 'bn' ? 'আপনি কি আসলেই এই খরচের এন্ট্রিটি মুছে ফেলতে চান?' : 'Are you sure you want to delete this expense entry?')) {
-                                  deleteExpense(e.id);
-                                }
-                              }} className="p-2 text-slate-300 hover:text-red-500">
-                                <Trash2 size={12} />
+                              <button onClick={() => handleDeleteExpense(e.id)} disabled={deletingExpenseId === e.id} className="p-2 text-slate-300 hover:text-red-500 disabled:opacity-50">
+                                {deletingExpenseId === e.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                               </button>
                             </td>
                           </tr>
@@ -1490,19 +1528,26 @@ export const AdminDashboard: React.FC = () => {
               </button>
               <button
                 type="button"
-                disabled={deletingDonation.status === DonationStatus.APPROVED && deleteConfirmationWord.trim().toUpperCase() !== 'DELETE'}
-                onClick={() => {
-                  deleteDonation(deletingDonation.id);
-                  setDeletingDonation(null);
-                  setDeleteConfirmationWord('');
+                disabled={isDeletingDonation || (deletingDonation.status === DonationStatus.APPROVED && deleteConfirmationWord.trim().toUpperCase() !== 'DELETE')}
+                onClick={async () => {
+                  setIsDeletingDonation(true);
+                  try {
+                    await deleteDonation(deletingDonation.id);
+                    setDeletingDonation(null);
+                    setDeleteConfirmationWord('');
+                  } catch (err) {
+                    alert(formatFirebaseError(err, lang));
+                  } finally {
+                    setIsDeletingDonation(false);
+                  }
                 }}
                 className={`flex-1 px-4 py-3 rounded-xl font-black text-xs uppercase cursor-pointer transition-all flex items-center justify-center gap-2 active:scale-95 text-white ${
-                  deletingDonation.status === DonationStatus.APPROVED && deleteConfirmationWord.trim().toUpperCase() !== 'DELETE'
+                  (isDeletingDonation || (deletingDonation.status === DonationStatus.APPROVED && deleteConfirmationWord.trim().toUpperCase() !== 'DELETE'))
                     ? 'bg-slate-100 dark:bg-slate-850 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-100 dark:border-slate-800/80'
                     : 'bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20'
                 }`}
               >
-                <Trash2 size={13} />
+                {isDeletingDonation ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                 {lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
               </button>
             </div>

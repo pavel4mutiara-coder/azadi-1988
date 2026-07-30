@@ -50,7 +50,7 @@ export default function Home() {
   const galleryImages = [
     ...recentEvents.map(e => ({ url: e.image, title: lang === 'bn' ? e.titleBn : e.titleEn })),
     ...recentNews.map(n => ({ url: n.image, title: lang === 'bn' ? n.titleBn : n.titleEn })),
-    { url: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600", title: lang === 'bn' ? "বার্ষিক ক্রীড়া অনুষ্ঠান" : "Annual Sports Meet" },
+    { url: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&auto=format&fit=crop&q=80", title: lang === 'bn' ? "বার্ষিক ক্রীড়া অনুষ্ঠান" : "Annual Sports Meet" },
     { url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600", title: lang === 'bn' ? "বিনামূল্যে চিকিৎসা সেবা" : "Free Medical Camp" },
     { url: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=600", title: lang === 'bn' ? "ত্রাণ বিতরণ কর্মসূচি" : "Emergency Relief Camp" },
     { url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600", title: lang === 'bn' ? "প্রতিষ্ঠাবার্ষিকী অনুষ্ঠান" : "Founding Anniversary" }

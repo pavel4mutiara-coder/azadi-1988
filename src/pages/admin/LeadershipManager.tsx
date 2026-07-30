@@ -5,9 +5,8 @@ import { Leadership } from '../../types';
 import { Users, Plus, Trash2, Edit2, RefreshCcw, Info, CheckCircle, AlertTriangle, UploadCloud, Loader2, X } from 'lucide-react';
 import { MemberImage } from '../../components/MemberImage';
 import { extractGoogleDriveId, normalizeGoogleDriveImage } from '../../utils/normalizeGoogleDriveImage';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage, formatFirebaseError } from '../../lib/firebase';
-import { compressInputImage } from '../../utils/imageOptimizer';
+import { formatFirebaseError } from '../../lib/firebase';
+import { uploadImage } from '../../utils/uploadImage';
 
 export const LeadershipManager: React.FC = () => {
   const { lang, leadership, saveLeader, deleteLeader, replaceLeadership } = useApp();
@@ -78,41 +77,17 @@ export const LeadershipManager: React.FC = () => {
     setErrorMsg(null);
     
     try {
-      // Compress client side first to save storage and optimize load performance
-      const compressedBlob = await compressInputImage(file, 400, 400, 0.75);
-      
-      const fileId = `leader_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-      const storageRef = ref(storage, `leadership/${fileId}`);
-      
-      const uploadTask = uploadBytesResumable(storageRef, compressedBlob);
-
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          setUploadProgress(progress);
-        }, 
-        (error) => {
-          console.error("Storage upload error:", error);
-          setErrorMsg(lang === 'bn' ? 'ছবি আপলোড করতে ব্যর্থ হয়েছে!' : 'Failed to upload image!');
-          setUploading(false);
-          setUploadProgress(null);
-        }, 
-        async () => {
-          try {
-            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            setFormData(prev => ({ ...prev, image: downloadUrl }));
-          } catch (err: any) {
-            console.error("Error getting download URL:", err);
-            setErrorMsg(formatFirebaseError(err, lang));
-          } finally {
-            setUploading(false);
-            setUploadProgress(null);
-          }
-        }
-      );
+      const downloadUrl = await uploadImage(file, 'leadership', {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.75,
+        onProgress: (progress) => setUploadProgress(progress)
+      });
+      setFormData(prev => ({ ...prev, image: downloadUrl }));
     } catch (err: any) {
-      console.error("Compression / upload initiation failed:", err);
+      console.error("Leadership image upload failed:", err);
       setErrorMsg(formatFirebaseError(err, lang));
+    } finally {
       setUploading(false);
       setUploadProgress(null);
     }

@@ -10,6 +10,8 @@ import {
   Loader2, MessageSquare, Send, Bell, ArrowUpCircle,
   Cloud, CloudOff, UploadCloud, Download
 } from 'lucide-react';
+import { formatFirebaseError } from '../../lib/firebase';
+import { uploadImage } from '../../utils/uploadImage';
 
 export const SettingsManager: React.FC = () => {
   const { 
@@ -35,6 +37,50 @@ export const SettingsManager: React.FC = () => {
   const [localSettings, setLocalSettings] = useState(settings);
   const [localVersion, setLocalVersion] = useState<any>(null);
   const [savingVersion, setSavingVersion] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFlag, setUploadingFlag] = useState(false);
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const url = await uploadImage(file, 'settings', {
+        maxWidth: 600,
+        maxHeight: 600,
+        quality: 0.85
+      });
+      setLocalSettings(prev => ({ ...prev, logo: url }));
+    } catch (err) {
+      console.error("Logo upload error:", err);
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleFlagUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
+      return;
+    }
+    setUploadingFlag(true);
+    try {
+      const url = await uploadImage(file, 'settings', {
+        maxWidth: 600,
+        maxHeight: 600,
+        quality: 0.85
+      });
+      setLocalSettings(prev => ({ ...prev, flag: url }));
+    } catch (err) {
+      console.error("Flag upload error:", err);
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setUploadingFlag(false);
+    }
+  };
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -554,10 +600,31 @@ export const SettingsManager: React.FC = () => {
         <div className="lg:col-span-4 space-y-8">
           {/* Logo Section */}
           <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-6">
-            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest">Logo Branding URL</h3>
-            <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-bold text-sm" value={localSettings.logo} onChange={e => setLocalSettings({...localSettings, logo: e.target.value})} />
+            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest">Logo Branding</h3>
+            <div className="space-y-3">
+              <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-bold text-sm" value={localSettings.logo} onChange={e => setLocalSettings({...localSettings, logo: e.target.value})} placeholder="Image URL" />
+              
+              <div className="flex items-center justify-center gap-2">
+                <input 
+                  type="file" 
+                  id="logo-upload-input" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={e => e.target.files?.[0] && handleLogoUpload(e.target.files[0])} 
+                  disabled={uploadingLogo} 
+                />
+                <label 
+                  htmlFor="logo-upload-input" 
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all shadow-md active:scale-95"
+                >
+                  {uploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                  <span>{lang === 'bn' ? 'লোগো আপলোড' : 'Upload Logo'}</span>
+                </label>
+              </div>
+            </div>
+
             <div className="w-24 h-24 mx-auto bg-slate-50 dark:bg-slate-950 rounded-2xl p-2 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden">
-              <img src={localSettings.logo} className="object-contain" alt="Logo Preview" />
+              <img src={localSettings.logo} className="object-contain max-h-full" alt="Logo Preview" />
             </div>
           </section>
 

@@ -11,7 +11,8 @@ import {
 import QRCode from 'qrcode';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
+import { formatFirebaseError } from '../../lib/firebase';
+import { uploadImage } from '../../utils/uploadImage';
 
 const LetterheadStyles = () => (
   <style>{`
@@ -383,21 +384,24 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
     }
   };
 
-  const handleSignatureUpload = (file: File) => {
+  const handleSignatureUpload = async (file: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       alert(lang === 'bn' ? 'অনুগ্রহ করে শুধুমাত্র ছবি ফাইল আপলোড করুন!' : 'Please upload an image file only!');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
-      if (typeof result === 'string') {
-        setLocalConfig(prev => ({ ...prev, signature: result }));
-        alert(lang === 'bn' ? 'স্বাক্ষর ইমেজ সফলভাবে আপলোড করা হয়েছে!' : 'Signature image successfully uploaded!');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const downloadUrl = await uploadImage(file, 'letterhead', {
+        maxWidth: 500,
+        maxHeight: 250,
+        quality: 0.8
+      });
+      setLocalConfig(prev => ({ ...prev, signature: downloadUrl }));
+      alert(lang === 'bn' ? 'স্বাক্ষর ইমেজ সফলভাবে আপলোড করা হয়েছে!' : 'Signature image successfully uploaded!');
+    } catch (err) {
+      console.error("Signature upload error:", err);
+      alert(formatFirebaseError(err, lang));
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {

@@ -3,10 +3,10 @@ import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { News } from '../../types';
 import { Newspaper, Plus, Trash2, Edit2, Clock, UploadCloud, Image, Loader2, X } from 'lucide-react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../lib/firebase';
+import { formatFirebaseError } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
-import { getOptimizedImageUrl, compressInputImage } from '../../utils/imageOptimizer';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { uploadImage } from '../../utils/uploadImage';
 
 export const NewsManager: React.FC = () => {
   const { lang, news, saveNews, deleteNews } = useApp();
@@ -61,49 +61,33 @@ export const NewsManager: React.FC = () => {
     setUploading(true);
     setUploadProgress(0);
     
-    let uploadBlob: Blob = file;
     try {
-      // Compress to maximum 1024x1024 resolution and 80% JPEG quality for fast transfers
-      uploadBlob = await compressInputImage(file, 1024, 1024, 0.8);
-    } catch (compressErr) {
-      console.warn("Client-side image compression bypassed:", compressErr);
+      const downloadUrl = await uploadImage(file, 'news', {
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8,
+        onProgress: (progress) => setUploadProgress(progress)
+      });
+      setFormData(prev => ({ ...prev, image: downloadUrl }));
+    } catch (err: any) {
+      console.error("News image upload error:", err);
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
     }
-    
-    const fileId = `news_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const storageRef = ref(storage, `news/${fileId}`);
-    const uploadTask = uploadBytesResumable(storageRef, uploadBlob);
-
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        setUploadProgress(progress);
-      }, 
-      (error) => {
-        console.error("Storage upload error:", error);
-        alert(lang === 'bn' ? 'ছবি আপলোড করতে ব্যর্থ হয়েছে!' : 'Failed to upload image!');
-        setUploading(false);
-        setUploadProgress(null);
-      }, 
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          setFormData(prev => ({ ...prev, image: downloadUrl }));
-        } catch (err) {
-          console.error("Error getting download URL:", err);
-        } finally {
-          setUploading(false);
-          setUploadProgress(null);
-        }
-      }
-    );
   };
 
   const handleRemoveImage = () => {
     setFormData(prev => ({ ...prev, image: '' }));
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       if (editingId) {
         await saveNews({ ...formData, id: editingId } as News);
@@ -114,7 +98,9 @@ export const NewsManager: React.FC = () => {
       resetForm();
     } catch (err) {
       console.error("Save news failed:", err);
-      alert(lang === 'bn' ? 'সংবাদ সংরক্ষণ করতে ব্যর্থ হয়েছে!' : 'Failed to save news!');
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -131,11 +117,14 @@ export const NewsManager: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি এই সংবাদটি মুছে ফেলতে চান?' : 'Do you want to delete this news?')) {
+      setDeletingId(id);
       try {
         await deleteNews(id);
       } catch (err) {
         console.error("Delete news failed:", err);
-        alert(lang === 'bn' ? 'সংবাদ মুছে ফেলতে ব্যর্থ হয়েছে!' : 'Failed to delete news!');
+        alert(formatFirebaseError(err, lang));
+      } finally {
+        setDeletingId(null);
       }
     }
   };

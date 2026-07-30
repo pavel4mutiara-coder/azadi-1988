@@ -10,8 +10,9 @@ import {
   setDoc, 
   deleteDoc 
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, formatFirebaseError } from '../../lib/firebase';
 import { Testimonial } from '../../types';
+import { uploadImage } from '../../utils/uploadImage';
 import { 
   Check, 
   Trash2, 
@@ -32,6 +33,7 @@ export const TestimonialManager: React.FC = () => {
   const t = TRANSLATIONS[lang];
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
   const [testimonialForm, setTestimonialForm] = useState({
@@ -43,6 +45,7 @@ export const TestimonialManager: React.FC = () => {
     locationBn: '',
     quoteEn: '',
     quoteBn: '',
+    image: '',
     status: 'PENDING' as 'PENDING' | 'APPROVED'
   });
 
@@ -57,8 +60,32 @@ export const TestimonialManager: React.FC = () => {
       locationBn: tItem.locationBn || '',
       quoteEn: tItem.quoteEn || '',
       quoteBn: tItem.quoteBn || '',
+      image: tItem.image || '',
       status: tItem.status || 'PENDING'
     });
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert(lang === 'bn' ? 'দয়া করে একটি বৈধ ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const url = await uploadImage(file, 'testimonials', {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.8
+      });
+      setTestimonialForm(prev => ({ ...prev, image: url }));
+    } catch (err) {
+      console.error("Error uploading testimonial image:", err);
+      alert(formatFirebaseError(err, lang));
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -80,6 +107,7 @@ export const TestimonialManager: React.FC = () => {
         locationBn: testimonialForm.locationBn,
         quoteEn: testimonialForm.quoteEn,
         quoteBn: testimonialForm.quoteBn,
+        image: testimonialForm.image || existing.image,
         status: testimonialForm.status as 'PENDING' | 'APPROVED'
       };
       await saveTestimonial(fullUpdate);
@@ -88,7 +116,7 @@ export const TestimonialManager: React.FC = () => {
       setEditingTestimonialId(null);
     } catch (err) {
       console.error("Error updating testimonial:", err);
-      alert(lang === 'bn' ? 'আপডেট করতে ত্রুটি হয়েছে।' : 'Error updating testimonial.');
+      alert(formatFirebaseError(err, lang));
     } finally {
       setActionLoadingId(null);
     }
@@ -105,7 +133,7 @@ export const TestimonialManager: React.FC = () => {
       await saveTestimonial(fullUpdate);
     } catch (err) {
       console.error("Error approving testimonial:", err);
-      alert(lang === 'bn' ? 'অনুমোদন করতে ত্রুটি হয়েছে।' : 'Error approving testimonial.');
+      alert(formatFirebaseError(err, lang));
     } finally {
       setActionLoadingId(null);
     }
@@ -120,7 +148,7 @@ export const TestimonialManager: React.FC = () => {
       await deleteTestimonial(id);
     } catch (err) {
       console.error("Error deleting testimonial:", err);
-      alert(lang === 'bn' ? 'মুছে ফেলতে ত্রুটি হয়েছে।' : 'Error deleting testimonial.');
+      alert(formatFirebaseError(err, lang));
     } finally {
       setActionLoadingId(null);
     }
@@ -422,6 +450,29 @@ export const TestimonialManager: React.FC = () => {
                   onChange={e => setTestimonialForm({ ...testimonialForm, quoteBn: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl font-medium text-slate-900 dark:text-slate-100 text-xs"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'ছবি (Photo)' : 'Photo'}
+                </label>
+                <div className="flex items-center gap-3">
+                  {testimonialForm.image && (
+                    <img 
+                      src={testimonialForm.image} 
+                      alt="Preview" 
+                      className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-800" 
+                    />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    disabled={uploadingImage}
+                    className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-white hover:file:bg-amber-600 cursor-pointer"
+                  />
+                  {uploadingImage && <Loader2 size={16} className="animate-spin text-amber-500" />}
+                </div>
               </div>
 
               <div className="space-y-2">

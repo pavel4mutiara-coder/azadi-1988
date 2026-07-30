@@ -40,7 +40,7 @@ import {
   auth, 
   db, 
   handleFirestoreError, 
-  OperationType 
+  OperationType
 } from '../lib/firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { 
@@ -134,26 +134,26 @@ interface AppState {
   syncHealth: CollectionSyncState[];
 }
 
-const STATIC_SETTINGS: OrganizationSettings = {
-  nameBn: "আজাদী সমাজ কল্যাণ সংঘ",
-  nameEn: "Azadi Social Welfare Organization",
-  sloganBn: "শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া",
-  sloganEn: "Education · Unity · Service · Peace · Sports",
-  addressBn: "রোড নং ০১, মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ",
-  addressEn: "Road No. 01, Mirbox Tula, Sylhet-3100, Bangladesh",
-  phone: "+8801711975488",
-  email: "azadisocialwelfareorganization@gmail.com",
-  establishedBn: "১০ জুন ১৯৮৮ (২৭ শে জৈষ্ঠ ১৩৯৫)",
-  establishedEn: "Established: 10 June 1988",
-  logo: "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
-  flag: "https://lh3.googleusercontent.com/d/1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q",
-  adminWhatsApp: "8801711975488",
-  bkash: "01711975488",
-  nagad: "01711975488",
-  roket: "01711975488",
-  facebook: "https://www.facebook.com/profile.php?id=61585193438030",
-  youtube: "https://youtube.com/@azadisocialwelfareorganization?si=gD7Akj6EdMYjHuFe",
-  whatsappChannel: "https://whatsapp.com/channel/0029Vb7KLIx0AgW4u9K4aw1k",
+const DEFAULT_SETTINGS: OrganizationSettings = {
+  nameBn: "",
+  nameEn: "",
+  sloganBn: "",
+  sloganEn: "",
+  addressBn: "",
+  addressEn: "",
+  phone: "",
+  email: "",
+  establishedBn: "",
+  establishedEn: "",
+  logo: "",
+  flag: "",
+  adminWhatsApp: "",
+  bkash: "",
+  nagad: "",
+  roket: "",
+  facebook: "",
+  youtube: "",
+  whatsappChannel: "",
   googleChatSpace: "",
   googleChatEnabled: false,
   googleChatNotifyOnReceipt: true,
@@ -161,179 +161,12 @@ const STATIC_SETTINGS: OrganizationSettings = {
   googleChatNotifyOnExpense: true
 };
 
-const STATIC_DONATIONS: Donation[] = [
-  {
-    id: "don-1",
-    donorName: "মোহাম্মদ ইউসুফ আলী (ইউএসএ)",
-    isAnonymous: false,
-    amount: 50000,
-    phone: "01711XXXXXX",
-    email: "yusuf@example.com",
-    transactionId: "BK89XJ721S",
-    purpose: "শিক্ষা কল্যাণ তহবিল",
-    status: DonationStatus.APPROVED,
-    date: new Date(2026, 4, 15).toISOString(),
-    paymentMethod: "bKash"
-  },
-  {
-    id: "don-2",
-    donorName: "আলহাজ্ব উবায়দুল হক",
-    isAnonymous: false,
-    amount: 25000,
-    phone: "01819XXXXXX",
-    email: "ubaidul@example.com",
-    transactionId: "NG90YK331M",
-    purpose: "রমজান ইফতার সামগ্রী বিতরণ",
-    status: DonationStatus.APPROVED,
-    date: new Date(2026, 4, 18).toISOString(),
-    paymentMethod: "Nagad"
-  },
-  {
-    id: "don-3",
-    donorName: "নাম প্রকাশে অনিচ্ছুক",
-    isAnonymous: true,
-    amount: 10000,
-    phone: "",
-    email: "",
-    transactionId: "RK11ZP552D",
-    purpose: "ক্রীড়া সামগ্রী উন্নয়ন তহবিল",
-    status: DonationStatus.APPROVED,
-    date: new Date(2026, 4, 25).toISOString(),
-    paymentMethod: "Rocket"
-  }
-];
-
-const STATIC_LEADERSHIP: Leadership[] = INITIAL_COMMITTEE.map((m, i) => ({
-  id: `leader-${i + 1}`,
-  nameEn: m.nameEn,
-  nameBn: m.nameBn,
-  designationEn: m.designationEn,
-  designationBn: m.designationBn,
-  subDesignationEn: m.subDesignationEn || "",
-  subDesignationBn: m.subDesignationBn || "",
-  messageEn: i === 0 ? "Welcome to Azadi Social Welfare Organization. We are committed to serving the community." : "",
-  messageBn: i === 0 ? "আজাদী সমাজ কল্যাণ সংঘে আপনাকে স্বাগতম। আমরা মানবতার কল্যাণে কাজ করতে প্রতিশ্রুতিবদ্ধ।" : "",
-  phone: "01711975488",
-  image: m.order === 1 
-    ? "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh" 
-    : "",
-  order: m.order,
-  category: m.order <= 6 ? 'leader' : 'executive',
-  status: 'active',
-  createdAt: new Date(1988, 5, 10).toISOString()
-}));
-
-const STATIC_EVENTS: Event[] = [
-  {
-    id: "eve-1",
-    titleEn: "Annual Sports Tournament 2026",
-    titleBn: "বার্ষিক ক্রীড়া প্রতিযোগিতা ২০২৬",
-    descriptionEn: "Join us for our annual athletic meet with different events for all age groups.",
-    descriptionBn: "সব বয়সী মানুষের জন্য বিভিন্ন ধরণের খেলাধুলা নিয়ে আমাদের বার্ষিক ক্রীড়া প্রতিযোগিতা ২০২৬ এ যোগ দিন।",
-    locationEn: "Mirbox Tula Field, Sylhet",
-    locationBn: "মিরবক্সটুলা মাঠ, সিলেট",
-    date: new Date(2026, 6, 20).toISOString(),
-    image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=500",
-    meetUrl: "https://meet.google.com/abc-defg-hij"
-  },
-  {
-    id: "eve-2",
-    titleEn: "Free Medical Camp & Blood Donation",
-    titleBn: "বিনামূল্যে চিকিৎসা ক্যাম্প ও রক্তদান কর্মসূচী",
-    descriptionEn: "Providing free healthcare consultation and medicine distribution along with blood grouping.",
-    descriptionBn: "বিনামূল্যে স্বাস্থ্য পরামর্শ, ওষুধ বিতরণ এবং রক্তের গ্রুপ নির্ণয় কর্মসূচী।",
-    locationEn: "Azadi Club Building, Sylhet",
-    locationBn: "আজাদী ক্লাব ভবন, সিলেট",
-    date: new Date(2026, 5, 29).toISOString(),
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500",
-    meetUrl: "https://meet.google.com/xyz-mno-pqr"
-  }
-];
-
-const STATIC_NOTICES: Notice[] = [
-  {
-    id: "not-1",
-    titleEn: "Emergency Executive Committee Meeting",
-    titleBn: "জরুরী কার্যনির্বাহী কমিটির সভা",
-    contentEn: "An emergency meeting of the executive committee will be held on Friday at 7:00 PM.",
-    contentBn: "আগামী শুক্রবার সন্ধ্যা ৭:০০ ঘটিকায় কার্যনির্বাহী কমিটির এক জরুরী সভা অনুষ্ঠিত হইবে।",
-    date: new Date(2026, 5, 26).toISOString(),
-    isUrgent: true
-  },
-  {
-    id: "not-2",
-    titleEn: "Membership Renewal Circular 2026",
-    titleBn: "সদস্যপদ নবায়ন বিজ্ঞপ্তি ২০২৬",
-    contentEn: "All members are requested to renew their yearly subscription package by June 30.",
-    contentBn: "সকল সম্মানিত সদস্যদের আগামী ৩০শে জুনের মধ্যে তাদের বার্ষিক চাঁদা পরিশোধ করে সদস্যপদ নবায়নের অনুরোধ করা যাচ্ছে।",
-    date: new Date(2026, 5, 10).toISOString(),
-    isUrgent: false
-  }
-];
-
-const STATIC_NEWS: News[] = [
-  {
-    id: "news-1",
-    titleEn: "Relief Distribution Among Flood Affected Families",
-    titleBn: "বন্যা কবলিত অসহায় পরিবারগুলোর মাঝে ত্রাণ বিতরণ",
-    contentEn: "Azadi Social Welfare Organization has distributed food packets and essential supplies to 500 families.",
-    contentBn: "আজাদী সমাজ কল্যাণ সংঘ সিলেট অঞ্চলের বানভাসী ৫০০টি পরিবারের মাঝে শুকনো খাবার ও প্রয়োজনীয় ত্রাণ সামগ্রী বিতরণ করেছে।",
-    date: new Date(2026, 4, 10).toISOString(),
-    image: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=500"
-  },
-  {
-    id: "news-2",
-    titleEn: "Celebration of 38th Founding Anniversary of Azadi Club",
-    titleBn: "আজাদী ক্লাবের ৩৮তম প্রতিষ্ঠাবার্ষিকী উদযাপন",
-    contentEn: "On 10th June, the club celebrated its 38th years since establishing with deep pride and joy.",
-    contentBn: "গত ১০ই জুন এক বর্ণাঢ্য অনুষ্ঠানের মধ্য দিয়ে ক্লাবের ৩৮তম প্রতিষ্ঠাবার্ষিকী উদযাপিত হয়েছে।",
-    date: new Date(2026, 5, 10).toISOString(),
-    image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=500"
-  }
-];
-
-const STATIC_EXPENSES: Expense[] = [
-  {
-    id: "exp-1",
-    amount: 15000,
-    category: "Sports",
-    descriptionEn: "Purchased footballs, cricket bats, and jerseys for the local youth athletic development tournament.",
-    descriptionBn: "স্থানীয় যুব ক্রীড়া টুর্নামেন্টের জন্য ফুটবল, ক্রিকেট ব্যাট এবং জার্সি ক্রয়।",
-    date: new Date(2026, 4, 10).toISOString().split('T')[0]
-  },
-  {
-    id: "exp-2",
-    amount: 20000,
-    category: "Education",
-    descriptionEn: "Provided scholarship textbooks, materials, and stipends to underprivileged meritorious students.",
-    descriptionBn: "দরিদ্র ও মেধাবী শিক্ষার্থীদের মাঝে বিনামূল্যে পাঠ্যপুস্তক, শিক্ষা সামগ্রী এবং নগদ বৃত্তি প্রদান।",
-    date: new Date(2026, 4, 14).toISOString().split('T')[0]
-  },
-  {
-    id: "exp-3",
-    amount: 8000,
-    category: "General Welfare",
-    descriptionEn: "Arranged community medical counseling, healthy hygiene pamphlets, and emergency medicine distributions.",
-    descriptionBn: "বিনামূল্যে চিকিৎসা পরামর্শ সেবা ও পথ্য বিতরণের আনুষঙ্গিক খরচাদি প্রদান।",
-    date: new Date(2026, 4, 19).toISOString().split('T')[0]
-  }
-];
-
-const STATIC_LETTERHEAD: LetterheadConfig = {
-  leaderName: "মোঃ আব্দুছ ছাবির (টুটুল)",
-  designation: "সভাপতি",
+const DEFAULT_LETTERHEAD: LetterheadConfig = {
+  leaderName: "",
+  designation: "",
   signature: "",
-  stampText: "আজাদী সমাজ কল্যাণ সংঘ, সিলেট",
+  stampText: "",
   bodyText: ""
-};
-
-const getCachedData = <T,>(key: string, defaultValue: T): T => {
-  try {
-    const cached = localStorage.getItem(key);
-    return cached ? JSON.parse(cached) : defaultValue;
-  } catch {
-    return defaultValue;
-  }
 };
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -357,8 +190,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authLoading, setAuthLoading] = useState(true);
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
 
-  // Firestore states (fallback initialized to cached/mock content for instant page load)
-  const [rawDonations, setRawDonations] = useState<Donation[]>(() => getCachedData('azadi_donations', STATIC_DONATIONS));
+  // Firestore states (strictly initialized to empty/default; populated via snapshot listeners)
+  const [rawDonations, setRawDonations] = useState<Donation[]>([]);
   const [privateDonorMap, setPrivateDonorMap] = useState<Map<string, PrivateDonorInfo>>(new Map());
   const [publicStats, setPublicStats] = useState<PublicDonationStats | null>(null);
 
@@ -380,16 +213,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
   }, [rawDonations, privateDonorMap, isAdmin]);
-  const [leadership, setLeadership] = useState<Leadership[]>(() => getCachedData('azadi_leadership', STATIC_LEADERSHIP));
-  const [events, setEvents] = useState<Event[]>(() => getCachedData('azadi_events', STATIC_EVENTS));
-  const [notices, setNotices] = useState<Notice[]>(() => getCachedData('azadi_notices', STATIC_NOTICES));
-  const [news, setNews] = useState<News[]>(() => getCachedData('azadi_news', STATIC_NEWS));
-  const [expenses, setExpenses] = useState<Expense[]>(() => getCachedData('azadi_expenses', STATIC_EXPENSES));
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(() => getCachedData('azadi_testimonials', []));
+  const [leadership, setLeadership] = useState<Leadership[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [news, setNews] = useState<News[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [settings, setSettings] = useState<OrganizationSettings>(() => getCachedData('azadi_settings', STATIC_SETTINGS));
-  const [letterhead, setLetterhead] = useState<LetterheadConfig>(() => getCachedData('azadi_letterhead', STATIC_LETTERHEAD));
-  const [versionConfig, setVersionConfig] = useState<VersionConfig | null>(() => getCachedData('azadi_version_config', CURRENT_VERSION));
+  const [settings, setSettings] = useState<OrganizationSettings>(DEFAULT_SETTINGS);
+  const [letterhead, setLetterhead] = useState<LetterheadConfig>(DEFAULT_LETTERHEAD);
+  const [versionConfig, setVersionConfig] = useState<VersionConfig | null>(CURRENT_VERSION);
   const [isLoaded, setIsLoaded] = useState(true);
 
   const [loadingDonations, setLoadingDonations] = useState(true);
@@ -521,6 +354,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = lang;
   }, [lang]);
 
+  // Purge legacy cached data and offline Firestore database instances from browser storage
+  useEffect(() => {
+    const keysToRemove = [
+      'azadi_donations',
+      'azadi_leadership',
+      'azadi_events',
+      'azadi_notices',
+      'azadi_news',
+      'azadi_expenses',
+      'azadi_testimonials',
+      'azadi_settings',
+      'azadi_letterhead',
+      'azadi_version_config',
+      'azadi_donation_migration_completed'
+    ];
+    keysToRemove.forEach(key => {
+      try { localStorage.removeItem(key); } catch {}
+      try { sessionStorage.removeItem(key); } catch {}
+    });
+
+    if (typeof window !== 'undefined' && window.indexedDB && window.indexedDB.databases) {
+      window.indexedDB.databases().then(dbs => {
+        dbs.forEach(database => {
+          if (database.name && (database.name.includes('firestore') || database.name.includes('firebase') || database.name.includes('azadi'))) {
+            try { window.indexedDB.deleteDatabase(database.name); } catch {}
+          }
+        });
+      }).catch(() => {});
+    }
+
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          try { caches.delete(name); } catch {}
+        });
+      }).catch(() => {});
+    }
+  }, []);
+
   // Listen for Authentication state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -576,12 +448,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 1. Core Public Real-time Listeners (Run once on mount and persist throughout session)
   useEffect(() => {
+    // Purge any legacy cached data keys on boot to ensure Firestore is the sole source of truth
+    try {
+      ['azadi_donations', 'azadi_leadership', 'azadi_events', 'azadi_notices', 'azadi_news', 'azadi_expenses', 'azadi_settings', 'azadi_letterhead', 'azadi_testimonials', 'azadi_version_config'].forEach(k => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+
     // Settings listener
     const unsubSettings = onSnapshot(doc(db, 'settings', 'config'), { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const data = snap.data() as OrganizationSettings;
         setSettings(data);
-        localStorage.setItem('azadi_settings', JSON.stringify(data));
         recordSyncEvent('settings', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
         setSyncError(null);
       }
@@ -599,7 +475,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (snap.exists()) {
         const data = snap.data() as LetterheadConfig;
         setLetterhead(data);
-        localStorage.setItem('azadi_letterhead', JSON.stringify(data));
         recordSyncEvent('letterhead', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
         setSyncError(null);
       }
@@ -617,18 +492,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (snap.exists()) {
         const data = snap.data() as VersionConfig;
         setVersionConfig(data);
-        localStorage.setItem('azadi_version_config', JSON.stringify(data));
         recordSyncEvent('version', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
         setSyncError(null);
       } else {
-        const seedVersion = async () => {
-          try {
-            await setDoc(doc(db, 'settings', 'version'), CURRENT_VERSION);
-          } catch (err) {
-            console.error("Failed to seed initial version settings:", err);
-          }
-        };
-        seedVersion();
+        if (auth.currentUser) {
+          const seedVersion = async () => {
+            try {
+              await setDoc(doc(db, 'settings', 'version'), CURRENT_VERSION);
+            } catch (err) {
+              console.warn("Initial version document write skipped for non-admin:", err);
+            }
+          };
+          seedVersion();
+        }
         setVersionConfig(CURRENT_VERSION);
       }
       setLoadingVersion(false);
@@ -654,7 +530,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSyncError(error?.message || String(error));
     });
 
-    // Donations listener (Public safe - limited to 100 for fast page startup)
+    // Donations listener (Public safe)
     const unsubDonations = onSnapshot(query(collection(db, 'donations'), limit(100)), { includeMetadataChanges: true }, (snap) => {
       const list: Donation[] = [];
       if (!snap.empty) {
@@ -665,7 +541,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       }
       setRawDonations(list);
-      localStorage.setItem('azadi_donations', JSON.stringify(list));
       recordSyncEvent('donations', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingDonations(false);
       setSyncError(null);
@@ -677,7 +552,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingDonations(false);
     });
 
-    // Leadership listener (limit 100)
+    // Leadership listener
     const unsubLeadership = onSnapshot(query(collection(db, 'leadership'), limit(100)), { includeMetadataChanges: true }, (snap) => {
       const list: Leadership[] = [];
       if (!snap.empty) {
@@ -687,7 +562,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         list.sort((a, b) => (a.order || 0) - (b.order || 0));
       }
       setLeadership(list);
-      localStorage.setItem('azadi_leadership', JSON.stringify(list));
       recordSyncEvent('leadership', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingLeadership(false);
       setSyncError(null);
@@ -699,32 +573,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingLeadership(false);
     });
 
-    // Events listener with diagnostic tracking and single source of truth
-    if (import.meta.env.DEV) {
-      console.log("[EVENTS DEBUG] Initializing Firestore Events Listener", {
-        projectId: (firebaseConfig as any)?.projectId || "azadi-social-welfare",
-        databaseId: "(default)"
-      });
-    }
+    // Events listener
     const unsubEvents = onSnapshot(
       query(collection(db, 'events'), limit(100)),
       { includeMetadataChanges: true },
       (snap) => {
         const isFromCache = snap.metadata.fromCache;
         const hasPendingWrites = snap.metadata.hasPendingWrites;
-
-        if (import.meta.env.DEV) {
-          console.log("[EVENTS DEBUG]", {
-            projectId: (firebaseConfig as any)?.projectId || "azadi-social-welfare",
-            databaseId: "(default)",
-            listenerStarted: true,
-            snapshotReceived: true,
-            snapshotSize: snap.size,
-            fromCache: isFromCache,
-            hasPendingWrites: hasPendingWrites,
-            lastSync: new Date().toISOString()
-          });
-        }
 
         const firestoreEvents: Event[] = [];
         if (!snap.empty) {
@@ -741,13 +596,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         setEvents(sortedEvents);
-        localStorage.setItem('azadi_events', JSON.stringify(sortedEvents));
         recordSyncEvent('events', 'firestore', isFromCache ? 'cache' : 'server', { fromCache: isFromCache, hasPendingWrites });
         setLoadingEvents(false);
         setSyncError(null);
       },
       (error) => {
-        console.error("[Firestore Events Listener Error]", error);
+        const msg = error?.message || String(error);
+        if (msg.includes('Firestore shutting down') || (error as any)?.code === 'cancelled' || (error as any)?.code === 'aborted') {
+          return;
+        }
         handleFirestoreError(error, OperationType.GET, 'events');
         recordSyncEvent('events', 'firestore', 'cache', { fromCache: true, hasPendingWrites: false }, error?.message || String(error));
         setSyncError(error?.message || String(error));
@@ -766,7 +623,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       }
       setNotices(list);
-      localStorage.setItem('azadi_notices', JSON.stringify(list));
       recordSyncEvent('notices', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingNotices(false);
       setSyncError(null);
@@ -789,7 +645,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       }
       setNews(list);
-      localStorage.setItem('azadi_news', JSON.stringify(list));
       recordSyncEvent('news', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingNews(false);
       setSyncError(null);
@@ -801,7 +656,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoadingNews(false);
     });
 
-    // Testimonials listener (limit 100)
+    // Testimonials listener
     const unsubTestimonials = onSnapshot(query(collection(db, 'testimonials'), limit(100)), { includeMetadataChanges: true }, (snap) => {
       const list: Testimonial[] = [];
       if (!snap.empty) {
@@ -812,7 +667,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       }
       setTestimonials(list);
-      localStorage.setItem('azadi_testimonials', JSON.stringify(list));
       recordSyncEvent('testimonials', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingTestimonials(false);
       setSyncError(null);
@@ -860,7 +714,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       }
       setExpenses(list);
-      localStorage.setItem('azadi_expenses', JSON.stringify(list));
       recordSyncEvent('expenses', 'firestore', snap.metadata.fromCache ? 'cache' : 'server', { fromCache: snap.metadata.fromCache, hasPendingWrites: snap.metadata.hasPendingWrites });
       setLoadingExpenses(false);
       setSyncError(null);
@@ -920,39 +773,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [isAdmin]);
 
-  // Database auto-seeder step
+  // Database initialization step
   const seedDefaultDatabase = async () => {
     try {
       setCloudSyncStatus('syncing');
-      await setDoc(doc(db, 'settings', 'config'), STATIC_SETTINGS);
-      await setDoc(doc(db, 'settings', 'letterhead'), STATIC_LETTERHEAD);
-
-      for (const d of STATIC_DONATIONS) {
-        const pub = getPublicDonationDoc(d);
-        const priv = getPrivateInfoDoc(d);
-        await setDoc(doc(db, 'donations', d.id), pub);
-        await setDoc(doc(db, 'donations', d.id, 'private_info', 'details'), priv);
-      }
-      await updatePublicStatsAggregate(STATIC_DONATIONS);
-      for (const l of STATIC_LEADERSHIP) {
-        const { id, ...businessData } = l;
-        await setDoc(doc(db, 'leadership', id), businessData);
-      }
-      for (const e of STATIC_EVENTS) {
-        await setDoc(doc(db, 'events', e.id), e);
-      }
-      for (const n of STATIC_NOTICES) {
-        await setDoc(doc(db, 'notices', n.id), n);
-      }
-      for (const ns of STATIC_NEWS) {
-        await setDoc(doc(db, 'news', ns.id), ns);
-      }
-      for (const ex of STATIC_EXPENSES) {
-        await setDoc(doc(db, 'expenses', ex.id), ex);
-      }
+      await setDoc(doc(db, 'settings', 'config'), settings || DEFAULT_SETTINGS);
+      await setDoc(doc(db, 'settings', 'letterhead'), letterhead || DEFAULT_LETTERHEAD);
+      await setDoc(doc(db, 'settings', 'version'), CURRENT_VERSION);
       setCloudSyncStatus('success');
     } catch (error) {
-      console.error("Auto seeding failed:", error);
+      console.error("Initialization notice:", error);
       setCloudSyncStatus('error');
     }
   };
@@ -1565,7 +1395,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const replaceLeadership = async (leadershipList: Leadership[]) => {
-    const listToSave = leadershipList.length === 0 ? STATIC_LEADERSHIP : leadershipList;
+    const listToSave = leadershipList;
     try {
       // Optimistic local state update
       setLeadership(listToSave);

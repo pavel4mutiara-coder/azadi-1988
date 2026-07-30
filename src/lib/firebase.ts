@@ -1,55 +1,20 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getAuth, 
-  initializeAuth, 
-  browserLocalPersistence, 
-  browserSessionPersistence, 
-  inMemoryPersistence,
-  Auth
-} from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfigFile from '../../firebase-applet-config.json';
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Single clean Firebase initialization using provisioned config
+export const app = getApps().length === 0 ? initializeApp(firebaseConfigFile) : getApp();
 
-// Configure Firestore with persistent IndexedDB offline cache to load snapshots instantly and sync reliably
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-}, (firebaseConfig as any).firestoreDatabaseId || '(default)');
+// Database instance targeting provisioned database ID
+export const db = getFirestore(app, firebaseConfigFile.firestoreDatabaseId);
 
-let authInstance: Auth;
-try {
-  authInstance = initializeAuth(app, {
-    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
-  });
-} catch {
-  authInstance = getAuth(app);
-}
+// Auth instance
+export const auth = getAuth(app);
 
-export const auth = authInstance;
+// Storage instance
 export const storage = getStorage(app);
-
-// Initialize Firebase App Check to defend against API abuse / automated replay attacks
-if (typeof window !== 'undefined') {
-  try {
-    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-    if (siteKey) {
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(siteKey),
-        isTokenAutoRefreshEnabled: true
-      });
-    } else {
-      // Dev mode: automatic local token fallback
-      (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-    }
-  } catch (err) {
-    console.warn("Firebase App Check load deferred:", err);
-  }
-}
 
 export enum OperationType {
   CREATE = 'create',
@@ -80,6 +45,17 @@ export interface FirestoreErrorInfo {
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMsg = error instanceof Error ? error.message : String(error);
   const code = (error as any)?.code || 'unknown';
+
+  if (
+    errMsg.includes('Firestore shutting down') || 
+    errMsg.includes('Could not reach Cloud Firestore backend') ||
+    code === 'cancelled' || 
+    code === 'aborted' ||
+    code === 'unavailable'
+  ) {
+    // Ignore benign teardown / shutdown / transient offline reconnect notices
+    return;
+  }
 
   const errInfo: FirestoreErrorInfo = {
     error: errMsg,

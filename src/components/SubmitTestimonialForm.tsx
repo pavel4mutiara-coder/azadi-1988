@@ -1,12 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Image, Check, Loader2, UploadCloud, Trash2, X, Sparkles } from 'lucide-react';
 import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, formatFirebaseError, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Testimonial } from '../types';
 import { useApp } from '../context/AppContext';
-import { compressInputImage } from '../utils/imageOptimizer';
+import { uploadImage } from '../utils/uploadImage';
 
 interface SubmitTestimonialFormProps {
   onSuccess?: () => void;
@@ -196,9 +195,12 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
       const testimonialId = `testi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // 1. Upload photo to Firebase Storage
-      const fileRef = ref(storage, `testimonials/${testimonialId}.jpg`);
-      await uploadBytes(fileRef, imageBlob);
-      const downloadUrl = await getDownloadURL(fileRef);
+      const downloadUrl = await uploadImage(imageBlob, 'testimonials', {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.8,
+        fileName: `${testimonialId}.jpg`
+      });
 
       // 2. Build Testimonial Document
       const testimonialDoc: Testimonial = {
@@ -242,11 +244,8 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
       }
     } catch (err: any) {
       console.error("Testimonial submission failed:", err);
-      setErrorMsg(
-        lang === 'bn' 
-          ? 'দুঃখিত, তথ্য জমা দেওয়া সম্ভব হয়নি। আবার চেষ্টা করুন।' 
-          : 'Failed to submit testimonial. Please try again.'
-      );
+      handleFirestoreError(err, OperationType.WRITE, 'testimonials');
+      setErrorMsg(formatFirebaseError(err, lang));
     } finally {
       setUploadProgress(false);
     }
