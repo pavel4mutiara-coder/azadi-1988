@@ -134,25 +134,25 @@ interface AppState {
 }
 
 const DEFAULT_SETTINGS: OrganizationSettings = {
-  nameBn: "",
-  nameEn: "",
-  sloganBn: "",
-  sloganEn: "",
-  addressBn: "",
-  addressEn: "",
-  phone: "",
-  email: "",
-  establishedBn: "",
-  establishedEn: "",
+  nameBn: "আজাদী সোস্যাল ওয়েলফেয়ার অর্গানাইজেশন",
+  nameEn: "Azadi Social Welfare Organization",
+  sloganBn: "মানবতার সেবায় আত্মনিবেদিত এক সামাজিক সংগঠন",
+  sloganEn: "A Social Welfare Organization Dedicated to Humanity",
+  addressBn: "আজাদী, বাকলিয়া, চট্টগ্রাম, বাংলাদেশ",
+  addressEn: "Azadi, Bakalia, Chattogram, Bangladesh",
+  phone: "01712782564",
+  email: "azadisocialwelfareorganization@gmail.com",
+  establishedBn: "২০২৪",
+  establishedEn: "2024",
   logo: "",
   flag: "",
-  adminWhatsApp: "",
-  bkash: "",
-  nagad: "",
-  roket: "",
-  facebook: "",
-  youtube: "",
-  whatsappChannel: "",
+  adminWhatsApp: "8801712782564",
+  bkash: "01712782564",
+  nagad: "01712782564",
+  roket: "01712782564",
+  facebook: "https://facebook.com",
+  youtube: "https://youtube.com",
+  whatsappChannel: "https://whatsapp.com",
   googleChatSpace: "",
   googleChatEnabled: false,
   googleChatNotifyOnReceipt: true,
@@ -161,11 +161,11 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
 };
 
 const DEFAULT_LETTERHEAD: LetterheadConfig = {
-  leaderName: "",
-  designation: "",
+  leaderName: "মোঃ সভাপতি",
+  designation: "সভাপতি, আজাদী সোস্যাল ওয়েলফেয়ার অর্গানাইজেশন",
   signature: "",
-  stampText: "",
-  bodyText: ""
+  stampText: "আজাদী সোস্যাল ওয়েলফেয়ার অর্গানাইজেশন - সিলমোহর",
+  bodyText: "এতদ্বারা সর্বসাধারণের অবগতির জন্য জানানো যাইতেছে যে..."
 };
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -416,10 +416,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (isSuperAdminEmail) {
             // Self-seed admin document for superadmin
             await setDoc(adminRef, {
+              uid: currentUser.uid,
               email: currentUser.email,
+              displayName: currentUser.displayName || 'Super Admin',
               role: 'superadmin',
-              createdAt: new Date().toISOString()
-            });
+              active: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
             setIsAdmin(true);
             sessionStorage.setItem(cachedAdminKey, 'true');
           } else {
@@ -994,6 +998,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         msg = lang === 'bn' ? 'ইমেল এড্রেসের বিন্যাস সঠিক নয়।' : 'Invalid email format.';
       } else if (code === 'auth/too-many-requests') {
         msg = lang === 'bn' ? 'অতিরিক্ত চেষ্টার কারণে অ্যাকাউন্ট সাময়িকভাবে লক করা হয়েছে। কিছুক্ষণ পর চেষ্টা করুন।' : 'Access temporarily blocked due to multiple failed login attempts. Try again later or reset password.';
+      } else if (code === 'auth/user-disabled') {
+        msg = lang === 'bn' ? 'এই অ্যাডমিন অ্যাকাউন্টটি নিষ্ক্রিয় করা আছে।' : 'This administrator account has been disabled.';
       } else if (code === 'auth/network-request-failed') {
         msg = lang === 'bn' ? 'নেটওয়ার্ক সংযোগ ডাইরেক্ট বিচ্ছিন্ন হয়েছে। ইন্টারনেট কানেকশন চেক করুন।' : 'Network connection failed. Please check your internet.';
       }

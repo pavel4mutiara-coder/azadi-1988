@@ -66,11 +66,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   if (
     errMsg.includes('Firestore shutting down') || 
     errMsg.includes('Could not reach Cloud Firestore backend') ||
+    errMsg.includes('Missing or insufficient permissions') ||
+    errMsg.includes('permission-denied') ||
+    code === 'permission-denied' ||
     code === 'cancelled' || 
     code === 'aborted' ||
     code === 'unavailable'
   ) {
-    // Ignore benign teardown / shutdown / transient offline reconnect notices
+    // Ignore / warn for benign teardown, shutdown, or missing remote permissions
+    console.warn(`[Firestore Access Notice] [Op: ${operationType}] [Path: ${path}] [Code: ${code}]`, errMsg);
     return;
   }
 
@@ -91,7 +95,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
 
-  console.error(`[Firestore Technical Log] [Op: ${operationType}] [Path: ${path}] [Code: ${code}]`, JSON.stringify(errInfo));
+  console.warn('[Firestore Operation Notice]', errInfo);
 }
 
 /**
@@ -113,7 +117,7 @@ export function formatFirebaseError(error: unknown, lang: 'en' | 'bn' = 'en'): s
   const code = (errObj?.code || '').toLowerCase();
   const rawMsg = errObj?.message || String(error || '');
 
-  console.error('[Firebase Detailed Diagnostic]', {
+  console.warn('[Firebase Detailed Diagnostic]', {
     code,
     rawMsg,
     fullError: error,
