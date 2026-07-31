@@ -4,17 +4,34 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfigFile from '../../firebase-applet-config.json';
 
-// Single clean Firebase initialization using provisioned config
-export const app = getApps().length === 0 ? initializeApp(firebaseConfigFile) : getApp();
+// Unified Firebase Configuration from VITE_ environment variables or firebase-applet-config.json fallback
+export const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigFile.apiKey || 'AIzaSyCHEV4hOMBO7t-P4kvAUpN0oJiaCaO7Ths',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigFile.authDomain || 'azadi-social-welfare.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigFile.projectId || 'azadi-social-welfare',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigFile.storageBucket || 'azadi-social-welfare.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigFile.messagingSenderId || '265728132052',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigFile.appId || '1:265728132052:web:155282236253af245b8c41',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigFile.measurementId || ''
+};
 
-// Database instance targeting provisioned database ID
-export const db = getFirestore(app, firebaseConfigFile.firestoreDatabaseId);
+// Single clean Firebase initialization using provisioned config
+export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Firestore database instance targeting the default database of the new project
+export const db = getFirestore(app);
 
 // Auth instance
 export const auth = getAuth(app);
 
-// Storage instance
-export const storage = getStorage(app);
+// Storage instance connecting specifically to gs://azadi-social-welfare.firebasestorage.app
+const targetBucket = firebaseConfig.storageBucket && !firebaseConfig.storageBucket.includes('appspot.com')
+  ? firebaseConfig.storageBucket
+  : 'azadi-social-welfare.firebasestorage.app';
+
+const storageBucketUrl = targetBucket.startsWith('gs://') ? targetBucket : `gs://${targetBucket}`;
+
+export const storage = getStorage(app, storageBucketUrl);
 
 export enum OperationType {
   CREATE = 'create',

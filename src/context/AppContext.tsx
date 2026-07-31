@@ -42,7 +42,6 @@ import {
   handleFirestoreError, 
   OperationType
 } from '../lib/firebase';
-import firebaseConfig from '../../firebase-applet-config.json';
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 

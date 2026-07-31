@@ -90,6 +90,10 @@ export const TestimonialManager: React.FC = () => {
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploadingImage) {
+      alert(lang === 'bn' ? 'ছবি আপলোড হওয়া পর্যন্ত অপেক্ষা করুন...' : 'Please wait until image upload completes...');
+      return;
+    }
     if (!editingTestimonialId) return;
     setActionLoadingId(editingTestimonialId);
     try {

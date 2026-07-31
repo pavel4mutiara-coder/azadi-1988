@@ -1,12 +1,12 @@
 {
-  "projectId": "gen-lang-client-0117587417",
-  "appId": "1:135189563604:web:e7222291fea2cfae159341",
-  "apiKey": "AIzaSyBJHN82os1UVh1YFLXdZrnqISF8ZJVZp8s",
-  "authDomain": "gen-lang-client-0117587417.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-azadisocialwelfa-84c67078-c4ea-4ed4-a6c7-4a4393670da4",
-  "storageBucket": "gen-lang-client-0117587417.firebasestorage.app",
-  "messagingSenderId": "135189563604",
+  "projectId": "azadi-social-welfare",
+  "appId": "1:265728132052:web:155282236253af245b8c41",
+  "apiKey": "AIzaSyCHEV4hOMBO7t-P4kvAUpN0oJiaCaO7Ths",
+  "authDomain": "azadi-social-welfare.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "azadi-social-welfare.firebasestorage.app",
+  "messagingSenderId": "265728132052",
   "measurementId": "",
-  "oAuthClientId": "135189563604-ndb0p8gpncagjt5p71vnqt5vaccsgars.apps.googleusercontent.com",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

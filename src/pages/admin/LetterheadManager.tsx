@@ -378,9 +378,19 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
   const clearCanvas = () => canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   const saveSignatureFromCanvas = () => {
     if (canvasRef.current) {
-      const dataUrl = canvasRef.current.toDataURL();
-      setLocalConfig(prev => ({ ...prev, signature: dataUrl }));
-      alert(lang === 'bn' ? 'স্বাক্ষর ক্যাপচার করা হয়েছে!' : 'Signature captured successfully!');
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        try {
+          const downloadUrl = await uploadImage(blob, 'letterhead', {
+            fileName: `signature_${Date.now()}.png`
+          });
+          setLocalConfig(prev => ({ ...prev, signature: downloadUrl }));
+          alert(lang === 'bn' ? 'স্বাক্ষর ক্যাপচার ও আপলোড করা হয়েছে!' : 'Signature captured and uploaded successfully!');
+        } catch (err) {
+          console.error("Signature canvas upload error:", err);
+          alert(formatFirebaseError(err, lang));
+        }
+      });
     }
   };
 

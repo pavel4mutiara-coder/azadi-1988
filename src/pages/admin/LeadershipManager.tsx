@@ -111,6 +111,10 @@ export const LeadershipManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) return;
+    if (uploading) {
+      setErrorMsg(lang === 'bn' ? 'ছবি আপলোড হওয়া পর্যন্ত অপেক্ষা করুন...' : 'Please wait until image upload completes...');
+      return;
+    }
 
     setIsSaving(true);
     setErrorMsg(null);
