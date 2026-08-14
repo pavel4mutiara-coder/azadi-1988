@@ -1,11 +1,9 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Image, Check, Loader2, UploadCloud, Trash2, X, Sparkles } from 'lucide-react';
-import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import React, { useState } from 'react';
+import { Check, Loader2, X, Sparkles } from 'lucide-react';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { db, formatFirebaseError, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Testimonial } from '../types';
 import { useApp } from '../context/AppContext';
-import { uploadImage } from '../utils/uploadImage';
 
 interface SubmitTestimonialFormProps {
   onSuccess?: () => void;
@@ -17,7 +15,6 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
   onCancel
 }) => {
   const { lang } = useApp();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [nameEn, setNameEn] = useState('');
@@ -29,139 +26,16 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
   const [quoteEn, setQuoteEn] = useState('');
   const [quoteBn, setQuoteBn] = useState('');
 
-  // Image upload states
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  // Image URL state
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageLoadError, setImageLoadError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setErrorMsg('');
-    const files = e.target.files;
-    if (files && files[0]) {
-      const file = files[0];
-      
-      // Validation: Size cap at 5MB
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMsg(lang === 'bn' ? 'ফাইলের আকার ৫ মেগাবাইটের কম হতে হবে।' : 'File size must be under 5MB.');
-        return;
-      }
-      // Validation: MIME types
-      if (!/^image\/(jpeg|png|webp|jpg)$/i.test(file.type)) {
-        setErrorMsg(lang === 'bn' ? 'শুধুমাত্র JPG, PNG বা WEBP ফরম্যাট সমর্থিত।' : 'Only JPG, PNG or WEBP images are supported.');
-        return;
-      }
-
-      try {
-        const compressed = await compressInputImage(file, 350, 350, 0.75);
-        setImageBlob(compressed);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(compressed);
-      } catch (err) {
-        console.warn("Client-side image compression failed, using original file instead:", err);
-        setImageBlob(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  };
-
-  const capturePhotoNative = async () => {
-    setErrorMsg('');
-    try {
-      const image = await CapCamera.getPhoto({
-        quality: 90,
-        allowEditing: true,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera
-      });
-
-      if (image.webPath) {
-        setImagePreview(image.webPath);
-        const response = await fetch(image.webPath);
-        const blob = await response.blob();
-        
-        if (blob.size > 5 * 1024 * 1024) {
-          setErrorMsg(lang === 'bn' ? 'ফাইলের আকার ৫ মেগাবাইটের কম হতে হবে।' : 'File size must be under 5MB.');
-          return;
-        }
-
-        try {
-          const compressed = await compressInputImage(blob, 350, 350, 0.75);
-          setImageBlob(compressed);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setImagePreview(reader.result as string);
-          };
-          reader.readAsDataURL(compressed);
-        } catch (err) {
-          console.warn("Native capture compression failed:", err);
-          setImageBlob(blob);
-        }
-      }
-    } catch (err: any) {
-      console.warn("Capacitor Native Camera unnavailable or rejected. Falling back to input file click.", err);
-      // Fallback
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    }
-  };
-
-  const pickGalleryNative = async () => {
-    setErrorMsg('');
-    try {
-      const image = await CapCamera.getPhoto({
-        quality: 90,
-        allowEditing: true,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Photos
-      });
-
-      if (image.webPath) {
-        setImagePreview(image.webPath);
-        const response = await fetch(image.webPath);
-        const blob = await response.blob();
-        
-        if (blob.size > 5 * 1024 * 1024) {
-          setErrorMsg(lang === 'bn' ? 'ফাইলের আকার ৫ মেগাবাইটের কম হতে হবে।' : 'File size must be under 5MB.');
-          return;
-        }
-
-        try {
-          const compressed = await compressInputImage(blob, 350, 350, 0.75);
-          setImageBlob(compressed);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setImagePreview(reader.result as string);
-          };
-          reader.readAsDataURL(compressed);
-        } catch (err) {
-          console.warn("Native gallery image compression failed:", err);
-          setImageBlob(blob);
-        }
-      }
-    } catch (err: any) {
-      console.warn("Capacitor Photo Library unnavailable or rejected. Falling back to input file click.", err);
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    }
-  };
-
   const removeSelectedImage = () => {
-    setImageBlob(null);
-    setImagePreview('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setImageUrl('');
+    setImageLoadError(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -184,25 +58,12 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
       return;
     }
 
-    if (!imageBlob) {
-      setErrorMsg(lang === 'bn' ? 'অনুগ্রহ করে নিজের একটি ছবি যুক্ত করুন।' : 'Please upload your profile photo.');
-      return;
-    }
-
     setUploadProgress(true);
 
     try {
       const testimonialId = `testi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // 1. Upload photo to Firebase Storage
-      const downloadUrl = await uploadImage(imageBlob, 'testimonials', {
-        maxWidth: 400,
-        maxHeight: 400,
-        quality: 0.8,
-        fileName: `${testimonialId}.jpg`
-      });
 
-      // 2. Build Testimonial Document
+      // Build Testimonial Document
       const testimonialDoc: Testimonial = {
         id: testimonialId,
         nameEn: effectiveNameEn,
@@ -213,12 +74,12 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
         locationBn: effectiveLocationBn || 'বাংলাদেশ',
         quoteEn: effectiveQuoteEn,
         quoteBn: effectiveQuoteBn,
-        image: downloadUrl,
+        image: imageUrl.trim(),
         createdAt: new Date().toISOString(),
         status: 'PENDING' // Newly submitted is pending review/approval
       };
 
-      // 3. Store to Firestore
+      // Store to Firestore
       const docRef = doc(collection(db, 'testimonials'), testimonialId);
       await setDoc(docRef, testimonialDoc);
 
@@ -299,68 +160,57 @@ export const SubmitTestimonialForm: React.FC<SubmitTestimonialFormProps> = ({
         {/* Photo Selection Pillar */}
         <div className="space-y-4 flex flex-col items-center">
           <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 self-start">
-            {lang === 'bn' ? 'প্রোফাইল ছবি' : 'Profile Photo'}
+            {lang === 'bn' ? 'প্রোফাইল ছবি (ইউআরএল)' : 'Profile Photo URL'}
           </span>
           
-          <div className="relative w-40 h-40 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-full aspect-square flex items-center justify-center overflow-hidden p-0.5 shadow-inner group">
-            {imagePreview ? (
+          <div className="relative w-36 h-36 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-full aspect-square flex items-center justify-center overflow-hidden p-0.5 shadow-inner group">
+            {Boolean(imageUrl?.trim()) ? (
               <>
                 <img 
-                  src={imagePreview} 
+                  src={imageUrl} 
                   alt="Testimonial contributor" 
                   className="w-full h-full object-cover rounded-full" 
+                  referrerPolicy="no-referrer"
+                  onError={() => setImageLoadError(true)}
+                  onLoad={() => setImageLoadError(false)}
                 />
                 <button
                   type="button"
                   onClick={removeSelectedImage}
                   className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity rounded-full gap-1.5 font-bold text-xs"
                 >
-                  <Trash2 size={16} />
+                  <X size={16} />
                   <span>{lang === 'bn' ? 'মুছে ফেলুন' : 'Remove'}</span>
                 </button>
               </>
             ) : (
               <div className="text-center flex flex-col items-center gap-2 p-4 text-slate-400 dark:text-slate-600">
-                <UploadCloud size={32} className="animate-bounce text-slate-300 dark:text-slate-700" />
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">No Image</span>
               </div>
             )}
           </div>
 
-          <div className="flex gap-2 w-full justify-center">
-            {/* Native Camera Trigger */}
-            <button
-              type="button"
-              onClick={capturePhotoNative}
-              className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-450 font-bold text-xs rounded-2xl flex items-center gap-1.5 transition-all w-1/2 justify-center shadow-soft active:scale-95"
-            >
-              <Camera size={14} />
-              <span>{lang === 'bn' ? 'ক্যামেরা' : 'Camera'}</span>
-            </button>
-
-            {/* Native Gallery Trigger */}
-            <button
-              type="button"
-              onClick={pickGalleryNative}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 font-bold text-xs rounded-2xl flex items-center gap-1.5 transition-all w-1/2 justify-center shadow-soft active:scale-95"
-            >
-              <Image size={14} />
-              <span>{lang === 'bn' ? 'গ্যালারি' : 'Gallery'}</span>
-            </button>
+          <div className="w-full space-y-2">
+            <input 
+              type="url"
+              value={imageUrl}
+              onChange={e => {
+                setImageLoadError(false);
+                setImageUrl(e.target.value);
+              }}
+              placeholder="https://example.com/photo.jpg or Google Drive URL"
+              className="w-full px-3 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+            {imageLoadError && (
+              <p className="text-[10px] text-rose-500 font-bold text-center">
+                {lang === 'bn' ? 'ছবি লোড হতে পারেনি' : 'Image preview failed'}
+              </p>
+            )}
           </div>
 
-          <span className="text-[10px] text-slate-400 text-center leading-normal max-w-[180px]">
-            {lang === 'bn' ? 'ক্যামেরা বা গ্যালারি থেকে ৫ মেগাবাইটের নীচে স্কয়ার ছবি নির্বাচন করুন।' : 'Capture via Camera or pick from Gallery (PNG/JPG under 5MB).'}
+          <span className="text-[10px] text-slate-400 text-center leading-normal max-w-[200px]">
+            {lang === 'bn' ? 'প্রকাশ্য যে কোনো ছবির ইমেজ URL বা গুগল ড্রাইভ লিংক প্রবেশ করান।' : 'Provide a direct link to a public photo or shared Google Drive URL.'}
           </span>
-
-          {/* Hidden File Input Fallback for HTML standard trigger */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*" 
-            className="hidden" 
-          />
         </div>
 
         {/* Inputs Fields - Bi-Lingual columns */}

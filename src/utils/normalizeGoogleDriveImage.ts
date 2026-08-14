@@ -172,6 +172,20 @@ export function normalizeGoogleDriveImage(url: string | null | undefined): strin
 }
 
 /**
+ * Converts any Google Drive link format into a clean normalized direct view URL for database storage:
+ * https://drive.google.com/uc?export=view&id=FILE_ID
+ */
+export function normalizeGoogleDriveUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  const fileId = extractGoogleDriveId(trimmed);
+  if (fileId) {
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+  }
+  return trimmed;
+}
+
+/**
  * Returns a fallback thumbnail URL for a Google Drive File ID if the uc endpoint fails.
  */
 export function getGoogleDriveThumbnailUrl(url: string | null | undefined): string {

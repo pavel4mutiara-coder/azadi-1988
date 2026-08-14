@@ -231,7 +231,7 @@ export const Events: React.FC = () => {
             >
               {/* Cover Image */}
               <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-100 dark:bg-slate-950">
-                {event.image ? (
+                {Boolean(event.image?.trim()) ? (
                   <img
                     src={getOptimizedImageUrl(event.image, 600)}
                     alt={lang === "bn" ? event.titleBn : event.titleEn}
@@ -373,7 +373,7 @@ export const Events: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              {selectedEvent.image && (
+              {Boolean(selectedEvent.image?.trim()) && (
                 <div className="rounded-3xl overflow-hidden max-h-96 border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950">
                   <img
                     src={getOptimizedImageUrl(selectedEvent.image, 1000)}

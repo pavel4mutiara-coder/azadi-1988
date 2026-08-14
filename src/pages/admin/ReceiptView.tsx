@@ -6,6 +6,7 @@ import { Heart, Printer, ArrowLeft, Download, MessageCircle, Shield, Mail, Phone
 import { ISLAMIC_QUOTES } from '../../utils/constants';
 import { useApp } from '../../context/AppContext';
 import { parseLocalDate } from '../../utils/parseLocalDate';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 declare var html2pdf: any;
 
@@ -34,7 +35,7 @@ export const ReceiptView: React.FC<Props> = ({
   }, [donation.id]);
 
   const signatoryConfig = letterhead;
-  const base64Logo = settings.logo;
+  const base64Logo = settings.logo?.trim() ? getOptimizedImageUrl(settings.logo.trim(), 200) : '';
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
@@ -233,8 +234,12 @@ export const ReceiptView: React.FC<Props> = ({
 
             {/* Header Section */}
             <div className="flex flex-col items-center text-center space-y-3 pt-2">
-              <div className="w-20 h-20 p-1.5 bg-white rounded-full border border-emerald-50 shadow-sm">
-                {base64Logo && <img src={base64Logo} className="w-full h-full object-contain" alt="Logo" />}
+              <div className="w-20 h-20 p-1.5 bg-white rounded-full border border-emerald-50 shadow-sm flex items-center justify-center">
+                {Boolean(base64Logo?.trim()) ? (
+                  <img src={base64Logo} className="w-full h-full object-contain" alt="Logo" />
+                ) : (
+                  <Award className="w-10 h-10 text-emerald-800" />
+                )}
               </div>
               <div className="space-y-0.5">
                 <h1 className="text-3xl font-black text-emerald-950 tracking-tight leading-none">{settings.nameBn}</h1>
@@ -365,7 +370,7 @@ export const ReceiptView: React.FC<Props> = ({
                 </div>
 
                 <div className="text-center w-56 space-y-1.5 relative">
-                  {signatoryConfig?.signature && (
+                  {Boolean(signatoryConfig?.signature?.trim()) && (
                     <img 
                       src={signatoryConfig.signature} 
                       className="h-10 object-contain mx-auto absolute bottom-7 left-1/2 -translate-x-1/2 select-none" 
@@ -385,7 +390,7 @@ export const ReceiptView: React.FC<Props> = ({
 
             {/* Watermark Logo */}
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.012] pointer-events-none select-none">
-              {base64Logo && <img src={base64Logo} className="w-[400px] h-[400px] object-contain rotate-[-15deg]" alt="Watermark" />}
+              {Boolean(base64Logo?.trim()) && <img src={base64Logo} className="w-[400px] h-[400px] object-contain rotate-[-15deg]" alt="Watermark" />}
             </div>
           </div>
         </div>

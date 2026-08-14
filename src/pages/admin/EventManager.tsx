@@ -1,18 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { Calendar, Plus, Trash2, Edit2, MapPin, Loader2, Video, Clipboard, UploadCloud, Image, X } from 'lucide-react';
+import { Calendar, Plus, Trash2, Edit2, MapPin, Video, Image as ImageIcon, X } from 'lucide-react';
 import { Event } from '../../types';
 import { formatFirebaseError } from '../../lib/firebase';
 import { parseLocalDate } from '../../utils/parseLocalDate';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
-import { uploadImage } from '../../utils/uploadImage';
 
 export const EventManager: React.FC = () => {
   const { lang, events, saveEvent, deleteEvent } = useApp();
   const t = TRANSLATIONS[lang];
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
   
   const formatDate = (dateStr: string) => {
     if (!dateStr) return lang === 'bn' ? 'তারিখ পাওয়া যায়নি' : 'Date not available';
@@ -38,69 +38,12 @@ export const EventManager: React.FC = () => {
     meetUrl: ''
   });
 
-  // Storage Upload States
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageUpload(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleImageUpload(e.target.files[0]);
-    }
-  };
-
-  const handleImageUpload = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
-      return;
-    }
-    
-    setUploading(true);
-    setUploadProgress(0);
-    
-    try {
-      const downloadUrl = await uploadImage(file, 'events', {
-        maxWidth: 1024,
-        maxHeight: 1024,
-        quality: 0.8,
-        onProgress: (progress) => setUploadProgress(progress)
-      });
-      setFormData(prev => ({ ...prev, image: downloadUrl }));
-    } catch (err: any) {
-      console.error("Event image upload error:", err);
-      alert(formatFirebaseError(err, lang));
-    } finally {
-      setUploading(false);
-      setUploadProgress(null);
-    }
-  };
-
   const handleRemoveImage = () => {
+    setImageLoadError(false);
     setFormData(prev => ({ ...prev, image: '' }));
   };
 
   const handleCreateMeet = () => {
-    // Generate a unique real Meet code style (e.g. abc-defg-hij)
     const part = (len: number) => Math.random().toString(36).substring(2, 2 + len);
     const generatedMeet = `https://meet.google.com/${part(3)}-${part(4)}-${part(3)}`;
     setFormData(prev => ({ ...prev, meetUrl: generatedMeet }));
@@ -109,10 +52,6 @@ export const EventManager: React.FC = () => {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (uploading) {
-      alert(lang === 'bn' ? 'ছবি আপলোড হওয়া পর্যন্ত অপেক্ষা করুন...' : 'Please wait until image upload completes...');
-      return;
-    }
     try {
       if (editingId) {
         await saveEvent({ ...formData, id: editingId } as Event);
@@ -132,6 +71,7 @@ export const EventManager: React.FC = () => {
   const resetForm = () => {
     setShowForm(false);
     setEditingId(null);
+    setImageLoadError(false);
     setFormData({
       titleEn: '', titleBn: '',
       descriptionEn: '', descriptionBn: '',
@@ -194,89 +134,60 @@ export const EventManager: React.FC = () => {
                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Event Date</label>
                 <input required type="date" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
               </div>
-              {/* Custom Image Upload Drag-Drop with Progress bar */}
+              {/* Image URL Input */}
               <div className="space-y-3 pt-2">
                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">
-                  {lang === 'bn' ? 'ইভেন্ট কভার ছবি' : 'Event Cover Image'}
+                  {lang === 'bn' ? 'ইভেন্ট কভার ছবি (ইমেজ URL)' : 'Event Cover Image URL'}
                 </label>
                 
-                <div 
-                  onDragEnter={handleDrag}
-                  onDragOver={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[160px] relative overflow-hidden ${
-                    dragActive 
-                      ? 'border-emerald-500 bg-emerald-500/10' 
-                      : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 bg-slate-50/50 dark:bg-slate-950/50'
-                  }`}
-                >
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept="image/*" 
-                    className="hidden" 
-                  />
+                <input 
+                  type="url" 
+                  placeholder="https://example.com/photo.jpg or Google Drive URL" 
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-mono text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none" 
+                  value={formData.image} 
+                  onChange={e => {
+                    setImageLoadError(false);
+                    setFormData({...formData, image: e.target.value});
+                  }} 
+                />
 
-                  {formData.image ? (
-                    <div className="space-y-3 w-full relative z-10 group/img" onClick={(e) => e.stopPropagation()}>
-                      <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                        <img src={getOptimizedImageUrl(formData.image, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Preview" />
-                        <button 
-                          type="button" 
-                          onClick={handleRemoveImage}
-                          className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
-                          title={lang === 'bn' ? 'ছবি মুছে ফেলুন' : 'Remove Image'}
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-bold truncate px-2">{formData.image}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 pointer-events-none">
-                      <div className="p-3 bg-white dark:bg-slate-900 rounded-full w-fit mx-auto shadow-sm border border-slate-100 dark:border-slate-800">
-                        <UploadCloud className="text-emerald-500 animate-pulse" size={24} />
-                      </div>
-                      <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                        {lang === 'bn' ? 'ছবি ড্র্যাগ করে ছাড়ুন অথবা ব্রাউজ করুন' : 'Drag & drop image here, or browse'}
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB</p>
-                    </div>
-                  )}
+                {formData.image && formData.image.includes('drive.google.com') && (
+                  <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/40">
+                    {lang === 'bn'
+                      ? 'গুগল ড্রাইভ নোট: ছবিটি "Anyone with the link" হিসেবে পাবলিক এক্সেস সেট করা থাকতে হবে।'
+                      : 'Google Drive note: Make sure the file sharing is set to "Anyone with the link" so it is publicly accessible.'}
+                  </p>
+                )}
 
-                  {/* Upload Progress Overlay */}
-                  {uploading && (
-                    <div className="absolute inset-0 bg-white/90 dark:bg-slate-950/90 flex flex-col items-center justify-center p-4 z-20 space-y-3">
-                      <Loader2 className="animate-spin text-emerald-500" size={24} />
-                      <div className="w-full max-w-[150px] bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
-                        <div 
-                          className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress || 0}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-                        {uploadProgress}% {lang === 'bn' ? 'আপলোড হচ্ছে...' : 'Uploading...'}
-                      </span>
+                {Boolean(formData.image?.trim()) ? (
+                  <div className="space-y-2 pt-1">
+                    <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <img 
+                        src={getOptimizedImageUrl(formData.image, 400)} 
+                        referrerPolicy="no-referrer" 
+                        className="w-full h-full object-cover" 
+                        alt="Preview" 
+                        onError={() => setImageLoadError(true)}
+                        onLoad={() => setImageLoadError(false)}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleRemoveImage}
+                        className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
+                        title={lang === 'bn' ? 'ছবি মুছে ফেলুন' : 'Remove Image'}
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-                  )}
-                </div>
-
-                {/* Manual Override Field */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 ml-1 block">
-                    {lang === 'bn' ? 'অথবা সরাসরি ইমেজ লিংক বসান (ঐচ্ছিক)' : 'Or manual photo image URL (Optional)'}
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="https://images.unsplash.com/..." 
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl font-mono text-xs" 
-                    value={formData.image} 
-                    onChange={e => setFormData({...formData, image: e.target.value})} 
-                  />
-                </div>
+                    {imageLoadError && (
+                      <p className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-lg border border-rose-200 dark:border-rose-900/50">
+                        {lang === 'bn' 
+                          ? 'ছবি লোড করা সম্ভব হয়নি। ইউআরএলটি প্রকাশ্য এবং সরাসরি ছবি প্রদর্শনযোগ্য কিনা নিশ্চিত করুন।' 
+                          : 'Image could not be loaded. Make sure the URL is public and points to an accessible image.'}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -348,7 +259,7 @@ export const EventManager: React.FC = () => {
         {events.map(event => (
           <div key={event.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl hover:-translate-y-1 transition-all group flex flex-col">
             <div className="h-48 overflow-hidden relative bg-slate-100 dark:bg-slate-950">
-              {event.image ? <img src={getOptimizedImageUrl(event.image, 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={event.titleEn} /> : <div className="w-full h-full flex items-center justify-center text-emerald-100"><Calendar size={48} /></div>}
+              {Boolean(event.image?.trim()) ? <img src={getOptimizedImageUrl(event.image.trim(), 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={event.titleEn} /> : <div className="w-full h-full flex items-center justify-center text-emerald-100"><Calendar size={48} /></div>}
               <div className="absolute top-4 right-4 flex gap-2">
                  <button onClick={() => handleEdit(event)} className="p-3 bg-white/90 dark:bg-slate-800/90 text-emerald-600 rounded-xl shadow-lg hover:scale-110 transition-transform"><Edit2 size={16} /></button>
                  <button onClick={() => handleDelete(event.id)} className="p-3 bg-white/90 dark:bg-slate-800/90 text-rose-600 rounded-xl shadow-lg hover:scale-110 transition-transform"><Trash2 size={16} /></button>

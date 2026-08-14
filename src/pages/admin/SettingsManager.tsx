@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
 import { CURRENT_VERSION } from '../../utils/version';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { normalizeGoogleDriveUrl, extractGoogleDriveId } from '../../utils/normalizeGoogleDriveImage';
 import { 
   Settings, Save, Globe, Mail, CheckCircle, 
   Facebook, Youtube, MessageCircle, RefreshCcw, 
   Image as ImageIcon, ExternalLink, Info, Database, 
   Shield, Copy, AlertCircle, Trash2, LogOut, Moon, Sun,
   Loader2, MessageSquare, Send, Bell, ArrowUpCircle,
-  Cloud, CloudOff, UploadCloud, Download
+  Cloud, CloudOff, UploadCloud, Download, Award, AlertTriangle, CheckCircle2, Sparkles
 } from 'lucide-react';
 import { formatFirebaseError } from '../../lib/firebase';
-import { uploadImage } from '../../utils/uploadImage';
 
 export const SettingsManager: React.FC = () => {
   const { 
@@ -37,50 +38,19 @@ export const SettingsManager: React.FC = () => {
   const [localSettings, setLocalSettings] = useState(settings);
   const [localVersion, setLocalVersion] = useState<any>(null);
   const [savingVersion, setSavingVersion] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingFlag, setUploadingFlag] = useState(false);
+  const [logoStatus, setLogoStatus] = useState<'loading' | 'success' | 'error' | 'empty'>(() => {
+    return settings?.logo?.trim() ? 'loading' : 'empty';
+  });
 
-  const handleLogoUpload = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
-      return;
-    }
-    setUploadingLogo(true);
-    try {
-      const url = await uploadImage(file, 'settings', {
-        maxWidth: 600,
-        maxHeight: 600,
-        quality: 0.85
-      });
-      setLocalSettings(prev => ({ ...prev, logo: url }));
-    } catch (err) {
-      console.error("Logo upload error:", err);
-      alert(formatFirebaseError(err, lang));
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
+  const OFFICIAL_LOGO_DRIVE_URL = 'https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh';
 
-  const handleFlagUpload = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert(lang === 'bn' ? 'দয়া করে একটি ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
-      return;
+  useEffect(() => {
+    if (localSettings.logo?.trim()) {
+      setLogoStatus('loading');
+    } else {
+      setLogoStatus('empty');
     }
-    setUploadingFlag(true);
-    try {
-      const url = await uploadImage(file, 'settings', {
-        maxWidth: 600,
-        maxHeight: 600,
-        quality: 0.85
-      });
-      setLocalSettings(prev => ({ ...prev, flag: url }));
-    } catch (err) {
-      console.error("Flag upload error:", err);
-      alert(formatFirebaseError(err, lang));
-    } finally {
-      setUploadingFlag(false);
-    }
-  };
+  }, [localSettings.logo]);
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -599,32 +569,149 @@ export const SettingsManager: React.FC = () => {
         {/* Right Column: Assets & Recovery */}
         <div className="lg:col-span-4 space-y-8">
           {/* Logo Section */}
-          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-6">
-            <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest">Logo Branding</h3>
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+                <ImageIcon size={16} className="text-blue-600" />
+                {lang === 'bn' ? 'সংগঠনের অফিসিয়াল লোগো' : 'Official Organization Logo'}
+              </h3>
+              {logoStatus === 'success' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <CheckCircle2 size={12} /> {lang === 'bn' ? 'যাচাইকৃত' : 'Verified'}
+                </span>
+              )}
+              {logoStatus === 'error' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+                  <AlertCircle size={12} /> {lang === 'bn' ? 'ত্রুটি' : 'Error'}
+                </span>
+              )}
+            </div>
+
             <div className="space-y-3">
-              <input type="text" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-lg font-bold text-sm" value={localSettings.logo} onChange={e => setLocalSettings({...localSettings, logo: e.target.value})} placeholder="Image URL" />
-              
-              <div className="flex items-center justify-center gap-2">
-                <input 
-                  type="file" 
-                  id="logo-upload-input" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={e => e.target.files?.[0] && handleLogoUpload(e.target.files[0])} 
-                  disabled={uploadingLogo} 
-                />
-                <label 
-                  htmlFor="logo-upload-input" 
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all shadow-md active:scale-95"
-                >
-                  {uploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                  <span>{lang === 'bn' ? 'লোগো আপলোড' : 'Upload Logo'}</span>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-left">
+                  {lang === 'bn' ? 'গুগল ড্রাইভ অথবা ইমেজ ইউআরএল (Google Drive URL):' : 'Google Drive or Image URL:'}
                 </label>
+                <input 
+                  type="text" 
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-mono text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                  value={localSettings.logo} 
+                  onChange={e => {
+                    const rawVal = e.target.value;
+                    const normalized = normalizeGoogleDriveUrl(rawVal);
+                    setLocalSettings({ ...localSettings, logo: normalized });
+                  }} 
+                  placeholder="https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh" 
+                />
+              </div>
+
+              {/* Quick Action to apply Official Google Drive Logo */}
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalSettings({ ...localSettings, logo: OFFICIAL_LOGO_DRIVE_URL });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl text-[11px] font-bold border border-blue-200 dark:border-blue-800/60 transition-colors"
+                >
+                  <Sparkles size={13} className="text-amber-500" />
+                  {lang === 'bn' ? 'অফিসিয়াল গুগল ড্রাইভ লোগো প্রয়োগ করুন' : 'Apply Official Google Drive Logo'}
+                </button>
+
+                {localSettings.logo?.trim() && extractGoogleDriveId(localSettings.logo) && (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    ID: {extractGoogleDriveId(localSettings.logo)}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="w-24 h-24 mx-auto bg-slate-50 dark:bg-slate-950 rounded-2xl p-2 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden">
-              <img src={localSettings.logo} className="object-contain max-h-full" alt="Logo Preview" />
+            {/* Live Dual Preview Box */}
+            <div className="bg-slate-50 dark:bg-slate-950/80 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 space-y-4">
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 text-left flex items-center justify-between">
+                <span>{lang === 'bn' ? 'লাইভ প্রিভিউ (Live Preview)' : 'Live Preview'}</span>
+                <span className="text-[10px] font-normal lowercase text-slate-400">
+                  {logoStatus === 'loading' && (lang === 'bn' ? 'লোড হচ্ছে...' : 'rendering...')}
+                  {logoStatus === 'success' && (lang === 'bn' ? 'সফলভাবে প্রদর্শিত' : 'rendered ok')}
+                  {logoStatus === 'error' && (lang === 'bn' ? 'লোড হতে ব্যর্থ' : 'render failed')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 items-center">
+                {/* 1. Box Preview */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-center overflow-hidden shadow-inner relative">
+                    {localSettings.logo?.trim() ? (
+                      <>
+                        <img 
+                          key={localSettings.logo.trim()}
+                          src={getOptimizedImageUrl(localSettings.logo.trim(), 200)} 
+                          className="object-contain max-h-full max-w-full" 
+                          alt="Logo Preview" 
+                          referrerPolicy="no-referrer" 
+                          onLoad={() => setLogoStatus('success')}
+                          onError={() => setLogoStatus('error')}
+                        />
+                        {logoStatus === 'loading' && (
+                          <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex items-center justify-center">
+                            <Loader2 size={20} className="animate-spin text-blue-600" />
+                          </div>
+                        )}
+                        {logoStatus === 'error' && (
+                          <div className="absolute inset-0 bg-rose-50/95 dark:bg-rose-950/95 flex flex-col items-center justify-center p-2 text-center text-rose-600">
+                            <AlertCircle size={24} />
+                            <span className="text-[9px] font-black leading-tight mt-1">
+                              {lang === 'bn' ? 'ইমেজ লোড হয়নি' : 'Load Failed'}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-bold">{lang === 'bn' ? 'লোগো নেই' : 'No Logo'}</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{lang === 'bn' ? 'বক্স ভিউ' : 'Standard View'}</span>
+                </div>
+
+                {/* 2. Header Circular Seal Preview */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-24 h-24 flex items-center justify-center">
+                    <div className="w-16 h-16 relative rounded-full border-[2.5px] border-blue-700 dark:border-blue-500 bg-white dark:bg-slate-900 p-0.5 shadow-md overflow-hidden flex items-center justify-center ring-2 ring-amber-500/20">
+                      <div className="absolute inset-0 border border-amber-500/30 rounded-full"></div>
+                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-slate-900 relative z-10">
+                        {localSettings.logo?.trim() && logoStatus !== 'error' ? (
+                          <img 
+                            src={getOptimizedImageUrl(localSettings.logo.trim(), 200)} 
+                            alt="Azadi Seal Preview" 
+                            referrerPolicy="no-referrer" 
+                            className="w-full h-full object-contain p-0.5" 
+                            onError={() => setLogoStatus('error')}
+                          />
+                        ) : logoStatus === 'error' ? (
+                          <div className="w-full h-full flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-1" title="Logo load failed">
+                            <AlertCircle size={20} />
+                          </div>
+                        ) : (
+                          <Award className="w-3/5 h-3/5 text-amber-500 dark:text-amber-400" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{lang === 'bn' ? 'হেডার সিলমোহর' : 'Header Seal'}</span>
+                </div>
+              </div>
+
+              {/* Status Notice Message */}
+              {logoStatus === 'error' && (
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-xl text-left flex items-start gap-2">
+                  <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium leading-tight">
+                    {lang === 'bn' 
+                      ? 'গুগল ড্রাইভ লিংক থেকে ইমেজ লোড করা যায়নি। ফাইলটির শেয়ারিং পারমিশন "Anyone with the link can view" নিশ্চিত করুন।' 
+                      : 'Unable to render image from URL as <img>. Ensure the Google Drive file permission is set to "Anyone with the link can view".'}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 

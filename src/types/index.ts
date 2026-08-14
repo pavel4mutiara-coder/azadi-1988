@@ -1,10 +1,19 @@
-
 export type Language = 'en' | 'bn';
 
 export enum DonationStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED'
+}
+
+export interface AdminRecord {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: 'superadmin' | 'admin' | 'editor';
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PrivateDonorInfo {
@@ -15,19 +24,28 @@ export interface PrivateDonorInfo {
   transactionId?: string;
   paymentReference?: string;
   privateNotes?: string;
+  updatedAt?: string;
 }
 
 export interface PublicDonationStats {
+  totalAmount?: number;
+  totalDonations?: number;
   totalApprovedAmount: number;
   totalApprovedDonations: number;
+  monthlyAmount?: number;
+  monthlyDonations?: number;
   lastUpdated: string;
+  updatedAt?: string;
 }
 
 export interface Donation {
   id: string;
+  name?: string;
   donorName: string;
   isAnonymous: boolean;
+  anonymous?: boolean;
   amount: number;
+  currency?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -36,10 +54,14 @@ export interface Donation {
   privateNotes?: string;
   purpose: string;
   status: DonationStatus;
+  approved?: boolean;
   date: string;
   paymentMethod: string;
+  method?: string;
   receiptId?: string;
   isPublic?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Leadership {
@@ -50,14 +72,22 @@ export interface Leadership {
   designationBn: string;
   subDesignationEn?: string;
   subDesignationBn?: string;
+  category?: 'leader' | 'executive' | 'advisor' | 'volunteer' | 'member' | string;
+  image: string; // URL string
+  phone: string;
+  email?: string;
+  bioEn?: string;
+  bioBn?: string;
+  quoteEn?: string;
+  quoteBn?: string;
   messageEn: string;
   messageBn: string;
-  phone: string;
-  image: string; // URL or Base64
   order: number;
-  category?: 'leader' | 'executive' | 'advisor' | 'volunteer' | 'member';
+  sortOrder?: number;
+  active?: boolean;
   status?: 'active' | 'inactive';
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Event {
@@ -69,8 +99,13 @@ export interface Event {
   locationEn: string;
   locationBn: string;
   date: string;
-  image: string; // Base64 encoded
+  image: string; // HTTPS URL
+  status?: string;
+  time?: string;
   meetUrl?: string; // Optional Google Meet URL
+  featured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Notice {
@@ -80,7 +115,12 @@ export interface Notice {
   contentEn: string;
   contentBn: string;
   date: string;
-  isUrgent: boolean;
+  priority?: 'normal' | 'high' | 'urgent' | string;
+  isUrgent?: boolean;
+  published?: boolean;
+  attachmentUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface News {
@@ -90,12 +130,19 @@ export interface News {
   contentEn: string;
   contentBn: string;
   date: string;
-  image: string;
+  image: string; // URL string
+  author?: string;
+  published?: boolean;
+  publishedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface OrganizationSettings {
   nameBn: string;
   nameEn: string;
+  organizationNameBn?: string;
+  organizationNameEn?: string;
   sloganBn: string;
   sloganEn: string;
   addressBn: string;
@@ -106,7 +153,13 @@ export interface OrganizationSettings {
   establishedEn: string;
   logo: string;
   flag: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  website?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
   adminWhatsApp: string;
+  whatsapp?: string;
   bkash: string;
   nagad: string;
   roket: string;
@@ -118,6 +171,7 @@ export interface OrganizationSettings {
   googleChatNotifyOnReceipt?: boolean;
   googleChatNotifyOnApproval?: boolean;
   googleChatNotifyOnExpense?: boolean;
+  updatedAt?: string;
 }
 
 export interface LetterheadConfig {
@@ -126,6 +180,17 @@ export interface LetterheadConfig {
   signature: string;
   stampText: string;
   bodyText: string; // Document content
+  organizationNameBn?: string;
+  organizationNameEn?: string;
+  addressBn?: string;
+  addressEn?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  logoUrl?: string;
+  signatureUrl?: string;
+  footerBn?: string;
+  footerEn?: string;
   signatureWidth?: number;
   signatureYOffset?: number;
   signatureXOffset?: number;
@@ -137,30 +202,44 @@ export interface LetterheadConfig {
   qrCustomText?: string;
   qrXOffset?: number;
   qrYOffset?: number;
+  updatedAt?: string;
 }
 
 export interface Testimonial {
   id: string;
+  name?: string;
   nameEn: string;
-  nameBn: string;
-  roleEn: string;
-  roleBn: string;
-  locationEn: string;
-  locationBn: string;
+  nameBn?: string;
+  designation?: string;
+  roleEn?: string;
+  roleBn?: string;
+  locationEn?: string;
+  locationBn?: string;
   quoteEn: string;
-  quoteBn: string;
-  image: string;
-  createdAt: string;
+  quoteBn?: string;
+  messageEn?: string;
+  messageBn?: string;
+  image: string; // URL string
+  rating?: number;
+  approved?: boolean;
   status: 'PENDING' | 'APPROVED';
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Expense {
   id: string;
-  amount: number;
+  title?: string;
   category: string;
+  amount: number;
+  currency?: string;
+  description?: string;
   descriptionEn: string;
   descriptionBn: string;
   date: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CollectionSyncState {
@@ -177,25 +256,28 @@ export interface CollectionSyncState {
 
 export interface VersionConfig {
   latestVersion: string;
+  version?: string;
   buildNumber: number;
+  build?: number;
   releaseDate: string;
   releaseNotes: string;
   forceUpdate: boolean;
   apkDownloadUrl?: string;
   updateSize?: string;
   playStoreUrl?: string;
+  updatedAt?: string;
 }
 
 export interface AuditLog {
   id: string;
   action: string;
-  targetCollection: string;
-  targetDocId: string;
+  collection?: string;
+  targetCollection?: string;
+  documentId?: string;
+  targetDocId?: string;
   userId: string;
   userEmail: string;
-  timestamp: string;
+  timestamp?: string;
+  createdAt?: string;
   details?: string;
 }
-
-
-

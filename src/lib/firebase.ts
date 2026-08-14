@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 import firebaseConfigFile from '../../firebase-applet-config.json';
 
 // Unified Firebase Configuration from VITE_ environment variables or firebase-applet-config.json fallback
@@ -12,8 +11,17 @@ export const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigFile.storageBucket || 'azadi-social-welfare.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigFile.messagingSenderId || '265728132052',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigFile.appId || '1:265728132052:web:155282236253af245b8c41',
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigFile.measurementId || ''
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigFile.measurementId || 'G-YH14D125WS'
 };
+
+// Safe development diagnostic: logs only non-sensitive environment metadata
+if (typeof window !== 'undefined') {
+  console.log('[Firebase Init Diagnostic]', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    storageBucketConfigured: Boolean(firebaseConfig.storageBucket)
+  });
+}
 
 // Single clean Firebase initialization using provisioned config
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -23,15 +31,6 @@ export const db = getFirestore(app);
 
 // Auth instance
 export const auth = getAuth(app);
-
-// Storage instance connecting specifically to gs://azadi-social-welfare.firebasestorage.app
-const targetBucket = firebaseConfig.storageBucket && !firebaseConfig.storageBucket.includes('appspot.com')
-  ? firebaseConfig.storageBucket
-  : 'azadi-social-welfare.firebasestorage.app';
-
-const storageBucketUrl = targetBucket.startsWith('gs://') ? targetBucket : `gs://${targetBucket}`;
-
-export const storage = getStorage(app, storageBucketUrl);
 
 export enum OperationType {
   CREATE = 'create',

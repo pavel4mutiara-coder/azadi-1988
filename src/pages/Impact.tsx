@@ -156,86 +156,49 @@ export const Impact: React.FC = () => {
         </AnimatePresence>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            {
-              nameEn: "Fatema Begum",
-              nameBn: "ফাতেমা বেগম",
-              roleEn: "Widowed Mother & Sewing Microgrant Recipient",
-              roleBn: "বিধবা মাতা ও সেলাই প্রকল্প সুবিধাভোগী",
-              locationEn: "Mirbox Tula, Sylhet",
-              locationBn: "মিরবক্সটুলা, সিলেট",
-              quoteEn: "“After losing my husband, I struggled to support my children. Azadi helped me set up a tailoring venture with a new sewing machine. Today, I can support my family with dignity.”",
-              quoteBn: "“স্বামী হারানোর পর সন্তানদের চালানো অসম্ভব হয়ে দাঁড়িয়েছিল। আজাদী সমাজ কল্যাণ সংঘ আমাকে সেলাই মেশিন প্রদান করে স্বাবলম্বী করেছে। আজ আমি সম্মানের সাথে সংসার চালাতে পারছি।”",
-              image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200", 
-            },
-            {
-              nameEn: "Md. Rafiqul Islam",
-              nameBn: "মো: রফিকুল ইসলাম",
-              roleEn: "Flood Relief Survivor",
-              roleBn: "বন্যা পুনর্বাসন সুবিধাভোগী",
-              locationEn: "Sylhet Sadar",
-              locationBn: "সিলেট সদর",
-              quoteEn: "“When severe floods swept our locality, Azadi's team arrived with dry food, medical supplies, and tin metal sheets. They helped us rebuild our shelter.”",
-              quoteBn: "“বন্যায় যখন আমাদের এলাকা প্লাবিত হলো, আজাদী সমাজ কল্যাণ সংঘের স্বেচ্ছাসেবক দল শুকনো খাবার ও ঔষধ নিয়ে হাজির হয়। তাদের সহায়তায় আমরা আবার মাথা গোঁজার ঠাঁই পেয়েছি।”",
-              image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
-            },
-            {
-              nameEn: "Anika Tabassum",
-              nameBn: "আনিকা তাবাসসুম",
-              roleEn: "Educational Stipend Recipient",
-              roleBn: "শিক্ষা বৃত্তি সুবিধাভোগী",
-              locationEn: "Sylhet Government College Student",
-              locationBn: "সিলেট সরকারি কলেজ শিক্ষার্থী",
-              quoteEn: "“Financial difficulties almost forced me to drop out. Thanks to Azadi's educational stipend, I continued my studies and am currently pursuing higher education!”",
-              quoteBn: "“আর্থিক সংকটে পড়াশোনা বন্ধ হয়ে যাওয়ার উপক্রম হয়েছিল। আজাদী সমাজ কল্যাণ সংঘের শিক্ষাবৃত্তির কারণে আমি আজ কলেজে অনার্সে অধ্যয়ন করতে পারছি।”",
-              image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-            },
-            ...dbTestimonials.map(t => ({
-              nameEn: t.nameEn,
-              nameBn: t.nameBn,
-              roleEn: t.roleEn,
-              roleBn: t.roleBn,
-              locationEn: t.locationEn,
-              locationBn: t.locationBn,
-              quoteEn: t.quoteEn,
-              quoteBn: t.quoteBn,
-              image: t.image
-            }))
-          ].map((tItem, idx) => (
-            <div 
-              key={idx}
-              className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft hover:shadow-heavy transition-all duration-300 flex flex-col justify-between relative group hover:-translate-y-2"
-            >
-              <div className="space-y-4 relative z-10">
-                <span className="text-4xl text-amber-500 font-serif leading-none select-none">“</span>
-                <p className="text-slate-700 dark:text-slate-300 italic font-medium leading-relaxed text-sm">
-                  {lang === 'bn' ? tItem.quoteBn : tItem.quoteEn}
-                </p>
-              </div>
+        {dbTestimonials.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {dbTestimonials.map((tItem, idx) => (
+              <div 
+                key={tItem.id || idx}
+                className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft hover:shadow-heavy transition-all duration-300 flex flex-col justify-between relative group hover:-translate-y-2"
+              >
+                <div className="space-y-4 relative z-10">
+                  <span className="text-4xl text-amber-500 font-serif leading-none select-none">“</span>
+                  <p className="text-slate-700 dark:text-slate-300 italic font-medium leading-relaxed text-sm">
+                    {lang === 'bn' ? tItem.quoteBn : tItem.quoteEn}
+                  </p>
+                </div>
 
-              <div className="flex items-center gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-600/30 bg-slate-100 dark:bg-slate-950 shrink-0">
-                  <MemberImage 
-                    src={tItem.image} 
-                    alt={lang === 'bn' ? tItem.nameBn : tItem.nameEn} 
-                  />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-black text-slate-900 dark:text-white text-sm truncate">
-                    {lang === 'bn' ? tItem.nameBn : tItem.nameEn}
-                  </h4>
-                  <div className="text-[10px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-wider truncate">
-                    {lang === 'bn' ? tItem.roleBn : tItem.roleEn}
+                <div className="flex items-center gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-600/30 bg-slate-100 dark:bg-slate-950 shrink-0">
+                    <MemberImage 
+                      src={tItem.image} 
+                      alt={lang === 'bn' ? tItem.nameBn : tItem.nameEn} 
+                    />
                   </div>
-                  <div className="text-[10px] font-bold text-slate-400 truncate">
-                    {lang === 'bn' ? tItem.locationBn : tItem.locationEn}
+                  <div className="min-w-0">
+                    <h4 className="font-black text-slate-900 dark:text-white text-sm truncate">
+                      {lang === 'bn' ? tItem.nameBn : tItem.nameEn}
+                    </h4>
+                    <div className="text-[10px] font-black text-blue-700 dark:text-amber-400 uppercase tracking-wider truncate">
+                      {lang === 'bn' ? tItem.roleBn : tItem.roleEn}
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-400 truncate">
+                      {lang === 'bn' ? tItem.locationBn : tItem.locationEn}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              {lang === 'bn' ? 'কোনো শুভকামনা বা অনুভূতি এখনও যুক্ত করা হয়নি' : 'No Testimonials Available'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Financial Transparency Chart Box */}

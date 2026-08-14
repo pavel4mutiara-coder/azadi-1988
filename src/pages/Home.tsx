@@ -44,16 +44,12 @@ export default function Home() {
     : [];
 
   // Organization Seal/Logo
-  const LOGO_URL = settings?.logo || "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
+  const LOGO_URL = settings?.logo?.trim() ? getOptimizedImageUrl(settings.logo.trim(), 200) : '';
 
   // Gallery preview images gathered from events & news
   const galleryImages = [
     ...recentEvents.map(e => ({ url: e.image, title: lang === 'bn' ? e.titleBn : e.titleEn })),
-    ...recentNews.map(n => ({ url: n.image, title: lang === 'bn' ? n.titleBn : n.titleEn })),
-    { url: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&auto=format&fit=crop&q=80", title: lang === 'bn' ? "বার্ষিক ক্রীড়া অনুষ্ঠান" : "Annual Sports Meet" },
-    { url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600", title: lang === 'bn' ? "বিনামূল্যে চিকিৎসা সেবা" : "Free Medical Camp" },
-    { url: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=600", title: lang === 'bn' ? "ত্রাণ বিতরণ কর্মসূচি" : "Emergency Relief Camp" },
-    { url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600", title: lang === 'bn' ? "প্রতিষ্ঠাবার্ষিকী অনুষ্ঠান" : "Founding Anniversary" }
+    ...recentNews.map(n => ({ url: n.image, title: lang === 'bn' ? n.titleBn : n.titleEn }))
   ].filter(item => Boolean(item.url)).slice(0, 6);
 
   return (
@@ -208,16 +204,32 @@ export default function Home() {
           
           {/* Visual Column */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-slate-950 group">
-              <img 
-                src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=800" 
-                alt="Azadi Social Welfare Activities" 
-                className="w-full h-64 sm:h-80 object-cover group-hover:scale-105 transition-transform duration-700"
-              />
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-slate-950 group h-64 sm:h-80 flex items-center justify-center">
+              {(recentEvents[0]?.image || recentNews[0]?.image || settings?.logo) ? (
+                <img 
+                  src={getOptimizedImageUrl(recentEvents[0]?.image || recentNews[0]?.image || settings?.logo, 800)} 
+                  alt="Azadi Social Welfare Activities" 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 flex flex-col items-center justify-center text-center space-y-3">
+                  <Award size={48} className="text-amber-400 opacity-80" />
+                  <span className="text-xs font-black uppercase text-slate-300 tracking-wider">
+                    {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
+                  </span>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent"></div>
               <div className="absolute bottom-4 left-4 right-4 p-4 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-800 text-white">
                 <div className="flex items-center gap-3">
-                  <img src={LOGO_URL} alt="Seal" className="w-10 h-10 object-contain rounded-full bg-white p-0.5" />
+                  {LOGO_URL ? (
+                    <img src={LOGO_URL} alt="Seal" referrerPolicy="no-referrer" className="w-10 h-10 object-contain rounded-full bg-white p-0.5 shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
+                      <Award size={20} />
+                    </div>
+                  )}
                   <div>
                     <div className="font-black text-xs text-amber-400 uppercase">
                       {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
@@ -365,7 +377,7 @@ export default function Home() {
               {lang === 'bn' ? 'আমাদের প্রভাব ও অর্জন' : 'Our Verified Impact'}
             </span>
             <h2 className="text-2xl sm:text-4xl font-black bengali text-white">
-              {lang === 'bn' ? 'সংখ্যার আলোয় আজাদী সংঘ' : 'Azadi Social Welfare in Numbers'}
+              {lang === 'bn' ? 'সংখ্যার আলোয় আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Organization in Numbers'}
             </h2>
           </div>
 
@@ -819,7 +831,7 @@ export default function Home() {
             return (
               <div key={leader.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-3 shadow-sm hover:shadow-md transition-all group">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full overflow-hidden border-2 border-blue-600/20 group-hover:border-blue-600 transition-colors">
-                  <MemberImage src={leader.image} alt={name} fallbackSrc={LOGO_URL} />
+                  <MemberImage src={leader.image} alt={name} />
                 </div>
                 <div className="space-y-0.5">
                   <h4 className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-tight bengali group-hover:text-blue-600 transition-colors">
@@ -843,7 +855,7 @@ export default function Home() {
               {lang === 'bn' ? 'শুভাকাঙ্ক্ষীদের অনুভূতি' : 'Community Voices'}
             </span>
             <h2 className="text-2xl sm:text-3xl font-black bengali text-white">
-              {lang === 'bn' ? 'আজাদী সংঘ সম্পর্কে বক্তব্য' : 'Words About Azadi Organization'}
+              {lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ সম্পর্কে বক্তব্য' : 'Voices About Azadi Social Welfare Organization'}
             </h2>
           </div>
 
@@ -885,13 +897,17 @@ export default function Home() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {galleryImages.map((img, i) => (
-            <div key={i} className="relative aspect-square rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 group shadow-sm">
-              <img 
-                src={getOptimizedImageUrl(img.url, 300)} 
-                alt={img.title} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                loading="lazy"
-              />
+            <div key={i} className="relative aspect-square rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 group shadow-sm flex items-center justify-center">
+              {img.url?.trim() ? (
+                <img 
+                  src={getOptimizedImageUrl(img.url.trim(), 300)} 
+                  alt={img.title} 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
+                />
+              ) : (
+                <ImageIcon size={24} className="text-slate-600" />
+              )}
               <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
                 <span className="text-[10px] font-black text-white leading-tight bengali line-clamp-2">{img.title}</span>
               </div>
@@ -965,7 +981,13 @@ export default function Home() {
           {/* Quick Map / Address Visual Card */}
           <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-900 to-slate-950 text-white border border-slate-800 space-y-4">
             <div className="flex items-center gap-3">
-              <img src={LOGO_URL} className="w-12 h-12 object-contain bg-white rounded-full p-1" alt="Seal" />
+              {LOGO_URL ? (
+                <img src={LOGO_URL} className="w-12 h-12 object-contain bg-white rounded-full p-1" alt="Seal" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
+                  <Award size={24} />
+                </div>
+              )}
               <div>
                 <h4 className="font-black text-sm text-white bengali">{lang === 'bn' ? settings?.nameBn : settings?.nameEn}</h4>
                 <p className="text-[10px] text-amber-400 font-black uppercase">{lang === 'bn' ? 'সিলেট সদর কেন্দ্র' : 'Sylhet Headquarters'}</p>

@@ -208,7 +208,7 @@ export const NewsPage: React.FC = () => {
             </div>
           </div>
 
-          {getNewsFields(selectedNews, lang).image && (
+          {Boolean(getNewsFields(selectedNews, lang).image?.trim()) && (
             <div className="rounded-3xl overflow-hidden max-h-[450px] bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
               <img
                 src={getOptimizedImageUrl(getNewsFields(selectedNews, lang).image, 1000)}
@@ -250,7 +250,7 @@ export const NewsPage: React.FC = () => {
         <div className="mb-16 group bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 rounded-4xl border border-blue-800/40 overflow-hidden shadow-heavy text-white">
           <div className="grid grid-cols-1 lg:grid-cols-12 items-center">
             <div className="lg:col-span-7 h-72 sm:h-96 lg:h-full overflow-hidden relative bg-slate-950">
-              {getNewsFields(featuredNews, lang).image ? (
+              {Boolean(getNewsFields(featuredNews, lang).image?.trim()) ? (
                 <img
                   src={getOptimizedImageUrl(getNewsFields(featuredNews, lang).image, 800)}
                   alt={getNewsFields(featuredNews, lang).title}
@@ -361,7 +361,7 @@ export const NewsPage: React.FC = () => {
                 className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-soft hover:shadow-heavy transition-all duration-300 flex flex-col hover:-translate-y-2"
               >
                 <div className="relative h-52 overflow-hidden bg-slate-100 dark:bg-slate-950">
-                  {fields.image ? (
+                  {Boolean(fields.image?.trim()) ? (
                     <img
                       src={getOptimizedImageUrl(fields.image, 600)}
                       alt={fields.title}

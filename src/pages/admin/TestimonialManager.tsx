@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db, formatFirebaseError } from '../../lib/firebase';
 import { Testimonial } from '../../types';
-import { uploadImage } from '../../utils/uploadImage';
 import { 
   Check, 
   Trash2, 
@@ -33,7 +32,6 @@ export const TestimonialManager: React.FC = () => {
   const t = TRANSLATIONS[lang];
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
   const [testimonialForm, setTestimonialForm] = useState({
@@ -65,35 +63,8 @@ export const TestimonialManager: React.FC = () => {
     });
   };
 
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert(lang === 'bn' ? 'দয়া করে একটি বৈধ ছবি ফাইল নির্বাচন করুন।' : 'Please select a valid image file.');
-      return;
-    }
-    setUploadingImage(true);
-    try {
-      const url = await uploadImage(file, 'testimonials', {
-        maxWidth: 400,
-        maxHeight: 400,
-        quality: 0.8
-      });
-      setTestimonialForm(prev => ({ ...prev, image: url }));
-    } catch (err) {
-      console.error("Error uploading testimonial image:", err);
-      alert(formatFirebaseError(err, lang));
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (uploadingImage) {
-      alert(lang === 'bn' ? 'ছবি আপলোড হওয়া পর্যন্ত অপেক্ষা করুন...' : 'Please wait until image upload completes...');
-      return;
-    }
     if (!editingTestimonialId) return;
     setActionLoadingId(editingTestimonialId);
     try {
@@ -458,25 +429,26 @@ export const TestimonialManager: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {lang === 'bn' ? 'ছবি (Photo)' : 'Photo'}
+                  {lang === 'bn' ? 'ছবি (Photo URL)' : 'Photo URL'}
                 </label>
-                <div className="flex items-center gap-3">
-                  {testimonialForm.image && (
+                <input
+                  type="url"
+                  placeholder="https://example.com/photo.jpg or Google Drive URL"
+                  value={testimonialForm.image}
+                  onChange={e => setTestimonialForm({ ...testimonialForm, image: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs font-semibold text-slate-900 dark:text-slate-100"
+                />
+                {Boolean(testimonialForm.image?.trim()) && (
+                  <div className="flex items-center gap-3 pt-2">
                     <img 
                       src={testimonialForm.image} 
                       alt="Preview" 
                       className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-800" 
+                      referrerPolicy="no-referrer"
                     />
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
-                    disabled={uploadingImage}
-                    className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-white hover:file:bg-amber-600 cursor-pointer"
-                  />
-                  {uploadingImage && <Loader2 size={16} className="animate-spin text-amber-500" />}
-                </div>
+                    <span className="text-[10px] text-slate-400 truncate max-w-xs">{testimonialForm.image}</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

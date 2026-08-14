@@ -1,46 +1,90 @@
 {
   "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrator registry and access control metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["superadmin", "admin", "editor"] },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "active"]
+    },
     "Donation": {
       "title": "Donation",
-      "description": "Information about a donation made by a user",
+      "description": "Public safe donation record without sensitive PII",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "donorName": { "type": "string" },
+        "donorName": { "type": "string", "maxLength": 200 },
+        "name": { "type": "string", "maxLength": 200 },
         "isAnonymous": { "type": "boolean" },
+        "anonymous": { "type": "boolean" },
         "amount": { "type": "number" },
-        "phone": { "type": "string" },
-        "email": { "type": "string" },
-        "transactionId": { "type": "string" },
-        "purpose": { "type": "string" },
+        "currency": { "type": "string" },
+        "purpose": { "type": "string", "maxLength": 200 },
         "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "approved": { "type": "boolean" },
         "date": { "type": "string" },
-        "paymentMethod": { "type": "string" }
+        "paymentMethod": { "type": "string", "maxLength": 100 },
+        "method": { "type": "string", "maxLength": 100 },
+        "receiptId": { "type": "string", "maxLength": 128 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "donorName", "isAnonymous", "amount", "phone", "transactionId", "purpose", "status", "date", "paymentMethod"]
+      "required": ["id", "amount", "purpose", "date"]
+    },
+    "PrivateDonorInfo": {
+      "title": "PrivateDonorInfo",
+      "description": "Isolated sensitive donor contact details and transaction reference",
+      "type": "object",
+      "properties": {
+        "donorName": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 200 },
+        "address": { "type": "string", "maxLength": 500 },
+        "transactionId": { "type": "string", "maxLength": 128 },
+        "paymentReference": { "type": "string", "maxLength": 200 },
+        "privateNotes": { "type": "string", "maxLength": 1000 },
+        "updatedAt": { "type": "string" }
+      }
     },
     "Leadership": {
       "title": "Leadership",
-      "description": "Committee members and organization leadership info",
+      "description": "Executive and Committee members of the organization",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "nameEn": { "type": "string" },
-        "nameBn": { "type": "string" },
-        "designationEn": { "type": "string" },
-        "designationBn": { "type": "string" },
-        "subDesignationEn": { "type": "string" },
-        "subDesignationBn": { "type": "string" },
-        "category": { "type": "string", "enum": ["leader", "executive", "advisor", "volunteer", "member"] },
-        "messageEn": { "type": "string" },
-        "messageBn": { "type": "string" },
-        "phone": { "type": "string" },
+        "nameEn": { "type": "string", "maxLength": 200 },
+        "nameBn": { "type": "string", "maxLength": 200 },
+        "designationEn": { "type": "string", "maxLength": 200 },
+        "designationBn": { "type": "string", "maxLength": 200 },
+        "subDesignationEn": { "type": "string", "maxLength": 200 },
+        "subDesignationBn": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string" },
         "image": { "type": "string" },
+        "phone": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 200 },
+        "bioEn": { "type": "string", "maxLength": 5000 },
+        "bioBn": { "type": "string", "maxLength": 5000 },
+        "quoteEn": { "type": "string", "maxLength": 5000 },
+        "quoteBn": { "type": "string", "maxLength": 5000 },
+        "messageEn": { "type": "string", "maxLength": 5000 },
+        "messageBn": { "type": "string", "maxLength": 5000 },
         "order": { "type": "number" },
+        "sortOrder": { "type": "number" },
+        "active": { "type": "boolean" },
         "status": { "type": "string", "enum": ["active", "inactive"] },
-        "createdAt": { "type": "string" }
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "nameEn", "nameBn", "designationEn", "designationBn", "messageEn", "messageBn", "phone", "image", "order"]
+      "required": ["id", "nameEn", "nameBn", "designationEn", "designationBn", "image", "order"]
     },
     "Event": {
       "title": "Event",
@@ -48,55 +92,72 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "titleEn": { "type": "string" },
-        "titleBn": { "type": "string" },
-        "descriptionEn": { "type": "string" },
-        "descriptionBn": { "type": "string" },
-        "locationEn": { "type": "string" },
-        "locationBn": { "type": "string" },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleBn": { "type": "string", "maxLength": 200 },
+        "descriptionEn": { "type": "string", "maxLength": 5000 },
+        "descriptionBn": { "type": "string", "maxLength": 5000 },
+        "locationEn": { "type": "string", "maxLength": 500 },
+        "locationBn": { "type": "string", "maxLength": 500 },
         "date": { "type": "string" },
         "image": { "type": "string" },
-        "meetUrl": { "type": "string" }
+        "status": { "type": "string" },
+        "time": { "type": "string" },
+        "meetUrl": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["id", "titleEn", "titleBn", "descriptionEn", "descriptionBn", "locationEn", "locationBn", "date", "image"]
     },
     "Notice": {
       "title": "Notice",
-      "description": "Important announcements/notices published by the admin",
+      "description": "Important administrative notices and updates",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "titleEn": { "type": "string" },
-        "titleBn": { "type": "string" },
-        "contentEn": { "type": "string" },
-        "contentBn": { "type": "string" },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleBn": { "type": "string", "maxLength": 200 },
+        "contentEn": { "type": "string", "maxLength": 10000 },
+        "contentBn": { "type": "string", "maxLength": 10000 },
         "date": { "type": "string" },
-        "isUrgent": { "type": "boolean" }
+        "priority": { "type": "string" },
+        "isUrgent": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "attachmentUrl": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "titleEn", "titleBn", "contentEn", "contentBn", "date", "isUrgent"]
+      "required": ["id", "titleEn", "titleBn", "contentEn", "contentBn", "date"]
     },
     "News": {
       "title": "News",
-      "description": "Latest stories or articles about the organization activities",
+      "description": "Press releases and published news articles",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "titleEn": { "type": "string" },
-        "titleBn": { "type": "string" },
-        "contentEn": { "type": "string" },
-        "contentBn": { "type": "string" },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleBn": { "type": "string", "maxLength": 200 },
+        "contentEn": { "type": "string", "maxLength": 10000 },
+        "contentBn": { "type": "string", "maxLength": 10000 },
         "date": { "type": "string" },
-        "image": { "type": "string" }
+        "image": { "type": "string" },
+        "author": { "type": "string" },
+        "published": { "type": "boolean" },
+        "publishedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["id", "titleEn", "titleBn", "contentEn", "contentBn", "date", "image"]
     },
     "OrganizationSettings": {
       "title": "OrganizationSettings",
-      "description": "General profile settings for the organization",
+      "description": "System-wide branding and contact configurations",
       "type": "object",
       "properties": {
         "nameBn": { "type": "string" },
         "nameEn": { "type": "string" },
+        "organizationNameBn": { "type": "string" },
+        "organizationNameEn": { "type": "string" },
         "sloganBn": { "type": "string" },
         "sloganEn": { "type": "string" },
         "addressBn": { "type": "string" },
@@ -107,62 +168,110 @@
         "establishedEn": { "type": "string" },
         "logo": { "type": "string" },
         "flag": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "faviconUrl": { "type": "string" },
+        "website": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "secondaryColor": { "type": "string" },
         "adminWhatsApp": { "type": "string" },
+        "whatsapp": { "type": "string" },
         "bkash": { "type": "string" },
         "nagad": { "type": "string" },
         "roket": { "type": "string" },
         "facebook": { "type": "string" },
         "youtube": { "type": "string" },
-        "whatsappChannel": { "type": "string" }
+        "whatsappChannel": { "type": "string" },
+        "googleChatSpace": { "type": "string" },
+        "googleChatEnabled": { "type": "boolean" },
+        "googleChatNotifyOnReceipt": { "type": "boolean" },
+        "googleChatNotifyOnApproval": { "type": "boolean" },
+        "googleChatNotifyOnExpense": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["nameBn", "nameEn", "sloganBn", "sloganEn", "addressBn", "addressEn", "phone", "email", "establishedBn", "establishedEn", "logo", "flag"]
+      "required": ["nameBn", "nameEn", "phone", "email"]
     },
     "LetterheadConfig": {
       "title": "LetterheadConfig",
-      "description": "Signatory letterhead setup",
+      "description": "Signatory letterhead setup and document template configuration",
       "type": "object",
       "properties": {
         "leaderName": { "type": "string" },
         "designation": { "type": "string" },
         "signature": { "type": "string" },
         "stampText": { "type": "string" },
-        "bodyText": { "type": "string" }
+        "bodyText": { "type": "string" },
+        "organizationNameBn": { "type": "string" },
+        "organizationNameEn": { "type": "string" },
+        "addressBn": { "type": "string" },
+        "addressEn": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "signatureUrl": { "type": "string" },
+        "footerBn": { "type": "string" },
+        "footerEn": { "type": "string" },
+        "signatureWidth": { "type": "number" },
+        "signatureYOffset": { "type": "number" },
+        "signatureXOffset": { "type": "number" },
+        "signatureRotation": { "type": "number" },
+        "signatureOpacity": { "type": "number" },
+        "qrEnabled": { "type": "boolean" },
+        "qrSize": { "type": "number" },
+        "qrPosition": { "type": "string" },
+        "qrCustomText": { "type": "string" },
+        "qrXOffset": { "type": "number" },
+        "qrYOffset": { "type": "number" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["leaderName", "designation", "signature", "stampText", "bodyText"]
     },
     "Testimonial": {
       "title": "Testimonial",
-      "description": "User shared testimonial or story",
+      "description": "User shared testimonial or impact story",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "name": { "type": "string" },
         "nameEn": { "type": "string" },
         "nameBn": { "type": "string" },
+        "designation": { "type": "string" },
         "roleEn": { "type": "string" },
         "roleBn": { "type": "string" },
         "locationEn": { "type": "string" },
         "locationBn": { "type": "string" },
         "quoteEn": { "type": "string" },
         "quoteBn": { "type": "string" },
+        "messageEn": { "type": "string" },
+        "messageBn": { "type": "string" },
         "image": { "type": "string" },
+        "rating": { "type": "number" },
+        "approved": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED"] },
         "createdAt": { "type": "string" },
-        "status": { "type": "string", "enum": ["PENDING", "APPROVED"] }
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "nameEn", "quoteEn", "image", "createdAt", "status"]
+      "required": ["id", "image", "createdAt"]
     },
     "Expense": {
       "title": "Expense",
-      "description": "Financial ledger expense items",
+      "description": "Financial ledger expense vouchers and records",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "amount": { "type": "number" },
+        "title": { "type": "string" },
         "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "description": { "type": "string" },
         "descriptionEn": { "type": "string" },
         "descriptionBn": { "type": "string" },
-        "date": { "type": "string" }
+        "date": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "amount", "category", "descriptionEn", "descriptionBn", "date"]
+      "required": ["id", "amount", "category", "date"]
     },
     "VersionConfig": {
       "title": "VersionConfig",
@@ -170,18 +279,59 @@
       "type": "object",
       "properties": {
         "latestVersion": { "type": "string" },
+        "version": { "type": "string" },
         "buildNumber": { "type": "number" },
+        "build": { "type": "number" },
         "releaseDate": { "type": "string" },
         "releaseNotes": { "type": "string" },
         "forceUpdate": { "type": "boolean" },
         "apkDownloadUrl": { "type": "string" },
         "updateSize": { "type": "string" },
-        "playStoreUrl": { "type": "string" }
+        "playStoreUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["latestVersion", "buildNumber", "releaseDate", "releaseNotes", "forceUpdate"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Append-only administrative action audit log trail",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "collection": { "type": "string" },
+        "targetCollection": { "type": "string" },
+        "documentId": { "type": "string" },
+        "targetDocId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["id", "action", "userId", "userEmail"]
+    },
+    "PublicStats": {
+      "title": "PublicStats",
+      "description": "Public aggregated statistical metrics for donations",
+      "type": "object",
+      "properties": {
+        "totalAmount": { "type": "number" },
+        "totalApprovedAmount": { "type": "number" },
+        "totalDonations": { "type": "number" },
+        "totalApprovedDonations": { "type": "number" },
+        "monthlyAmount": { "type": "number" },
+        "monthlyDonations": { "type": "number" },
+        "lastUpdated": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
     }
   },
   "firestore": {
+    "admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Registry of authorized administrators and roles"
+    },
     "settings/config": {
       "schema": { "$ref": "#/entities/OrganizationSettings" },
       "description": "Single document holding the general system-wide Settings"
@@ -196,15 +346,19 @@
     },
     "donations/{donationId}": {
       "schema": { "$ref": "#/entities/Donation" },
-      "description": "Collections of donations"
+      "description": "Collection of public donation entries"
+    },
+    "donations/{donationId}/private_info/{docId}": {
+      "schema": { "$ref": "#/entities/PrivateDonorInfo" },
+      "description": "Isolated private subcollection for sensitive donor PII and transaction records"
     },
     "leadership/{leaderId}": {
       "schema": { "$ref": "#/entities/Leadership" },
-      "description": "Collections of leaders"
+      "description": "Collection of organization leaders and committee members"
     },
     "events/{eventId}": {
       "schema": { "$ref": "#/entities/Event" },
-      "description": "Collections of organization events"
+      "description": "Collection of organization events"
     },
     "notices/{noticeId}": {
       "schema": { "$ref": "#/entities/Notice" },
@@ -221,6 +375,14 @@
     "expenses/{expenseId}": {
       "schema": { "$ref": "#/entities/Expense" },
       "description": "Collection of financial expense items"
+    },
+    "audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Collection of immutable administrative audit trails"
+    },
+    "public_stats/donations": {
+      "schema": { "$ref": "#/entities/PublicStats" },
+      "description": "Document holding aggregate statistical summary"
     }
   }
 }

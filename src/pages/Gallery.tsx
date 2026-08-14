@@ -172,15 +172,21 @@ export const Gallery: React.FC = () => {
               <div
                 key={item.id}
                 onClick={() => setSelectedPhoto(item)}
-                className="group relative bg-slate-900 rounded-3xl overflow-hidden shadow-soft hover:shadow-heavy transition-all duration-500 cursor-pointer aspect-4/3 hover:-translate-y-2 border border-slate-200 dark:border-slate-800"
+                className="group relative bg-slate-900 rounded-3xl overflow-hidden shadow-soft hover:shadow-heavy transition-all duration-500 cursor-pointer aspect-4/3 hover:-translate-y-2 border border-slate-200 dark:border-slate-800 flex items-center justify-center"
               >
-                <img
-                  src={getOptimizedImageUrl(item.url, 600)}
-                  alt={title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
-                  onError={() => logImageLoadFailure(item.url, "Gallery Item")}
-                />
+                {Boolean(item.url?.trim()) ? (
+                  <img
+                    src={getOptimizedImageUrl(item.url.trim(), 600)}
+                    alt={title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
+                    onError={() => logImageLoadFailure(item.url, "Gallery Item")}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-900 text-slate-400">
+                    <ImageIcon size={36} />
+                  </div>
+                )}
 
                 {/* Dark Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
@@ -245,12 +251,14 @@ export const Gallery: React.FC = () => {
 
             {/* Modal Body: Large Image */}
             <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden p-4">
-              <img
-                src={getOptimizedImageUrl(selectedPhoto.url, 1200)}
-                alt={selectedPhoto.titleEn}
-                referrerPolicy="no-referrer"
-                className="max-h-[60vh] w-auto max-w-full object-contain rounded-2xl"
-              />
+              {Boolean(selectedPhoto.url?.trim()) && (
+                <img
+                  src={getOptimizedImageUrl(selectedPhoto.url.trim(), 1200)}
+                  alt={selectedPhoto.titleEn}
+                  referrerPolicy="no-referrer"
+                  className="max-h-[60vh] w-auto max-w-full object-contain rounded-2xl"
+                />
+              )}
             </div>
 
             {/* Modal Footer */}

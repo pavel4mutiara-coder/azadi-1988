@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS, MOBILE_NAV_ITEMS } from '../utils/constants';
+import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS, MOBILE_NAV_ITEMS, ORGANIZATION_NAME } from '../utils/constants';
 import { Link, useLocation } from 'react-router-dom';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 import { 
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
   Loader2, Users, Calendar, Facebook, Youtube, MessageCircle, 
   DownloadCloud, X, Share, BellRing, ChevronRight, ChevronDown,
   PlusSquare, ArrowUp, PieChart, Home, Sparkles, Lock, Menu,
   Award, Shield, ExternalLink, CheckCircle2, Image as ImageIcon,
-  Info, Newspaper, Contact, MoreHorizontal, FileText, MessageSquare, History, Settings, LayoutDashboard
+  Info, Newspaper, Contact, MoreHorizontal, FileText, MessageSquare, History, Settings, LayoutDashboard,
+  AlertCircle
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -33,10 +35,15 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  // Sync document lang attribute
+  // Sync document lang and document title dynamically based on selected language
   useEffect(() => {
     document.documentElement.lang = lang;
-  }, [lang]);
+    const orgName = lang === 'bn' 
+      ? (settings?.nameBn || ORGANIZATION_NAME.bn) 
+      : (settings?.nameEn || ORGANIZATION_NAME.en);
+    const suffix = lang === 'bn' ? 'সিলেট' : 'Sylhet';
+    document.title = `${orgName} | ${suffix}`;
+  }, [lang, settings?.nameBn, settings?.nameEn]);
 
   // Prevent body scrolling when mobile menu drawer is open
   useEffect(() => {
@@ -113,16 +120,38 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsDismissed(true);
   };
 
-  const LATEST_LOGO = "https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh";
+  const OrganizationSeal = ({ className = "w-11 h-11" }: { className?: string }) => {
+    const [imgError, setImgError] = useState(false);
+    const rawLogo = settings?.logo?.trim();
+    const logoUrl = rawLogo ? getOptimizedImageUrl(rawLogo, 200) : '';
 
-  const OrganizationSeal = ({ className = "w-11 h-11" }: { className?: string }) => (
-    <div className={`${className} relative rounded-full border-[2.5px] border-blue-700 dark:border-blue-500 bg-white p-0.5 shadow-md overflow-hidden flex items-center justify-center group-hover:scale-105 transition-all duration-300 ring-2 ring-amber-500/20 shrink-0`}>
-      <div className="absolute inset-0 border border-amber-500/30 rounded-full"></div>
-      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white relative z-10">
-        <img src={LATEST_LOGO} alt="Azadi Seal" className="w-full h-full object-contain p-0.5" />
+    useEffect(() => {
+      setImgError(false);
+    }, [rawLogo]);
+
+    return (
+      <div className={`${className} relative rounded-full border-[2.5px] border-blue-700 dark:border-blue-500 bg-white dark:bg-slate-900 p-0.5 shadow-md overflow-hidden flex items-center justify-center group-hover:scale-105 transition-all duration-300 ring-2 ring-amber-500/20 shrink-0`}>
+        <div className="absolute inset-0 border border-amber-500/30 rounded-full"></div>
+        <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-slate-900 relative z-10">
+          {logoUrl && !imgError ? (
+            <img 
+              src={logoUrl} 
+              alt="Azadi Seal" 
+              referrerPolicy="no-referrer" 
+              className="w-full h-full object-contain p-0.5" 
+              onError={() => setImgError(true)}
+            />
+          ) : imgError ? (
+            <div className="w-full h-full flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-1" title="Logo load failed">
+              <AlertCircle className="w-full h-full text-rose-500" />
+            </div>
+          ) : (
+            <Award className="w-3/5 h-3/5 text-amber-500 dark:text-amber-400" />
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const getSafeUrl = (url: string) => {
     if (!url) return '';
@@ -235,11 +264,27 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             {!showIOSInstructions ? (
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-blue-50 dark:bg-blue-950/50 rounded-2xl flex items-center justify-center p-2 shrink-0 border border-blue-100 dark:border-blue-900/50 shadow-inner">
-                  <img src={LATEST_LOGO} className="w-full h-full object-contain" alt="App Icon" />
+                  {settings?.logo?.trim() ? (
+                    <img 
+                      src={getOptimizedImageUrl(settings.logo.trim(), 200)} 
+                      className="w-full h-full object-contain" 
+                      alt="App Icon" 
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <Award className="w-8 h-8 text-blue-600" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 pr-6">
-                  <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight bengali">অ্যাপ হিসেবে ব্যবহার করুন</h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 bengali leading-tight">দ্রুত ও অফলাইনে ব্যবহারের জন্য আজাদী অ্যাপটি মোবাইলে ইন্সটল করুন।</p>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight bengali">
+                    {lang === 'bn' ? 'অ্যাপ হিসেবে ব্যবহার করুন' : 'Install as Web App'}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 bengali leading-tight">
+                    {lang === 'bn' 
+                      ? 'দ্রুত ও অফলাইনে ব্যবহারের জন্য আজাদী সমাজ কল্যাণ সংঘ অ্যাপটি মোবাইলে ইন্সটল করুন।' 
+                      : 'Install the Azadi Social Welfare Organization app for fast and offline access.'}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -317,7 +362,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <OrganizationSeal className="w-8 h-8 sm:w-9 sm:h-9 shrink-0" />
             <div className="flex flex-col justify-center min-w-0 max-w-[170px] sm:max-w-[210px] lg:max-w-[190px] xl:max-w-[240px] 2xl:max-w-none">
               <h1 className="text-[11px] sm:text-xs xl:text-sm font-black uppercase leading-tight text-slate-900 dark:text-white bengali tracking-tight">
-                {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
+                {lang === 'bn' ? (settings?.nameBn || ORGANIZATION_NAME.bn) : (settings?.nameEn || ORGANIZATION_NAME.en)}
               </h1>
               <p className="text-[9px] text-blue-700 dark:text-amber-400 font-bold uppercase bengali tracking-wider mt-0.5 hidden 2xl:block whitespace-nowrap">
                 {lang === 'bn' ? settings?.sloganBn || 'শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া' : settings?.sloganEn || 'Education · Unity · Service · Peace · Sports'}
@@ -572,7 +617,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                 <OrganizationSeal className="w-10 h-10" />
                 <div>
                   <h3 className="font-black text-sm text-white bengali leading-tight">
-                    {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
+                    {lang === 'bn' ? (settings?.nameBn || ORGANIZATION_NAME.bn) : (settings?.nameEn || ORGANIZATION_NAME.en)}
                   </h3>
                   <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider bengali mt-0.5">
                     {lang === 'bn' ? 'প্রতিষ্ঠিত ১৯৮৮' : 'Established 1988'}
@@ -750,7 +795,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                 <OrganizationSeal className="w-12 h-12" />
                 <div>
                   <h3 className="font-black text-base text-white leading-tight bengali">
-                    {lang === 'bn' ? settings?.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ' : settings?.nameEn || 'Azadi Social Welfare Organization'}
+                    {lang === 'bn' ? (settings?.nameBn || ORGANIZATION_NAME.bn) : (settings?.nameEn || ORGANIZATION_NAME.en)}
                   </h3>
                   <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest mt-0.5 bengali">
                     {lang === 'bn' ? 'প্রতিষ্ঠিত: ১০ জুন ১৯৮৮' : 'Established: 10 June 1988'}

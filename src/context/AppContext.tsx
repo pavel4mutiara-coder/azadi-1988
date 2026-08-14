@@ -19,6 +19,7 @@ import {
 } from '../types';
 import { CURRENT_VERSION } from '../utils/version';
 import { INITIAL_COMMITTEE } from '../utils/committee';
+import { normalizeGoogleDriveUrl } from '../utils/normalizeGoogleDriveImage';
 import { 
   collection, 
   collectionGroup,
@@ -134,17 +135,17 @@ interface AppState {
 }
 
 const DEFAULT_SETTINGS: OrganizationSettings = {
-  nameBn: "আজাদী সোস্যাল ওয়েলফেয়ার অর্গানাইজেশন",
+  nameBn: "আজাদী সমাজ কল্যাণ সংঘ",
   nameEn: "Azadi Social Welfare Organization",
-  sloganBn: "মানবতার সেবায় আত্মনিবেদিত এক সামাজিক সংগঠন",
-  sloganEn: "A Social Welfare Organization Dedicated to Humanity",
-  addressBn: "আজাদী, বাকলিয়া, চট্টগ্রাম, বাংলাদেশ",
-  addressEn: "Azadi, Bakalia, Chattogram, Bangladesh",
+  sloganBn: "শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া",
+  sloganEn: "Education · Unity · Service · Peace · Sports",
+  addressBn: "মিরবক্সটুলা, সিলেট, বাংলাদেশ",
+  addressEn: "Mirbox Tula, Sylhet, Bangladesh",
   phone: "01712782564",
   email: "azadisocialwelfareorganization@gmail.com",
-  establishedBn: "২০২৪",
-  establishedEn: "2024",
-  logo: "",
+  establishedBn: "১০ জুন ১৯৮৮",
+  establishedEn: "10 June 1988",
+  logo: "https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
   flag: "",
   adminWhatsApp: "8801712782564",
   bkash: "01712782564",
@@ -162,9 +163,9 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
 
 const DEFAULT_LETTERHEAD: LetterheadConfig = {
   leaderName: "মোঃ সভাপতি",
-  designation: "সভাপতি, আজাদী সোস্যাল ওয়েলফেয়ার অর্গানাইজেশন",
+  designation: "সভাপতি, আজাদী সমাজ কল্যাণ সংঘ",
   signature: "",
-  stampText: "আজাদী সোস্যাল ওয়েলফেয়ার অর্গানাইজেশন - সিলমোহর",
+  stampText: "আজাদী সমাজ কল্যাণ সংঘ - সিলমোহর",
   bodyText: "এতদ্বারা সর্বসাধারণের অবগতির জন্য জানানো যাইতেছে যে..."
 };
 
@@ -703,9 +704,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Auto-migrate legacy flat donation documents
-    runDonationDataMigration();
-
     // Expenses listener
     const unsubExpenses = onSnapshot(query(collection(db, 'expenses'), limit(100)), { includeMetadataChanges: true }, (snap) => {
       const list: Expense[] = [];
@@ -1147,57 +1145,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Safe migration helper: moves legacy flat donation fields to private_info subcollection
-  const runDonationDataMigration = async () => {
-    if (!auth.currentUser) return;
-    if (localStorage.getItem('azadi_donation_migration_completed') === 'true') return;
-    try {
-      const snap = await getDocs(collection(db, 'donations'));
-      let migratedCount = 0;
-      const allDocs: Donation[] = [];
-      for (const dDoc of snap.docs) {
-        const data = dDoc.data();
-        const id = dDoc.id;
-        if (data.phone !== undefined || data.transactionId !== undefined || data.email !== undefined || data.address !== undefined) {
-          const privateDetails = {
-            donorName: data.donorName || '',
-            phone: data.phone || '',
-            email: data.email || '',
-            address: data.address || '',
-            transactionId: data.transactionId || id,
-            paymentReference: data.paymentReference || '',
-            privateNotes: data.privateNotes || ''
-          };
-          const publicDetails = {
-            id,
-            donorName: data.isAnonymous ? (lang === 'bn' ? 'বেনামী' : 'Anonymous') : (data.donorName || 'Anonymous Giver'),
-            isAnonymous: Boolean(data.isAnonymous),
-            amount: Number(data.amount) || 0,
-            purpose: data.purpose || 'General Welfare',
-            status: data.status || DonationStatus.PENDING,
-            date: data.date || new Date().toISOString(),
-            paymentMethod: data.paymentMethod || 'bKash',
-            receiptId: data.receiptId || `REC-${id.slice(-8)}`,
-            isPublic: data.isPublic !== false
-          };
-          await setDoc(doc(db, 'donations', id, 'private_info', 'details'), privateDetails);
-          await setDoc(doc(db, 'donations', id), publicDetails);
-          migratedCount++;
-          allDocs.push({ ...publicDetails, ...privateDetails } as Donation);
-        } else {
-          allDocs.push({ ...data, id } as Donation);
-        }
-      }
-      if (migratedCount > 0) {
-        console.log(`[DATA MIGRATION] Migrated ${migratedCount} donation records to private subcollections.`);
-      }
-      await updatePublicStatsAggregate(allDocs);
-      localStorage.setItem('azadi_donation_migration_completed', 'true');
-    } catch (err) {
-      console.warn("[DATA MIGRATION] Migration check notice:", err);
-    }
-  };
-
   const addDonation = async (donation: Donation) => {
     // Optimistic UI update
     setRawDonations(prev => {
@@ -1275,7 +1222,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const { createChatCard } = await import('../utils/googleChat');
           const cardsV2 = createChatCard(
-            lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Society',
+            lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Organization',
             lang === 'bn' ? 'অনুদান অনুমোদন বিজ্ঞপ্তি' : 'Donation Approval Notification',
             [
               {
@@ -1362,9 +1309,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveSettings = async (newSettings: OrganizationSettings) => {
     try {
+      const cleanSettings: OrganizationSettings = {
+        ...newSettings,
+        logo: normalizeGoogleDriveUrl(newSettings.logo)
+      };
+      setSettings(cleanSettings);
       recordSyncEvent('settings', 'local');
-      await withSync(() => setDoc(doc(db, 'settings', 'config'), newSettings));
-      await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: newSettings.nameEn });
+      await withSync(() => setDoc(doc(db, 'settings', 'config'), cleanSettings));
+      await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: cleanSettings.nameEn, logo: cleanSettings.logo });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/config');
       throw error;
@@ -1556,7 +1508,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('SAVE_EVENT', 'events', cleanEvent.id, { titleEn: cleanEvent.titleEn });
     } catch (error) {
       setEvents(prevList);
-      localStorage.setItem('azadi_events', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.WRITE, `events/${event.id}`);
       throw error;
     }
@@ -1570,7 +1521,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('DELETE_EVENT', 'events', id);
     } catch (error) {
       setEvents(prevList);
-      localStorage.setItem('azadi_events', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
       throw error;
     }
@@ -1595,7 +1545,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('SAVE_NOTICE', 'notices', cleanNotice.id, { titleEn: cleanNotice.titleEn });
     } catch (error) {
       setNotices(prevList);
-      localStorage.setItem('azadi_notices', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.WRITE, `notices/${notice.id}`);
       throw error;
     }
@@ -1609,7 +1558,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('DELETE_NOTICE', 'notices', id);
     } catch (error) {
       setNotices(prevList);
-      localStorage.setItem('azadi_notices', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
       throw error;
     }
@@ -1634,7 +1582,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('SAVE_NEWS', 'news', cleanNews.id, { titleEn: cleanNews.titleEn });
     } catch (error) {
       setNews(prevList);
-      localStorage.setItem('azadi_news', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.WRITE, `news/${item.id}`);
       throw error;
     }
@@ -1648,7 +1595,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAuditTrail('DELETE_NEWS', 'news', id);
     } catch (error) {
       setNews(prevList);
-      localStorage.setItem('azadi_news', JSON.stringify(prevList));
       handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
       throw error;
     }
@@ -1670,7 +1616,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const { createChatCard } = await import('../utils/googleChat');
           const cardsV2 = createChatCard(
-            lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Society',
+            lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ' : 'Azadi Social Welfare Organization',
             lang === 'bn' ? 'খরচের এন্ট্রি রেকর্ড' : 'Expense Record Notification',
             [
               {

@@ -25,8 +25,14 @@ export const ISLAMIC_QUOTES = [
   }
 ];
 
+export const ORGANIZATION_NAME = {
+  bn: "আজাদী সমাজ কল্যাণ সংঘ",
+  en: "Azadi Social Welfare Organization"
+} as const;
+
 export const TRANSLATIONS = {
   en: {
+    organizationName: "Azadi Social Welfare Organization",
     home: "Home",
     leadership: "Leadership",
     events: "Events",
@@ -93,6 +99,7 @@ export const TRANSLATIONS = {
     more: "More"
   },
   bn: {
+    organizationName: "আজাদী সমাজ কল্যাণ সংঘ",
     home: "হোম",
     leadership: "নেতৃবৃন্দ",
     events: "ইভেন্টস",

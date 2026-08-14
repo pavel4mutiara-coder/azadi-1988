@@ -12,7 +12,7 @@ import QRCode from 'qrcode';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { formatFirebaseError } from '../../lib/firebase';
-import { uploadImage } from '../../utils/uploadImage';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 const LetterheadStyles = () => (
   <style>{`
@@ -378,58 +378,9 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
   const clearCanvas = () => canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   const saveSignatureFromCanvas = () => {
     if (canvasRef.current) {
-      canvasRef.current.toBlob(async (blob) => {
-        if (!blob) return;
-        try {
-          const downloadUrl = await uploadImage(blob, 'letterhead', {
-            fileName: `signature_${Date.now()}.png`
-          });
-          setLocalConfig(prev => ({ ...prev, signature: downloadUrl }));
-          alert(lang === 'bn' ? 'স্বাক্ষর ক্যাপচার ও আপলোড করা হয়েছে!' : 'Signature captured and uploaded successfully!');
-        } catch (err) {
-          console.error("Signature canvas upload error:", err);
-          alert(formatFirebaseError(err, lang));
-        }
-      });
-    }
-  };
-
-  const handleSignatureUpload = async (file: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert(lang === 'bn' ? 'অনুগ্রহ করে শুধুমাত্র ছবি ফাইল আপলোড করুন!' : 'Please upload an image file only!');
-      return;
-    }
-    try {
-      const downloadUrl = await uploadImage(file, 'letterhead', {
-        maxWidth: 500,
-        maxHeight: 250,
-        quality: 0.8
-      });
-      setLocalConfig(prev => ({ ...prev, signature: downloadUrl }));
-      alert(lang === 'bn' ? 'স্বাক্ষর ইমেজ সফলভাবে আপলোড করা হয়েছে!' : 'Signature image successfully uploaded!');
-    } catch (err) {
-      console.error("Signature upload error:", err);
-      alert(formatFirebaseError(err, lang));
-    }
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleSignatureUpload(e.dataTransfer.files[0]);
+      const dataUrl = canvasRef.current.toDataURL('image/png');
+      setLocalConfig(prev => ({ ...prev, signature: dataUrl }));
+      alert(lang === 'bn' ? 'স্বাক্ষর ড্রাইং যুক্ত করা হয়েছে!' : 'Signature added to letterhead!');
     }
   };
 
@@ -1257,47 +1208,25 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
               </div>
             )}
 
-            {/* Upload signature content */}
+            {/* Upload/URL signature content */}
             {signatureTab === 'upload' && (
               <div className="space-y-3">
                 <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
                   {lang === 'bn' 
-                    ? 'স্বচ্ছ ব্যাকগ্রাউন্ড বিশিষ্ট (PNG/WEBP) স্বাক্ষর ছবি সিলেক্ট করুন।' 
-                    : 'Upload a signature image. Transparent PNG or WEBP formats are highly recommended.'}
+                    ? 'স্বচ্ছ ব্যাকগ্রাউন্ড বিশিষ্ট (PNG/WEBP) স্বাক্ষর ছবির লিংক টাইপ করুন।' 
+                    : 'Provide an image URL for the signature. Transparent PNG/WEBP links are recommended.'}
                 </p>
 
-                <div 
-                  onDragEnter={handleDrag}
-                  onDragOver={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => document.getElementById('sig-upload-input')?.click()}
-                  className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[128px] ${
-                    dragActive 
-                      ? 'border-emerald-500 bg-emerald-500/5' 
-                      : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-950/40'
-                  }`}
-                >
-                  <input 
-                    id="sig-upload-input"
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleSignatureUpload(e.target.files[0]);
-                      }
-                    }}
-                    className="hidden" 
+                <div className="space-y-2">
+                  <input
+                    type="url"
+                    value={localConfig.signature || ''}
+                    onChange={e => setLocalConfig(prev => ({ ...prev, signature: e.target.value }))}
+                    placeholder="https://example.com/signature.png or Google Drive URL"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl font-mono text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  <Upload size={24} className="text-slate-400 dark:text-slate-500 mb-1.5" />
-                  <p className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">
-                    {lang === 'bn' ? 'ফাইল সিলেক্ট করতে ক্লিক করুন' : 'Click to select file'}
-                  </p>
-                  <p className="text-[9px] text-slate-400 mt-1">
-                    {lang === 'bn' ? 'অথবা ড্র্যাগ করে এখানে ছাড়ুন' : 'or drag & drop signature here'}
-                  </p>
-                  <p className="text-[8px] text-slate-400/80 mt-1 font-mono">
-                    (PNG, WEBP, JPG)
+                  <p className="text-[8px] text-slate-400 font-mono">
+                    (Direct Image URL or Google Drive Public Image URL)
                   </p>
                 </div>
               </div>
@@ -1867,14 +1796,22 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                 <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
                   <div className="flex items-center justify-between w-full">
                     <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
-                       <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" crossOrigin="anonymous" />
+                       {settings.logo?.trim() ? (
+                         <img src={getOptimizedImageUrl(settings.logo.trim(), 200)} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
+                       ) : (
+                         <Award className="w-10 h-10 text-emerald-800" />
+                       )}
                     </div>
                     <div className="flex-1 px-4">
                       <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1" style={{ fontSize: '32px', ...BENGALI_STYLE }}>{viewMode === 'bn' ? settings.nameBn : settings.nameEn}</h1>
                       <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}</p>
                     </div>
                     <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
-                      <img src={settings.flag} className="w-full h-full object-cover" alt="Flag" crossOrigin="anonymous" />
+                      {settings.flag?.trim() ? (
+                        <img src={settings.flag.trim()} className="w-full h-full object-cover" alt="Flag" crossOrigin="anonymous" />
+                      ) : (
+                        <span className="text-[10px] font-black text-slate-400">FLAG</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1926,7 +1863,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                   {/* Leader Signatory Block */}
                   <div className="text-center w-52 space-y-1 relative">
                     {/* Drawn/Uploaded Signature overlay */}
-                    {localConfig.signature && (
+                    {Boolean(localConfig.signature?.trim()) && (
                       <div 
                         className={`absolute mix-blend-multiply select-none flex items-center justify-center h-16 transition-all ${
                           isPrintPreview 
@@ -1967,7 +1904,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                 </div>
 
                 {/* Document Verification QR Code Overlay */}
-                {(localConfig.qrEnabled ?? true) && qrCodeDataUrl && (
+                {(localConfig.qrEnabled ?? true) && Boolean(qrCodeDataUrl?.trim()) && (
                   <div 
                     className={`select-none transition-all flex flex-col items-center justify-center ${
                       isPrintPreview 
@@ -2064,7 +2001,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                     </div>
                     
                     {/* Simulated Signature overlay positioning */}
-                    {localConfig.signature ? (
+                    {Boolean(localConfig.signature?.trim()) ? (
                       <div 
                         className="absolute mix-blend-multiply select-none flex items-center justify-center h-16 pointer-events-none"
                         style={{
@@ -2088,7 +2025,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                     )}
 
                     {/* Simulated QR Code Overlay */}
-                    {(localConfig.qrEnabled ?? true) && qrCodeDataUrl && (
+                    {(localConfig.qrEnabled ?? true) && Boolean(qrCodeDataUrl?.trim()) && (
                       <div 
                         className="absolute select-none pointer-events-none flex flex-col items-center justify-center bg-white border border-slate-150 p-0.5 shadow-sm rounded-sm"
                         style={{

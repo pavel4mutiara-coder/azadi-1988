@@ -88,7 +88,7 @@ export async function sendGoogleChatMessage(
  * Generate a visual card layout for Google Chat notification
  * Following Google's cardsV2 format
  */
-export function createChatCard(title: string, subtitle: string, sections: { header?: string; widgets: any[] }[]) {
+export function createChatCard(title: string, subtitle: string, sections: { header?: string; widgets: any[] }[], logoUrl?: string) {
   return [
     {
       cardId: `notification_${Date.now()}`,
@@ -96,8 +96,7 @@ export function createChatCard(title: string, subtitle: string, sections: { head
         header: {
           title,
           subtitle,
-          imageUrl: 'https://lh3.googleusercontent.com/d/1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh', // Azadi logo
-          imageType: 'CIRCLE'
+          ...(logoUrl ? { imageUrl: logoUrl, imageType: 'CIRCLE' } : {})
         },
         sections
       }
