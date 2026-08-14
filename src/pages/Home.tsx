@@ -43,8 +43,9 @@ export default function Home() {
     ? testimonials.filter(item => item.status === 'APPROVED').slice(0, 3)
     : [];
 
-  // Organization Seal/Logo
-  const LOGO_URL = settings?.logo?.trim() ? getOptimizedImageUrl(settings.logo.trim(), 200) : '';
+  // Organization Seal/Logo & Flag
+  const LOGO_URL = (settings?.logoUrl || settings?.logo)?.trim() ? getOptimizedImageUrl((settings.logoUrl || settings.logo)!.trim(), 200) : '';
+  const FLAG_URL = (settings?.flagUrl || settings?.flag)?.trim() ? getOptimizedImageUrl((settings.flagUrl || settings.flag)!.trim(), 300) : '';
 
   // Gallery preview images gathered from events & news
   const galleryImages = [
@@ -229,6 +230,9 @@ export default function Home() {
                     <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
                       <Award size={20} />
                     </div>
+                  )}
+                  {FLAG_URL && (
+                    <img src={FLAG_URL} alt="Flag" referrerPolicy="no-referrer" className="w-9 h-6 object-contain rounded border border-slate-700 bg-slate-800 shrink-0" />
                   )}
                   <div>
                     <div className="font-black text-xs text-amber-400 uppercase">

@@ -11,7 +11,7 @@ import {
   PlusSquare, ArrowUp, PieChart, Home, Sparkles, Lock, Menu,
   Award, Shield, ExternalLink, CheckCircle2, Image as ImageIcon,
   Info, Newspaper, Contact, MoreHorizontal, FileText, MessageSquare, History, Settings, LayoutDashboard,
-  AlertCircle
+  AlertCircle, Flag
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -122,7 +122,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const OrganizationSeal = ({ className = "w-11 h-11" }: { className?: string }) => {
     const [imgError, setImgError] = useState(false);
-    const rawLogo = settings?.logo?.trim();
+    const rawLogo = (settings?.logoUrl || settings?.logo)?.trim();
     const logoUrl = rawLogo ? getOptimizedImageUrl(rawLogo, 200) : '';
 
     useEffect(() => {
@@ -149,6 +149,43 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <Award className="w-3/5 h-3/5 text-amber-500 dark:text-amber-400" />
           )}
         </div>
+      </div>
+    );
+  };
+
+  const OrganizationFlag = ({ className = "w-9 h-6", showFallback = true }: { className?: string; showFallback?: boolean }) => {
+    const [imgError, setImgError] = useState(false);
+    const rawFlag = (settings?.flagUrl || settings?.flag)?.trim();
+    const flagUrl = rawFlag ? getOptimizedImageUrl(rawFlag, 300) : '';
+
+    useEffect(() => {
+      setImgError(false);
+    }, [rawFlag]);
+
+    if (!rawFlag && !showFallback) return null;
+
+    return (
+      <div 
+        className={`${className} relative rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-all`}
+        title={lang === 'bn' ? 'আজাদী সমাজ কল্যাণ সংঘ - অফিশিয়াল পতাকা' : 'Azadi Social Welfare Organization - Official Flag'}
+      >
+        {flagUrl && !imgError ? (
+          <img 
+            src={flagUrl} 
+            alt="Organization Flag" 
+            referrerPolicy="no-referrer" 
+            className="w-full h-full object-contain" 
+            onError={() => setImgError(true)}
+          />
+        ) : imgError ? (
+          <div className="w-full h-full flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-0.5 text-center" title="Flag image could not be loaded.">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400">
+            <Flag className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+        )}
       </div>
     );
   };
@@ -360,6 +397,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           {/* AREA 1: LEFT - Logo & Brand Identity */}
           <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 min-w-0 transition-transform active:scale-[0.98]">
             <OrganizationSeal className="w-8 h-8 sm:w-9 sm:h-9 shrink-0" />
+            <OrganizationFlag className="w-8 h-5 sm:w-9 sm:h-6 shrink-0 hidden xs:flex rounded" />
             <div className="flex flex-col justify-center min-w-0 max-w-[170px] sm:max-w-[210px] lg:max-w-[190px] xl:max-w-[240px] 2xl:max-w-none">
               <h1 className="text-[11px] sm:text-xs xl:text-sm font-black uppercase leading-tight text-slate-900 dark:text-white bengali tracking-tight">
                 {lang === 'bn' ? (settings?.nameBn || ORGANIZATION_NAME.bn) : (settings?.nameEn || ORGANIZATION_NAME.en)}
@@ -613,8 +651,9 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         <div className="lg:hidden fixed inset-0 z-[90] no-print flex flex-col bg-slate-950/95 backdrop-blur-xl text-white animate-in fade-in duration-200">
           <div className="p-4 border-b border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <OrganizationSeal className="w-10 h-10" />
+                <OrganizationFlag className="w-9 h-6 rounded" />
                 <div>
                   <h3 className="font-black text-sm text-white bengali leading-tight">
                     {lang === 'bn' ? (settings?.nameBn || ORGANIZATION_NAME.bn) : (settings?.nameEn || ORGANIZATION_NAME.en)}
@@ -793,6 +832,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <OrganizationSeal className="w-12 h-12" />
+                <OrganizationFlag className="w-11 h-7 rounded" />
                 <div>
                   <h3 className="font-black text-base text-white leading-tight bengali">
                     {lang === 'bn' ? (settings?.nameBn || ORGANIZATION_NAME.bn) : (settings?.nameEn || ORGANIZATION_NAME.en)}

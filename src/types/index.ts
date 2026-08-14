@@ -154,6 +154,7 @@ export interface OrganizationSettings {
   logo: string;
   flag: string;
   logoUrl?: string;
+  flagUrl?: string;
   faviconUrl?: string;
   website?: string;
   primaryColor?: string;

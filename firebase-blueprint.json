@@ -168,6 +168,7 @@
         "establishedEn": { "type": "string" },
         "logo": { "type": "string" },
         "flag": { "type": "string" },
+        "flagUrl": { "type": "string" },
         "logoUrl": { "type": "string" },
         "faviconUrl": { "type": "string" },
         "website": { "type": "string" },

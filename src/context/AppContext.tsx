@@ -146,7 +146,9 @@ const DEFAULT_SETTINGS: OrganizationSettings = {
   establishedBn: "১০ জুন ১৯৮৮",
   establishedEn: "10 June 1988",
   logo: "https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
-  flag: "",
+  logoUrl: "https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh",
+  flag: "https://drive.google.com/uc?export=view&id=1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q",
+  flagUrl: "https://drive.google.com/uc?export=view&id=1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q",
   adminWhatsApp: "8801712782564",
   bkash: "01712782564",
   nagad: "01712782564",
@@ -1309,14 +1311,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveSettings = async (newSettings: OrganizationSettings) => {
     try {
+      const normalizedLogo = normalizeGoogleDriveUrl(newSettings.logo || newSettings.logoUrl);
+      const normalizedFlag = normalizeGoogleDriveUrl(newSettings.flagUrl || newSettings.flag);
       const cleanSettings: OrganizationSettings = {
         ...newSettings,
-        logo: normalizeGoogleDriveUrl(newSettings.logo)
+        logo: normalizedLogo,
+        logoUrl: normalizedLogo,
+        flag: normalizedFlag,
+        flagUrl: normalizedFlag,
       };
       setSettings(cleanSettings);
       recordSyncEvent('settings', 'local');
       await withSync(() => setDoc(doc(db, 'settings', 'config'), cleanSettings));
-      await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { nameEn: cleanSettings.nameEn, logo: cleanSettings.logo });
+      await logAuditTrail('SETTINGS_CONFIGURATION_UPDATE', { 
+        nameEn: cleanSettings.nameEn, 
+        logo: cleanSettings.logo,
+        flag: cleanSettings.flag,
+        flagUrl: cleanSettings.flagUrl
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'settings/config');
       throw error;

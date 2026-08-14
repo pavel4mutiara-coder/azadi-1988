@@ -10,7 +10,7 @@ import {
   Image as ImageIcon, ExternalLink, Info, Database, 
   Shield, Copy, AlertCircle, Trash2, LogOut, Moon, Sun,
   Loader2, MessageSquare, Send, Bell, ArrowUpCircle,
-  Cloud, CloudOff, UploadCloud, Download, Award, AlertTriangle, CheckCircle2, Sparkles
+  Cloud, CloudOff, UploadCloud, Download, Award, AlertTriangle, CheckCircle2, Sparkles, Flag
 } from 'lucide-react';
 import { formatFirebaseError } from '../../lib/firebase';
 
@@ -41,8 +41,12 @@ export const SettingsManager: React.FC = () => {
   const [logoStatus, setLogoStatus] = useState<'loading' | 'success' | 'error' | 'empty'>(() => {
     return settings?.logo?.trim() ? 'loading' : 'empty';
   });
+  const [flagStatus, setFlagStatus] = useState<'loading' | 'success' | 'error' | 'empty'>(() => {
+    return (settings?.flagUrl || settings?.flag)?.trim() ? 'loading' : 'empty';
+  });
 
   const OFFICIAL_LOGO_DRIVE_URL = 'https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh';
+  const OFFICIAL_FLAG_DRIVE_URL = 'https://drive.google.com/uc?export=view&id=1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q';
 
   useEffect(() => {
     if (localSettings.logo?.trim()) {
@@ -51,6 +55,15 @@ export const SettingsManager: React.FC = () => {
       setLogoStatus('empty');
     }
   }, [localSettings.logo]);
+
+  useEffect(() => {
+    const rawFlag = (localSettings.flagUrl || localSettings.flag)?.trim();
+    if (rawFlag) {
+      setFlagStatus('loading');
+    } else {
+      setFlagStatus('empty');
+    }
+  }, [localSettings.flag, localSettings.flagUrl]);
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -599,7 +612,7 @@ export const SettingsManager: React.FC = () => {
                   onChange={e => {
                     const rawVal = e.target.value;
                     const normalized = normalizeGoogleDriveUrl(rawVal);
-                    setLocalSettings({ ...localSettings, logo: normalized });
+                    setLocalSettings({ ...localSettings, logo: normalized, logoUrl: normalized });
                   }} 
                   placeholder="https://drive.google.com/uc?export=view&id=1qvQUx-Qph8aIIJY3liQ9iBSzFcnqKalh" 
                 />
@@ -610,7 +623,7 @@ export const SettingsManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setLocalSettings({ ...localSettings, logo: OFFICIAL_LOGO_DRIVE_URL });
+                    setLocalSettings({ ...localSettings, logo: OFFICIAL_LOGO_DRIVE_URL, logoUrl: OFFICIAL_LOGO_DRIVE_URL });
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl text-[11px] font-bold border border-blue-200 dark:border-blue-800/60 transition-colors"
                 >
@@ -709,6 +722,154 @@ export const SettingsManager: React.FC = () => {
                     {lang === 'bn' 
                       ? 'গুগল ড্রাইভ লিংক থেকে ইমেজ লোড করা যায়নি। ফাইলটির শেয়ারিং পারমিশন "Anyone with the link can view" নিশ্চিত করুন।' 
                       : 'Unable to render image from URL as <img>. Ensure the Google Drive file permission is set to "Anyone with the link can view".'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Official Flag Section */}
+          <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+                <Flag size={16} className="text-emerald-600" />
+                {lang === 'bn' ? 'সংগঠনের অফিসিয়াল পতাকা' : 'Official Organization Flag'}
+              </h3>
+              {flagStatus === 'success' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <CheckCircle2 size={12} /> {lang === 'bn' ? 'যাচাইকৃত' : 'Verified'}
+                </span>
+              )}
+              {flagStatus === 'error' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+                  <AlertCircle size={12} /> {lang === 'bn' ? 'ত্রুটি' : 'Error'}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-left">
+                  {lang === 'bn' ? 'পতাকার গুগল ড্রাইভ অথবা ইমেজ ইউআরএল (Flag URL):' : 'Flag Google Drive or Image URL:'}
+                </label>
+                <input 
+                  type="text" 
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-mono text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none" 
+                  value={localSettings.flagUrl || localSettings.flag || ''} 
+                  onChange={e => {
+                    const rawVal = e.target.value;
+                    const normalized = normalizeGoogleDriveUrl(rawVal);
+                    setLocalSettings({ ...localSettings, flag: normalized, flagUrl: normalized });
+                  }} 
+                  placeholder="https://drive.google.com/uc?export=view&id=1TWJkEOGDsfJ4uH7NKqcDMLYHiTGEGM4q" 
+                />
+              </div>
+
+              {/* Quick Action to apply Official Google Drive Flag */}
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalSettings({ 
+                      ...localSettings, 
+                      flag: OFFICIAL_FLAG_DRIVE_URL, 
+                      flagUrl: OFFICIAL_FLAG_DRIVE_URL 
+                    });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-xl text-[11px] font-bold border border-emerald-200 dark:border-emerald-800/60 transition-colors"
+                >
+                  <Sparkles size={13} className="text-amber-500" />
+                  {lang === 'bn' ? 'অফিসিয়াল আজাদী পতাকা প্রয়োগ করুন' : 'Apply Official Azadi Flag'}
+                </button>
+
+                {(localSettings.flagUrl || localSettings.flag)?.trim() && extractGoogleDriveId(localSettings.flagUrl || localSettings.flag) && (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    ID: {extractGoogleDriveId(localSettings.flagUrl || localSettings.flag)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Live Flag Preview Box */}
+            <div className="bg-slate-50 dark:bg-slate-950/80 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 space-y-4">
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 text-left flex items-center justify-between">
+                <span>{lang === 'bn' ? 'লাইভ প্রিভিউ (Live Preview)' : 'Live Preview'}</span>
+                <span className="text-[10px] font-normal lowercase text-slate-400">
+                  {flagStatus === 'loading' && (lang === 'bn' ? 'লোড হচ্ছে...' : 'rendering...')}
+                  {flagStatus === 'success' && (lang === 'bn' ? 'সফলভাবে প্রদর্শিত' : 'rendered ok')}
+                  {flagStatus === 'error' && (lang === 'bn' ? 'লোড হতে ব্যর্থ' : 'render failed')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 items-center">
+                {/* 1. Rectangular Flag Preview */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-28 h-20 bg-white dark:bg-slate-900 rounded-xl p-1.5 border border-slate-200 dark:border-slate-800 flex items-center justify-center overflow-hidden shadow-inner relative">
+                    {(localSettings.flagUrl || localSettings.flag)?.trim() ? (
+                      <>
+                        <img 
+                          key={(localSettings.flagUrl || localSettings.flag)?.trim()}
+                          src={getOptimizedImageUrl((localSettings.flagUrl || localSettings.flag)!.trim(), 300)} 
+                          className="object-contain max-h-full max-w-full" 
+                          alt="Organization Flag Preview" 
+                          referrerPolicy="no-referrer" 
+                          onLoad={() => setFlagStatus('success')}
+                          onError={() => setFlagStatus('error')}
+                        />
+                        {flagStatus === 'loading' && (
+                          <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex items-center justify-center">
+                            <Loader2 size={18} className="animate-spin text-emerald-600" />
+                          </div>
+                        )}
+                        {flagStatus === 'error' && (
+                          <div className="absolute inset-0 bg-rose-50/95 dark:bg-rose-950/95 flex flex-col items-center justify-center p-2 text-center text-rose-600">
+                            <AlertCircle size={20} />
+                            <span className="text-[9px] font-black leading-tight mt-1">
+                              {lang === 'bn' ? 'পতাকার ইমেজ লোড করা সম্ভব হয়নি।' : 'Flag image could not be loaded.'}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-bold">{lang === 'bn' ? 'পতাকা নেই' : 'No Flag'}</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{lang === 'bn' ? 'স্ট্যান্ডার্ড ভিউ' : 'Standard View'}</span>
+                </div>
+
+                {/* 2. Badge Flag Preview */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-28 h-20 flex items-center justify-center">
+                    <div className="w-16 h-11 relative rounded-lg border-2 border-emerald-700 dark:border-emerald-500 bg-white dark:bg-slate-900 p-0.5 shadow-md overflow-hidden flex items-center justify-center ring-2 ring-emerald-500/20">
+                      {(localSettings.flagUrl || localSettings.flag)?.trim() && flagStatus !== 'error' ? (
+                        <img 
+                          src={getOptimizedImageUrl((localSettings.flagUrl || localSettings.flag)!.trim(), 200)} 
+                          alt="Flag Badge Preview" 
+                          referrerPolicy="no-referrer" 
+                          className="w-full h-full object-contain" 
+                          onError={() => setFlagStatus('error')}
+                        />
+                      ) : flagStatus === 'error' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-0.5 text-center" title="Flag image could not be loaded.">
+                          <AlertCircle size={16} />
+                        </div>
+                      ) : (
+                        <Flag className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{lang === 'bn' ? 'ব্যাজ ভিউ' : 'Badge View'}</span>
+                </div>
+              </div>
+
+              {/* Status Notice Message */}
+              {flagStatus === 'error' && (
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-xl text-left flex items-start gap-2">
+                  <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium leading-tight">
+                    {lang === 'bn' 
+                      ? 'পতাকার ইমেজ লোড করা সম্ভব হয়নি। গুগল ড্রাইভে ফাইলটির শেয়ারিং পারমিশন "Anyone with the link can view" নিশ্চিত করুন।' 
+                      : 'Flag image could not be loaded. Ensure the Google Drive file permission is set to "Anyone with the link can view".'}
                   </p>
                 </div>
               )}

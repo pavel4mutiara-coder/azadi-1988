@@ -48,6 +48,7 @@ service cloud.firestore {
         && (!data.keys().hasAny(['establishedEn']) || (data.establishedEn is string && data.establishedEn.size() <= 100))
         && (!data.keys().hasAny(['logo']) || data.logo is string)
         && (!data.keys().hasAny(['flag']) || data.flag is string)
+        && (!data.keys().hasAny(['flagUrl']) || data.flagUrl is string)
         && (!data.keys().hasAny(['logoUrl']) || data.logoUrl is string)
         && (!data.keys().hasAny(['faviconUrl']) || data.faviconUrl is string)
         && (!data.keys().hasAny(['website']) || data.website is string)

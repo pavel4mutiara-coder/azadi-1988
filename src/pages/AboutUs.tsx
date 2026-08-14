@@ -54,9 +54,14 @@ export const AboutUs: React.FC = () => {
       {/* Hero Section */}
       <div className="text-center space-y-8 pt-10 px-4">
         <div className="flex flex-col items-center gap-6">
-          <div className="w-24 h-14 md:w-32 md:h-20 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border-4 border-emerald-900/10 dark:border-emerald-500/20 overflow-hidden transform hover:scale-110 transition-transform duration-500 flex items-center justify-center">
-             {settings.flag?.trim() ? (
-               <img src={getOptimizedImageUrl(settings.flag.trim(), 300)} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Organization Flag" />
+          <div className="w-28 h-18 md:w-36 md:h-24 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border-4 border-emerald-900/10 dark:border-emerald-500/20 overflow-hidden transform hover:scale-105 transition-transform duration-500 flex items-center justify-center p-1.5 relative">
+             {(settings.flagUrl || settings.flag)?.trim() ? (
+               <img 
+                 src={getOptimizedImageUrl((settings.flagUrl || settings.flag)!.trim(), 400)} 
+                 referrerPolicy="no-referrer" 
+                 className="w-full h-full object-contain" 
+                 alt="Azadi Organization Flag" 
+               />
              ) : (
                <span className="text-xs font-black text-emerald-800 dark:text-emerald-300">ASWO</span>
              )}

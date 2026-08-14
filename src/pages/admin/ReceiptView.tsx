@@ -35,7 +35,7 @@ export const ReceiptView: React.FC<Props> = ({
   }, [donation.id]);
 
   const signatoryConfig = letterhead;
-  const base64Logo = settings.logo?.trim() ? getOptimizedImageUrl(settings.logo.trim(), 200) : '';
+  const base64Logo = (settings.logoUrl || settings.logo)?.trim() ? getOptimizedImageUrl((settings.logoUrl || settings.logo)!.trim(), 200) : '';
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');

@@ -1796,8 +1796,8 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                 <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
                   <div className="flex items-center justify-between w-full">
                     <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
-                       {settings.logo?.trim() ? (
-                         <img src={getOptimizedImageUrl(settings.logo.trim(), 200)} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
+                       {(settings.logoUrl || settings.logo)?.trim() ? (
+                         <img src={getOptimizedImageUrl((settings.logoUrl || settings.logo)!.trim(), 200)} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
                        ) : (
                          <Award className="w-10 h-10 text-emerald-800" />
                        )}
@@ -1807,8 +1807,8 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                       <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}</p>
                     </div>
                     <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
-                      {settings.flag?.trim() ? (
-                        <img src={settings.flag.trim()} className="w-full h-full object-cover" alt="Flag" crossOrigin="anonymous" />
+                      {(settings.flagUrl || settings.flag)?.trim() ? (
+                        <img src={getOptimizedImageUrl((settings.flagUrl || settings.flag)!.trim(), 300)} className="w-full h-full object-contain" alt="Flag" crossOrigin="anonymous" referrerPolicy="no-referrer" />
                       ) : (
                         <span className="text-[10px] font-black text-slate-400">FLAG</span>
                       )}
