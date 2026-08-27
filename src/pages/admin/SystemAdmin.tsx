@@ -6,9 +6,12 @@ import {
   Shield, Cloud, CloudOff, RefreshCcw, Download, UploadCloud, 
   Trash2, LogOut, Loader2, ArrowUpCircle, Info, Database, 
   CheckCircle, AlertTriangle, RefreshCw, Smartphone, Save,
-  Activity, Clock, Server, Wifi, WifiOff
+  Activity, Clock, Server, Wifi, WifiOff, Users, UserCheck,
+  UserX, UserPlus, ShieldAlert, KeyRound
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { db, auth } from '../../lib/firebase';
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 export const SystemAdmin: React.FC = () => {
   const { 
@@ -36,14 +39,102 @@ export const SystemAdmin: React.FC = () => {
   const [localVersion, setLocalVersion] = useState<any>(null);
   const [savingVersion, setSavingVersion] = useState(false);
 
+  // Admin Directory Management
+  const [adminsList, setAdminsList] = useState<any[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
+  const [newAdminUid, setNewAdminUid] = useState('');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminRole, setNewAdminRole] = useState<'superadmin' | 'admin' | 'editor'>('admin');
+  const [savingAdmin, setSavingAdmin] = useState(false);
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+
+  const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
+  const isSuperAdmin = user?.email?.toLowerCase() === superAdminEmail;
+
   useEffect(() => {
     if (versionConfig) {
       setLocalVersion({ ...versionConfig });
     }
   }, [versionConfig]);
 
-  const superAdminEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com';
-  const isSuperAdmin = user?.email === superAdminEmail;
+  // Subscribe to admins collection
+  useEffect(() => {
+    if (!user) return;
+    setLoadingAdmins(true);
+    const unsub = onSnapshot(collection(db, 'admins'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach(docSnap => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setAdminsList(list);
+      setLoadingAdmins(false);
+    }, (err) => {
+      console.warn("Admins list subscription notice:", err);
+      setLoadingAdmins(false);
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  const handleCreateOrUpdateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminUid.trim() || !newAdminEmail.trim()) {
+      showStatus('error', 'UID এবং ইমেইল দুটোই আবশ্যক।', 'UID and Email are required.');
+      return;
+    }
+
+    setSavingAdmin(true);
+    try {
+      const uid = newAdminUid.trim();
+      const adminData = {
+        uid,
+        email: newAdminEmail.trim().toLowerCase(),
+        displayName: newAdminName.trim() || 'Admin User',
+        role: newAdminRole,
+        active: true,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'admins', uid), adminData, { merge: true });
+      showStatus('success', 'অ্যাডমিন অ্যাকাউন্ট সফলভাবে ফায়ারস্টোরে সংরক্ষিত হয়েছে!', 'Admin account saved to Firestore successfully!');
+      setNewAdminUid('');
+      setNewAdminEmail('');
+      setNewAdminName('');
+      setShowAddAdmin(false);
+    } catch (err: any) {
+      console.error("Save admin failed:", err);
+      showStatus('error', 'অ্যাডমিন সংরক্ষণে ব্যর্থ হয়েছে: ' + (err?.message || ''), 'Failed to save admin record: ' + (err?.message || ''));
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
+  const handleToggleAdminStatus = async (admin: any) => {
+    try {
+      const newStatus = !admin.active;
+      await setDoc(doc(db, 'admins', admin.id), {
+        active: newStatus,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      showStatus('success', `অ্যাডমিন অ্যাকাউন্ট স্ট্যাটাস আপডেট করা হয়েছে!`, 'Admin account status updated!');
+    } catch (err: any) {
+      showStatus('error', 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।', 'Failed to update admin status.');
+    }
+  };
+
+  const handleDeleteAdmin = async (adminId: string) => {
+    if (!window.confirm(lang === 'bn' ? 'আপনি কি এই অ্যাডমিন রেকর্ডটি মুছে ফেলতে চান?' : 'Are you sure you want to remove this admin authorization?')) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'admins', adminId));
+      showStatus('success', 'অ্যাডমিন মুছে ফেলা হয়েছে!', 'Admin record removed successfully!');
+    } catch (err: any) {
+      showStatus('error', 'মুছে ফেলতে ব্যর্থ হয়েছে।', 'Failed to delete admin record.');
+    }
+  };
 
   const showStatus = (type: 'success' | 'error', textBn: string, textEn: string) => {
     setStatusMessage({
@@ -461,6 +552,191 @@ export const SystemAdmin: React.FC = () => {
                   {lang === 'bn' ? 'ব্যাকআপ আমদানি' : 'Import Database'}
                 </label>
               </div>
+            </div>
+          </div>
+
+          {/* Card 2.5: Admin Authorization Management (Superadmin) */}
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5 uppercase tracking-tight">
+                <Users className="text-purple-500" size={22} />
+                {lang === 'bn' ? 'প্রশাসক অনুমতি ও ইউজার ম্যানেজমেন্ট' : 'Admin Role Directory (/admins)'}
+              </h2>
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddAdmin(!showAddAdmin)}
+                  className="px-3.5 py-1.5 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 hover:bg-purple-100 rounded-xl text-[11px] font-black uppercase flex items-center gap-1.5 transition-all"
+                >
+                  <UserPlus size={14} />
+                  {showAddAdmin ? (lang === 'bn' ? 'বন্ধ করুন' : 'Close') : (lang === 'bn' ? 'নতুন অ্যাডমিন' : 'Add Admin')}
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+              {lang === 'bn'
+                ? 'ফায়ারস্টোরের /admins/{uid} ডকুমেন্টের মাধ্যমে ব্যবহারকারীদের অ্যাডমিন অধিকার, সক্রিয়/নিষ্ক্রিয় স্ট্যাটাস ও রোল পরিচালিত হয়।'
+                : 'Firestore /admins/{uid} collection authorization registry controlling admin access, active status, and privileges.'}
+            </p>
+
+            {/* Current Auth Diagnostic Info */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5 text-xs font-bold font-mono">
+              <div className="text-[10px] uppercase font-sans tracking-widest text-slate-400 font-black flex items-center gap-1.5">
+                <KeyRound size={12} className="text-amber-500" />
+                {lang === 'bn' ? 'বর্তমান সেশন ইউজার ক্রেডেনশিয়াল' : 'Current Session Auth State'}
+              </div>
+              <div className="flex justify-between text-slate-700 dark:text-slate-300">
+                <span>UID:</span>
+                <span className="text-emerald-600 dark:text-emerald-400 select-all">{auth.currentUser?.uid || 'Not signed in'}</span>
+              </div>
+              <div className="flex justify-between text-slate-700 dark:text-slate-300">
+                <span>Email:</span>
+                <span className="select-all">{auth.currentUser?.email || 'N/A'}</span>
+              </div>
+            </div>
+
+            {/* Add Admin Form */}
+            {showAddAdmin && isSuperAdmin && (
+              <form onSubmit={handleCreateOrUpdateAdmin} className="p-5 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 rounded-2xl space-y-4 animate-in slide-in-from-top-3">
+                <div className="text-xs font-black uppercase text-purple-900 dark:text-purple-300 flex items-center gap-2">
+                  <UserPlus size={16} />
+                  {lang === 'bn' ? 'নতুন অ্যাডমিন যুক্ত / অনুমতি প্রদান' : 'Grant Administrator Privileges'}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Firebase Auth UID (Required)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 8k9D2j... (from Firebase Auth)"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-mono text-xs text-slate-900 dark:text-white"
+                    value={newAdminUid}
+                    onChange={e => setNewAdminUid(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="admin@azadi.org"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-bold text-xs text-slate-900 dark:text-white"
+                    value={newAdminEmail}
+                    onChange={e => setNewAdminEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Display Name</label>
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-bold text-xs text-slate-900 dark:text-white"
+                      value={newAdminName}
+                      onChange={e => setNewAdminName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Role</label>
+                    <select
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-bold text-xs text-slate-900 dark:text-white"
+                      value={newAdminRole}
+                      onChange={e => setNewAdminRole(e.target.value as any)}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="superadmin">Super Admin</option>
+                      <option value="editor">Editor</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingAdmin}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase py-3 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
+                >
+                  {savingAdmin ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {lang === 'bn' ? 'অ্যাডমিন অধিকার সংরক্ষণ করুন' : 'Save Admin Authorization'}
+                </button>
+              </form>
+            )}
+
+            {/* List of Admins */}
+            <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+              {loadingAdmins ? (
+                <div className="p-6 text-center text-slate-400 flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin" size={16} />
+                  <span className="text-xs font-bold">{lang === 'bn' ? 'অ্যাডমিন তালিকা লোড হচ্ছে...' : 'Loading admin authorizations...'}</span>
+                </div>
+              ) : adminsList.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 bg-slate-50 dark:bg-slate-950/40 rounded-2xl text-xs font-bold">
+                  {lang === 'bn' ? 'বর্তমানে কোনো অতিরিক্ত অ্যাডমিন নথিভুক্ত নেই।' : 'No admin documents found in Firestore /admins.'}
+                </div>
+              ) : (
+                adminsList.map((adm) => {
+                  const isActive = adm.active === true;
+                  const isCurrent = adm.uid === auth.currentUser?.uid || adm.id === auth.currentUser?.uid;
+
+                  return (
+                    <div key={adm.id} className="p-4 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                            {adm.displayName || adm.email}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                              {lang === 'bn' ? 'আপনি' : 'You'}
+                            </span>
+                          )}
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                            adm.role === 'superadmin' ? 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800' :
+                            'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                          }`}>
+                            {adm.role || 'admin'}
+                          </span>
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 truncate">
+                          UID: {adm.id || adm.uid}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-bold truncate">
+                          {adm.email}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAdminStatus(adm)}
+                          className={`p-2 rounded-xl border transition-all text-[10px] font-black uppercase flex items-center gap-1 ${
+                            isActive 
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100' 
+                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 border-rose-200 dark:border-rose-800 hover:bg-rose-100'
+                          }`}
+                          title={isActive ? 'Active - Click to Deactivate' : 'Inactive - Click to Activate'}
+                        >
+                          {isActive ? <UserCheck size={14} /> : <UserX size={14} />}
+                          <span>{isActive ? (lang === 'bn' ? 'সক্রিয়' : 'Active') : (lang === 'bn' ? 'নিষ্ক্রিয়' : 'Inactive')}</span>
+                        </button>
+
+                        {isSuperAdmin && !isCurrent && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAdmin(adm.id)}
+                            className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-xl transition-all"
+                            title="Delete Admin Record"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

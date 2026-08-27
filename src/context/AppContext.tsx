@@ -411,17 +411,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
         
         try {
+          console.log("[ADMIN AUTH]", {
+            uid: currentUser.uid,
+            email: currentUser.email
+          });
+
           const adminRef = doc(db, 'admins', currentUser.uid);
-          const adminDoc = await getDoc(adminRef);
+          let adminDoc = await getDoc(adminRef);
+          console.log("[ADMIN DOCUMENT]", adminDoc.exists() ? adminDoc.data() : null);
+
           if (adminDoc.exists()) {
-            setIsAdmin(true);
-            sessionStorage.setItem(cachedAdminKey, 'true');
+            const data = adminDoc.data();
+            if (data?.active === true && ['superadmin', 'admin', 'editor'].includes(data?.role)) {
+              setIsAdmin(true);
+              sessionStorage.setItem(cachedAdminKey, 'true');
+            } else if (isSuperAdminEmail) {
+              // Reactivate or fix role for known superadmin email
+              await setDoc(adminRef, {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
+                role: 'superadmin',
+                active: true,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+              setIsAdmin(true);
+              sessionStorage.setItem(cachedAdminKey, 'true');
+            } else {
+              setIsAdmin(false);
+              sessionStorage.removeItem(cachedAdminKey);
+            }
           } else if (isSuperAdminEmail) {
-            // Self-seed admin document for superadmin
+            // Self-seed admin document for superadmin without circular dependency
+            console.log("[ADMIN BOOTSTRAP] Creating superadmin document for", currentUser.uid);
             await setDoc(adminRef, {
               uid: currentUser.uid,
               email: currentUser.email,
-              displayName: currentUser.displayName || 'Super Admin',
+              displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
               role: 'superadmin',
               active: true,
               createdAt: new Date().toISOString(),
@@ -434,6 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             sessionStorage.removeItem(cachedAdminKey);
           }
         } catch (e) {
+          console.warn("[ADMIN BOOTSTRAP/AUTH NOTICE]", e);
           if (isSuperAdminEmail) {
             setIsAdmin(true);
             sessionStorage.setItem(cachedAdminKey, 'true');
@@ -942,27 +969,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const currentUser = userCredential.user;
       
+      console.log("[ADMIN AUTH]", {
+        uid: currentUser.uid,
+        email: currentUser.email
+      });
+
       // Determine if they are authorized admins (either database check or superadmin email)
       const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
       const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
       
       let isAuthorizedAdmin = false;
       try {
-        const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
-        if (adminDoc.exists() || isSuperAdminEmail) {
-          isAuthorizedAdmin = true;
-          if (isSuperAdminEmail && (!adminDoc.exists() || adminDoc.data()?.role !== 'superadmin')) {
-            // Seed/update super admin record dynamically
-            await setDoc(doc(db, 'admins', currentUser.uid), {
+        const adminRef = doc(db, 'admins', currentUser.uid);
+        let adminDoc = await getDoc(adminRef);
+        console.log("[ADMIN DOCUMENT]", adminDoc.exists() ? adminDoc.data() : null);
+
+        if (adminDoc.exists()) {
+          const data = adminDoc.data();
+          if (data?.active === true && ['superadmin', 'admin', 'editor'].includes(data?.role)) {
+            isAuthorizedAdmin = true;
+          } else if (isSuperAdminEmail) {
+            // Fix inactive or wrong role for superadmin email
+            await setDoc(adminRef, {
               uid: currentUser.uid,
               email: currentUser.email,
-              displayName: currentUser.displayName || 'Super Admin',
+              displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
               role: 'superadmin',
               active: true,
-              createdAt: adminDoc.exists() ? adminDoc.data()?.createdAt || new Date().toISOString() : new Date().toISOString(),
               updatedAt: new Date().toISOString()
             }, { merge: true });
+            isAuthorizedAdmin = true;
           }
+        } else if (isSuperAdminEmail) {
+          // Self-seed admin document for initial superadmin without circular dependency
+          console.log("[ADMIN BOOTSTRAP] Creating superadmin document for", currentUser.uid);
+          await setDoc(adminRef, {
+            uid: currentUser.uid,
+            email: currentUser.email,
+            displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
+            role: 'superadmin',
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          isAuthorizedAdmin = true;
         }
       } catch (dbError) {
         console.warn("Could not check Firestore admin collection (possibly offline). Fallback to superadmin check.", dbError);
@@ -973,6 +1023,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (isAuthorizedAdmin) {
         setIsAdmin(true);
+        sessionStorage.setItem(`azadi_admin_cached_uid_${currentUser.uid}`, 'true');
         return { success: true };
       } else {
         // Not authorized as an admin in Firestore admins collection
@@ -981,8 +1032,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { 
           success: false, 
           message: lang === 'bn' 
-            ? 'ইউজার অ্যাকাউন্ট সফলভাবে পাওয়া গেছে, কিন্তু এটিadmins রেজিস্ট্রিতে নিবন্ধিত নয়।' 
-            : 'Authenticated successfully, but this account is not registered in the admins registry.',
+            ? 'আপনার Firebase Admin authorization document পাওয়া যায়নি অথবা অ্যাকাউন্টটি সক্রিয় নয়।' 
+            : 'Your Firebase Admin authorization document was not found or your account is inactive.',
           errorCode: 'auth/not-authorized'
         };
       }
@@ -1541,6 +1592,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveNotice = async (notice: Notice) => {
     const prevList = [...notices];
     try {
+      const currentUser = auth.currentUser;
+      console.log("[ADMIN AUTH]", {
+        uid: currentUser?.uid,
+        email: currentUser?.email
+      });
+
+      if (!currentUser || !currentUser.uid) {
+        throw new Error('unauthenticated');
+      }
+
+      const adminRef = doc(db, 'admins', currentUser.uid);
+      let adminDoc = await getDoc(adminRef);
+      console.log("[ADMIN DOCUMENT]", adminDoc.exists() ? adminDoc.data() : null);
+
+      const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
+      const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
+
+      // Initial superadmin bootstrap if document is missing
+      if (!adminDoc.exists() && isSuperAdminEmail) {
+        console.log("[ADMIN BOOTSTRAP] Creating superadmin document for", currentUser.uid);
+        await setDoc(adminRef, {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
+          role: 'superadmin',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        adminDoc = await getDoc(adminRef);
+        console.log("[ADMIN BOOTSTRAP RESULT]", adminDoc.exists() ? adminDoc.data() : null);
+      }
+
+      if (!adminDoc.exists()) {
+        throw new Error('MISSING_ADMIN_DOC');
+      }
+
+      const adminData = adminDoc.data();
+      if (adminData?.active !== true) {
+        if (isSuperAdminEmail) {
+          await setDoc(adminRef, { active: true, role: 'superadmin', updatedAt: new Date().toISOString() }, { merge: true });
+        } else {
+          throw new Error('INACTIVE_ADMIN');
+        }
+      } else if (!['superadmin', 'admin', 'editor'].includes(adminData?.role)) {
+        if (isSuperAdminEmail) {
+          await setDoc(adminRef, { role: 'superadmin', active: true, updatedAt: new Date().toISOString() }, { merge: true });
+        } else {
+          throw new Error('UNAUTHORIZED_ROLE');
+        }
+      }
+
       recordSyncEvent('notices', 'local');
       const cleanNotice: Notice = {
         id: notice.id,
@@ -1549,7 +1652,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         contentEn: notice.contentEn || '',
         contentBn: notice.contentBn || '',
         date: notice.date || new Date().toISOString().split('T')[0],
-        isUrgent: Boolean(notice.isUrgent)
+        isUrgent: Boolean(notice.isUrgent),
+        ...(notice.priority ? { priority: notice.priority } : {}),
+        ...(notice.published !== undefined ? { published: notice.published } : {}),
+        ...(notice.attachmentUrl ? { attachmentUrl: notice.attachmentUrl } : {}),
+        ...(notice.imageUrl ? { imageUrl: notice.imageUrl } : {}),
+        ...(notice.createdAt ? { createdAt: notice.createdAt } : { createdAt: new Date().toISOString() }),
+        updatedAt: new Date().toISOString()
       };
 
       await withSync(() => setDoc(doc(db, 'notices', cleanNotice.id), cleanNotice, { merge: true }));
@@ -1565,6 +1674,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteNotice = async (id: string) => {
     const prevList = [...notices];
     try {
+      const currentUser = auth.currentUser;
+      console.log("[ADMIN AUTH]", {
+        uid: currentUser?.uid,
+        email: currentUser?.email
+      });
+
+      if (!currentUser || !currentUser.uid) {
+        throw new Error('unauthenticated');
+      }
+
+      const adminRef = doc(db, 'admins', currentUser.uid);
+      let adminDoc = await getDoc(adminRef);
+      console.log("[ADMIN DOCUMENT]", adminDoc.exists() ? adminDoc.data() : null);
+
+      const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
+      const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
+
+      if (!adminDoc.exists() && isSuperAdminEmail) {
+        await setDoc(adminRef, {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
+          role: 'superadmin',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        adminDoc = await getDoc(adminRef);
+      }
+
+      if (!adminDoc.exists()) {
+        throw new Error('MISSING_ADMIN_DOC');
+      }
+
+      const adminData = adminDoc.data();
+      if (adminData?.active !== true) {
+        if (isSuperAdminEmail) {
+          await setDoc(adminRef, { active: true, role: 'superadmin', updatedAt: new Date().toISOString() }, { merge: true });
+        } else {
+          throw new Error('INACTIVE_ADMIN');
+        }
+      } else if (!['superadmin', 'admin'].includes(adminData?.role)) {
+        if (isSuperAdminEmail) {
+          await setDoc(adminRef, { role: 'superadmin', active: true, updatedAt: new Date().toISOString() }, { merge: true });
+        } else {
+          throw new Error('UNAUTHORIZED_ROLE');
+        }
+      }
+
       recordSyncEvent('notices', 'local');
       await withSync(() => deleteDoc(doc(db, 'notices', id)));
       await logAuditTrail('DELETE_NOTICE', 'notices', id);

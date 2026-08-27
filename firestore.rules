@@ -16,10 +16,37 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
+    function isSuperAdminEmail() {
+      return isSignedIn() && request.auth.token.email.matches('(?i)^azadisocialwelfareorganization@gmail\\.com$');
+    }
+
     function isAdmin() {
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email.matches('(?i)^azadisocialwelfareorganization@gmail\\.com$')
+        (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['superadmin', 'admin', 'editor']
+        ) || isSuperAdminEmail()
+      );
+    }
+
+    function isPrivilegedAdmin() {
+      return isSignedIn() && (
+        (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['superadmin', 'admin']
+        ) || isSuperAdminEmail()
+      );
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'superadmin'
+        ) || isSuperAdminEmail()
       );
     }
 
@@ -119,17 +146,17 @@ service cloud.firestore {
 
     match /settings/config {
       allow read: if true;
-      allow write: if isAdmin() && isValidSettings(incoming());
+      allow write: if isPrivilegedAdmin() && isValidSettings(incoming());
     }
 
     match /settings/letterhead {
       allow read: if true;
-      allow write: if isAdmin() && isValidLetterhead(incoming());
+      allow write: if isPrivilegedAdmin() && isValidLetterhead(incoming());
     }
 
     match /settings/version {
       allow read: if true;
-      allow write: if isAdmin() && isValidVersion(incoming());
+      allow write: if isPrivilegedAdmin() && isValidVersion(incoming());
     }
 
     // 2. Admins Collection
@@ -140,15 +167,17 @@ service cloud.firestore {
         && (data.role == 'superadmin' || data.role == 'admin' || data.role == 'editor')
         && data.active is bool
         && (!data.keys().hasAny(['displayName']) || (data.displayName is string && data.displayName.size() <= 200))
-        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is string && data.createdAt.size() <= 100))
-        && (!data.keys().hasAny(['updatedAt']) || (data.updatedAt is string && data.updatedAt.size() <= 100));
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is string || data.createdAt is timestamp))
+        && (!data.keys().hasAny(['updatedAt']) || (data.updatedAt is string || data.updatedAt is timestamp));
     }
 
     match /admins/{adminId} {
-      allow read: if isSignedIn() && (adminId == request.auth.uid || isAdmin());
+      allow read: if isSignedIn() && (adminId == request.auth.uid || isPrivilegedAdmin());
       allow write: if (
-        (isAdmin() && isValidAdmin(incoming()) && adminId == incoming().uid) ||
-        (isSignedIn() && request.auth.uid == adminId && request.auth.token.email.matches('(?i)^azadisocialwelfareorganization@gmail\\.com$') && isValidAdmin(incoming()))
+        // Superadmin bootstrap: Known initial superadmin email writing their own superadmin document
+        (isSuperAdminEmail() && request.auth.uid == adminId && isValidAdmin(incoming()) && incoming().uid == adminId && incoming().role == 'superadmin') ||
+        // Existing superadmin managing admin records
+        (isSuperAdmin() && isValidAdmin(incoming()) && incoming().uid == adminId)
       );
     }
 
@@ -192,19 +221,19 @@ service cloud.firestore {
       allow list: if true;
       allow create: if isValidId(donationId) && donationId == incoming().id && isValidPublicDonation(incoming()) && (isAdmin() || !incoming().keys().hasAny(['status']) || incoming().status == 'PENDING');
       allow update: if isValidId(donationId) && donationId == incoming().id && isAdmin() && isValidPublicDonation(incoming());
-      allow delete: if isValidId(donationId) && isAdmin();
+      allow delete: if isValidId(donationId) && isPrivilegedAdmin();
 
       // Private donor information subcollection
       match /private_info/{docId} {
-        allow read: if isAdmin();
+        allow read: if isPrivilegedAdmin();
         allow create: if isValidId(donationId) && (docId == 'details' || isValidId(docId)) && isValidPrivateInfo(incoming());
-        allow update, delete: if isAdmin();
+        allow update, delete: if isPrivilegedAdmin();
       }
     }
 
     // Collection group rule for admin to query all private_info subcollections securely
     match /{path=**}/private_info/{docId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isPrivilegedAdmin();
     }
 
     // 4. Public Aggregate Statistics Collection
@@ -245,7 +274,7 @@ service cloud.firestore {
       allow list: if true;
       allow get: if isValidId(leaderId);
       allow create, update: if isValidId(leaderId) && isAdmin() && isValidLeader(incoming());
-      allow delete: if isValidId(leaderId) && isAdmin();
+      allow delete: if isValidId(leaderId) && isPrivilegedAdmin();
     }
 
     // 6. Events Collection
@@ -272,22 +301,24 @@ service cloud.firestore {
       allow list: if true;
       allow get: if isValidId(eventId);
       allow create, update: if isValidId(eventId) && isAdmin() && isValidEvent(incoming());
-      allow delete: if isValidId(eventId) && isAdmin();
+      allow delete: if isValidId(eventId) && isPrivilegedAdmin();
     }
 
     // 7. Notices Collection
     function isValidNotice(data) {
       return data.keys().hasAll(['id', 'titleEn', 'titleBn', 'contentEn', 'contentBn', 'date'])
         && data.id is string && data.id.size() <= 128
-        && data.titleEn is string && data.titleEn.size() <= 200
-        && data.titleBn is string && data.titleBn.size() <= 200
-        && data.contentEn is string && data.contentEn.size() <= 10000
-        && data.contentBn is string && data.contentBn.size() <= 10000
+        && data.titleEn is string && data.titleEn.size() <= 300
+        && data.titleBn is string && data.titleBn.size() <= 300
+        && data.contentEn is string && data.contentEn.size() <= 20000
+        && data.contentBn is string && data.contentBn.size() <= 20000
         && data.date is string
         && (!data.keys().hasAny(['priority']) || (data.priority is string && data.priority.size() <= 50))
         && (!data.keys().hasAny(['isUrgent']) || data.isUrgent is bool)
         && (!data.keys().hasAny(['published']) || data.published is bool)
         && (!data.keys().hasAny(['attachmentUrl']) || data.attachmentUrl is string)
+        && (!data.keys().hasAny(['imageUrl']) || data.imageUrl is string)
+        && (!data.keys().hasAny(['image']) || data.image is string)
         && (!data.keys().hasAny(['createdAt']) || (data.createdAt is string && data.createdAt.size() <= 100))
         && (!data.keys().hasAny(['updatedAt']) || (data.updatedAt is string && data.updatedAt.size() <= 100));
     }
@@ -296,7 +327,7 @@ service cloud.firestore {
       allow list: if true;
       allow get: if isValidId(noticeId);
       allow create, update: if isValidId(noticeId) && isAdmin() && isValidNotice(incoming());
-      allow delete: if isValidId(noticeId) && isAdmin();
+      allow delete: if isValidId(noticeId) && isPrivilegedAdmin();
     }
 
     // 8. News Collection
@@ -320,7 +351,7 @@ service cloud.firestore {
       allow list: if true;
       allow get: if isValidId(newsId);
       allow create, update: if isValidId(newsId) && isAdmin() && isValidNews(incoming());
-      allow delete: if isValidId(newsId) && isAdmin();
+      allow delete: if isValidId(newsId) && isPrivilegedAdmin();
     }
 
     // 9. Audit Logs Collection (Append-only)
@@ -340,7 +371,7 @@ service cloud.firestore {
     }
 
     match /audit_logs/{logId} {
-      allow list, get: if isAdmin();
+      allow list, get: if isPrivilegedAdmin();
       allow create: if isSignedIn() && isValidId(logId) && isValidAuditLog(incoming());
       allow update, delete: if false;
     }
@@ -374,7 +405,7 @@ service cloud.firestore {
       allow get: if isValidId(testimonialId);
       allow create: if isValidId(testimonialId) && testimonialId == incoming().id && isValidTestimonial(incoming()) && (isAdmin() || !incoming().keys().hasAny(['status']) || incoming().status == 'PENDING');
       allow update: if isValidId(testimonialId) && testimonialId == incoming().id && isAdmin() && isValidTestimonial(incoming());
-      allow delete: if isValidId(testimonialId) && isAdmin();
+      allow delete: if isValidId(testimonialId) && isPrivilegedAdmin();
     }
 
     // 11. Expenses Collection (Admin only)
@@ -395,9 +426,9 @@ service cloud.firestore {
     }
 
     match /expenses/{expenseId} {
-      allow list, get: if isAdmin();
-      allow create, update: if isValidId(expenseId) && expenseId == incoming().id && isAdmin() && isValidExpense(incoming());
-      allow delete: if isValidId(expenseId) && isAdmin();
+      allow list, get: if isPrivilegedAdmin();
+      allow create, update: if isValidId(expenseId) && expenseId == incoming().id && isPrivilegedAdmin() && isValidExpense(incoming());
+      allow delete: if isValidId(expenseId) && isPrivilegedAdmin();
     }
 
     // Connection testing doc

@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TRANSLATIONS } from '../../utils/constants';
-import { BellRing, Plus, Trash2, Edit2, Clock, Loader2 } from 'lucide-react';
+import { BellRing, Plus, Trash2, Edit2, Clock, Loader2, Image as ImageIcon, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Notice } from '../../types';
 import { parseLocalDate } from '../../utils/parseLocalDate';
-import { formatFirebaseError } from '../../lib/firebase';
+import { formatFirebaseError, auth, db } from '../../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { normalizeGoogleDriveImage } from '../../utils/normalizeGoogleDriveImage';
 
 export const NoticeManager: React.FC = () => {
   const { lang, notices, saveNotice, deleteNotice } = useApp();
   const t = TRANSLATIONS[lang];
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   const [formData, setFormData] = useState<Omit<Notice, 'id'>>({
-    titleEn: '', titleBn: '',
-    contentEn: '', contentBn: '',
+    titleEn: '', 
+    titleBn: '',
+    contentEn: '', 
+    contentBn: '',
     date: new Date().toISOString().split('T')[0],
-    isUrgent: true // Default to true since current date is within the last 24 hours
+    isUrgent: true,
+    imageUrl: '',
+    priority: 'normal'
   });
 
   const isDateWithin24Hours = (dateStr: string): boolean => {
@@ -30,23 +37,105 @@ export const NoticeManager: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setStatusFeedback({ type, text });
+    setTimeout(() => setStatusFeedback(null), 6000);
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isUrgentAuto = formData.isUrgent || isDateWithin24Hours(formData.date);
-    const finalData = { ...formData, isUrgent: isUrgentAuto };
+    setStatusFeedback(null);
+
+    // 1. Diagnostic logging: Check Auth User
+    const currentUser = auth.currentUser;
+    console.log("[ADMIN AUTH]", {
+      uid: currentUser?.uid,
+      email: currentUser?.email
+    });
+
+    if (!currentUser || !currentUser.uid) {
+      const msg = lang === 'bn' 
+        ? 'আপনি লগইন করেননি। অনুগ্রহ করে পুনরায় অ্যাডমিন হিসেবে সাইন ইন করুন।' 
+        : 'You are not logged in. Please sign in as an administrator.';
+      showToast('error', msg);
+      return;
+    }
 
     setIsSaving(true);
     try {
+      // 2. Diagnostic logging & verification: Check Admin Document in Firestore
+      const adminRef = doc(db, 'admins', currentUser.uid);
+      let adminDoc = await getDoc(adminRef);
+      console.log("[ADMIN DOCUMENT]", adminDoc.exists() ? adminDoc.data() : null);
+
+      const superAdminEmail = (import.meta.env.VITE_SUPERADMIN_EMAIL || 'azadisocialwelfareorganization@gmail.com').toLowerCase();
+      const isSuperAdminEmail = currentUser.email ? currentUser.email.toLowerCase() === superAdminEmail : false;
+
+      // Handle initial superadmin self-bootstrap if missing
+      if (!adminDoc.exists() && isSuperAdminEmail) {
+        console.log("[ADMIN BOOTSTRAP] Creating superadmin document for", currentUser.uid);
+        await setDoc(adminRef, {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName || 'Azadi Social Welfare Organization',
+          role: 'superadmin',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        adminDoc = await getDoc(adminRef);
+      }
+
+      if (!adminDoc.exists()) {
+        const errorMsg = lang === 'bn' 
+          ? 'আপনার Firebase Admin authorization document পাওয়া যায়নি।' 
+          : 'Your Firebase Admin authorization document was not found in Firestore (/admins/{uid}).';
+        showToast('error', errorMsg);
+        setIsSaving(false);
+        return;
+      }
+
+      const adminData = adminDoc.data();
+      if (adminData?.active !== true && !isSuperAdminEmail) {
+        const errorMsg = lang === 'bn' 
+          ? 'আপনার অ্যাডমিন অ্যাকাউন্টটি নিষ্ক্রিয় করা আছে।' 
+          : 'Your administrator account is marked as inactive.';
+        showToast('error', errorMsg);
+        setIsSaving(false);
+        return;
+      }
+
+      if (!['superadmin', 'admin', 'editor'].includes(adminData?.role) && !isSuperAdminEmail) {
+        const errorMsg = lang === 'bn' 
+          ? 'এই কাজটি করার জন্য আপনার প্রশাসনিক ভূমিকা (Role) অনুমোদিত নয়।' 
+          : 'Your administrator role does not have permission for this action.';
+        showToast('error', errorMsg);
+        setIsSaving(false);
+        return;
+      }
+
+      const isUrgentAuto = formData.isUrgent || isDateWithin24Hours(formData.date);
+      const normalizedImg = formData.imageUrl ? normalizeGoogleDriveImage(formData.imageUrl) : '';
+
+      const finalData: Omit<Notice, 'id'> = { 
+        ...formData, 
+        isUrgent: isUrgentAuto,
+        ...(normalizedImg ? { imageUrl: normalizedImg } : {})
+      };
+
       if (editingId) {
         await saveNotice({ ...finalData, id: editingId } as Notice);
+        showToast('success', lang === 'bn' ? 'নোটিশ সফলভাবে আপডেট করা হয়েছে!' : 'Notice successfully updated!');
       } else {
         const newId = `notice_${Date.now()}`;
         await saveNotice({ ...finalData, id: newId } as Notice);
+        showToast('success', lang === 'bn' ? 'নোটিশ সফলভাবে প্রকাশিত হয়েছে!' : 'Notice published successfully!');
       }
       resetForm();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Save notice failed:", err);
-      alert(formatFirebaseError(err, lang));
+      const msg = formatFirebaseError(err, lang);
+      showToast('error', msg);
     } finally {
       setIsSaving(false);
     }
@@ -59,7 +148,9 @@ export const NoticeManager: React.FC = () => {
       titleEn: '', titleBn: '',
       contentEn: '', contentBn: '',
       date: new Date().toISOString().split('T')[0],
-      isUrgent: true // Current date is always within last 24 hours, so default to true
+      isUrgent: true,
+      imageUrl: '',
+      priority: 'normal'
     });
   };
 
@@ -68,9 +159,10 @@ export const NoticeManager: React.FC = () => {
       setDeletingId(id);
       try {
         await deleteNotice(id);
+        showToast('success', lang === 'bn' ? 'নোটিশ সফলভাবে মুছে ফেলা হয়েছে।' : 'Notice deleted successfully.');
       } catch (err) {
         console.error("Delete notice failed:", err);
-        alert(formatFirebaseError(err, lang));
+        showToast('error', formatFirebaseError(err, lang));
       } finally {
         setDeletingId(null);
       }
@@ -79,8 +171,18 @@ export const NoticeManager: React.FC = () => {
 
   const handleEdit = (notice: Notice) => {
     setEditingId(notice.id);
-    setFormData({ ...notice });
+    setFormData({ 
+      titleEn: notice.titleEn || '',
+      titleBn: notice.titleBn || '',
+      contentEn: notice.contentEn || '',
+      contentBn: notice.contentBn || '',
+      date: notice.date || new Date().toISOString().split('T')[0],
+      isUrgent: notice.isUrgent ?? true,
+      imageUrl: notice.imageUrl || '',
+      priority: notice.priority || 'normal'
+    });
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -93,10 +195,21 @@ export const NoticeManager: React.FC = () => {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">{lang === 'bn' ? 'সংগঠনের নোটিশ বোর্ড তদারকি ও নতুন নোটিশ প্রকাশ করুন' : 'Oversee notice boards and publish active administrative notices'}</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl active:scale-95">
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl active:scale-95 transition-all">
           <Plus size={20} /> {lang === 'bn' ? 'নতুন নোটিশ' : 'New Notice'}
         </button>
       </div>
+
+      {statusFeedback && (
+        <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in ${
+          statusFeedback.type === 'success' 
+            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+        }`}>
+          {statusFeedback.type === 'success' ? <CheckCircle2 className="shrink-0" size={20} /> : <AlertCircle className="shrink-0" size={20} />}
+          <span className="font-bold text-sm">{statusFeedback.text}</span>
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleAdd} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-2xl space-y-8 animate-in slide-in-from-top-4">
@@ -112,6 +225,19 @@ export const NoticeManager: React.FC = () => {
                     isUrgent: formData.isUrgent || isDateWithin24Hours(newDate)
                   });
                 }} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1 flex items-center gap-1.5">
+                  <ImageIcon size={14} /> ছবি বা এটাচমেন্ট লিংক (Optional Image / Drive URL)
+                </label>
+                <input 
+                  type="url" 
+                  placeholder="https://drive.google.com/... or image link"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-medium text-sm" 
+                  value={formData.imageUrl || ''} 
+                  onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} 
+                />
               </div>
               
               <label className="flex items-center gap-4 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/50 cursor-pointer select-none">
@@ -139,29 +265,51 @@ export const NoticeManager: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-4">
-            <button type="submit" className="flex-1 bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-emerald-700 transition-all">{editingId ? (lang === 'bn' ? 'নোটিশ আপডেট করুন' : 'Update Notice') : (lang === 'bn' ? 'নোটিশ পোস্ট করুন' : 'Post Notice')}</button>
-            <button type="button" onClick={resetForm} className="px-10 bg-slate-100 dark:bg-slate-850 text-slate-500 dark:text-slate-400 font-black py-4 rounded-xl">Cancel</button>
+            <button 
+              type="submit" 
+              disabled={isSaving}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>{lang === 'bn' ? 'সংরক্ষণ করা হচ্ছে...' : 'Saving to Firestore...'}</span>
+                </>
+              ) : (
+                <span>{editingId ? (lang === 'bn' ? 'নোটিশ আপডেট করুন' : 'Update Notice') : (lang === 'bn' ? 'নোটিশ পোস্ট করুন' : 'Post Notice')}</span>
+              )}
+            </button>
+            <button type="button" onClick={resetForm} disabled={isSaving} className="px-10 bg-slate-100 dark:bg-slate-850 text-slate-500 dark:text-slate-400 font-black py-4 rounded-xl">Cancel</button>
           </div>
         </form>
       )}
 
       <div className="grid grid-cols-1 gap-6">
-        {notices.map(notice => (
-          <div key={notice.id} className={`bg-white dark:bg-slate-900 rounded-[2rem] border ${notice.isUrgent ? 'border-red-200 dark:border-red-900/50' : 'border-slate-200 dark:border-slate-800'} p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 group`}>
-            <div className="flex-1 space-y-3 text-center md:text-left">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                {notice.isUrgent && <span className="px-3 py-1 bg-red-500 text-white text-[9px] font-black uppercase rounded-full">Urgent</span>}
-              </div>
-              <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight bengali">{lang === 'bn' ? notice.titleBn : notice.titleEn}</h3>
-              <p className="text-slate-500 dark:text-slate-400 font-bold text-sm line-clamp-2 bengali">{lang === 'bn' ? notice.contentBn : notice.contentEn}</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => handleEdit(notice)} className="p-4 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all"><Edit2 size={20} /></button>
-              <button onClick={() => handleDelete(notice.id)} className="p-4 bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-2xl hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={20} /></button>
-            </div>
+        {notices.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-400">
+            <BellRing className="mx-auto mb-3 opacity-40" size={36} />
+            <p className="font-bold">{lang === 'bn' ? 'বর্তমানে কোনো নোটিশ নেই।' : 'No notices published yet.'}</p>
           </div>
-        ))}
+        ) : (
+          notices.map(notice => (
+            <div key={notice.id} className={`bg-white dark:bg-slate-900 rounded-[2rem] border ${notice.isUrgent ? 'border-red-200 dark:border-red-900/50' : 'border-slate-200 dark:border-slate-800'} p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 group`}>
+              <div className="flex-1 space-y-3 text-center md:text-left">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                  <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Clock size={12} /> {parseLocalDate(notice.date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  {notice.isUrgent && <span className="px-3 py-1 bg-red-500 text-white text-[9px] font-black uppercase rounded-full">Urgent</span>}
+                </div>
+                <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight bengali">{lang === 'bn' ? notice.titleBn : notice.titleEn}</h3>
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-sm line-clamp-2 bengali">{lang === 'bn' ? notice.contentBn : notice.contentEn}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleEdit(notice)} className="p-4 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all"><Edit2 size={20} /></button>
+                <button onClick={() => handleDelete(notice.id)} disabled={deletingId === notice.id} className="p-4 bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-2xl hover:bg-rose-600 hover:text-white transition-all disabled:opacity-50">
+                  {deletingId === notice.id ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

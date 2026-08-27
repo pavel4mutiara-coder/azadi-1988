@@ -108,8 +108,30 @@ export function formatFirebaseError(error: unknown, lang: 'en' | 'bn' = 'en'): s
       : 'You are currently offline. Please reconnect to the internet and try again.';
   }
 
-  if (error instanceof Error && (error.message === 'EDIT_CONFLICT' || error.message === 'DOCUMENT_NOT_FOUND')) {
-    return error.message;
+  if (error instanceof Error) {
+    if (error.message === 'MISSING_ADMIN_DOC') {
+      return lang === 'bn'
+        ? 'আপনার Firebase Admin authorization document পাওয়া যায়নি।'
+        : 'Your Firebase Admin authorization document was not found in Firestore (/admins/{uid}).';
+    }
+    if (error.message === 'INACTIVE_ADMIN') {
+      return lang === 'bn'
+        ? 'আপনার অ্যাডমিন অ্যাকাউন্টটি নিষ্ক্রিয় করা আছে।'
+        : 'Your administrator account is marked as inactive.';
+    }
+    if (error.message === 'UNAUTHORIZED_ROLE') {
+      return lang === 'bn'
+        ? 'এই কাজটি করার জন্য আপনার প্রশাসনিক ভূমিকা (Role) অনুমোদিত নয়।'
+        : 'Your administrator role does not have permission for this action.';
+    }
+    if (error.message === 'unauthenticated' || error.message === 'UNAUTHENTICATED') {
+      return lang === 'bn'
+        ? 'আপনি লগইন করেননি।'
+        : 'You are not logged in. Please sign in as an administrator.';
+    }
+    if (error.message === 'EDIT_CONFLICT' || error.message === 'DOCUMENT_NOT_FOUND') {
+      return error.message;
+    }
   }
 
   const errObj = error as any;
@@ -127,14 +149,20 @@ export function formatFirebaseError(error: unknown, lang: 'en' | 'bn' = 'en'): s
 
   if (code.includes('permission-denied') || rawMsg.includes('permission-denied') || rawMsg.includes('Missing or insufficient permissions')) {
     return lang === 'bn'
-      ? 'অনুমতি অস্বীকার করা হয়েছে: এই কাজটি করার জন্য আপনার প্রশাসনিক অধিকার (Admin Role) প্রয়োজন।'
-      : 'Permission denied: You do not have administrative authorization to modify this document.';
+      ? 'Firestore permission denied. আপনার Admin authorization যাচাই করুন।'
+      : 'Firestore permission denied. Please verify your Admin authorization in /admins/{uid}.';
   }
 
   if (code.includes('unauthenticated') || rawMsg.includes('unauthenticated')) {
     return lang === 'bn'
-      ? 'প্রমাণীকরণ আবশ্যক: অনুগ্রহ করে পুনরায় অ্যাডমিন হিসেবে সাইন ইন করুন।'
-      : 'Authentication required: Please sign in as an administrator again.';
+      ? 'আপনি লগইন করেননি।'
+      : 'You are not logged in.';
+  }
+
+  if (code.includes('failed-precondition')) {
+    return lang === 'bn'
+      ? `ফায়ারস্টোর পূর্বশর্ত ব্যর্থ (failed-precondition): ${rawMsg}`
+      : `Firestore failed-precondition: ${rawMsg}`;
   }
 
   if (code.includes('unavailable') || rawMsg.includes('unavailable')) {
