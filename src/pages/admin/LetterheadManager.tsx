@@ -17,42 +17,82 @@ import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 const LetterheadStyles = () => (
   <style>{`
     @media print {
-      /* Hide absolutely everything in the document body */
+      /* Define standard A4 page dimensions and strict portrait orientation */
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+      
+      /* Global document canvas reset for physical printing */
+      html, body {
+        width: 210mm !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* Hide all default layout and application elements */
       body * {
         visibility: hidden !important;
       }
-      /* Ensure that the print area and ALL its descendants are visible */
+
+      /* Completely remove screen navigation, headers, footers, toolbars, and no-print containers */
+      header, footer, nav, aside, .no-print, #app-layout-root > header, #app-layout-root > footer {
+        display: none !important;
+        visibility: hidden !important;
+      }
+
+      /* Force print area and all internal elements to be visible */
       #print-area, #print-area * {
         visibility: visible !important;
       }
-      /* Position the print area at the absolute top left, with natural flow across page breaks */
+
+      /* Precision A4 Letterhead formatting */
       #print-area {
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
         width: 210mm !important;
-        height: auto !important; /* Let height be auto for natural page breaks */
+        height: auto !important; /* Dynamic flow for natural multipage support */
         min-height: 297mm !important;
-        padding: 15mm 20mm 20mm 20mm !important; /* Standard official document margins */
+        padding: 12mm 15mm 15mm 15mm !important; /* Standard institutional letterhead padding */
         margin: 0 !important;
+        box-sizing: border-box !important;
+        transform: none !important;
         box-shadow: none !important;
-        background: white !important;
-        color: black !important;
+        border: none !important;
+        background: #ffffff !important;
+        color: #000000 !important;
         font-family: "Noto Sans Bengali", sans-serif !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
+
+      /* Editor body print expansion */
       .editor-body {
         overflow: visible !important;
         max-height: none !important;
-        min-height: none !important;
+        min-height: auto !important;
         height: auto !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
       }
-      /* Hide elements with 'no-print' class completely */
-      .no-print {
-        display: none !important;
+
+      /* Prevent awkward page break splits in paragraphs, lists, signatures, and stamps */
+      p, li, blockquote, .signature-block, .stamp-block, h1, h2, h3, h4 {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
-      @page {
-        size: A4 portrait;
-        margin: 0;
+
+      /* Crisp image rendering on print */
+      img {
+        max-width: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
     }
     
@@ -980,10 +1020,13 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
             </button>
             
             <button 
+              id="preview-print-official-letter-btn"
               onClick={handlePrint} 
-              className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+              className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+              title={lang === 'bn' ? 'A4 সাইজে অফিসিয়াল চিঠি প্রিন্ট করুন' : 'Print Official Letter (A4 Paper)'}
             >
-              <Printer size={14} /> {lang === 'bn' ? 'প্রিন্ট' : 'Print'}
+              <Printer size={15} className="text-amber-400 dark:text-amber-600" />
+              <span>{lang === 'bn' ? 'অফিসিয়াল চিঠি প্রিন্ট করুন' : 'Print Official Letter'}</span>
             </button>
 
             <button 
@@ -1057,8 +1100,14 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           >
             <Download size={16} /> {isGeneratingPDF ? (lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...') : (lang === 'bn' ? 'PDF ডাউনলোড' : 'Download PDF')}
           </button>
-          <button onClick={handlePrint} className="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 active:scale-98 cursor-pointer">
-            <Printer size={16} /> Print
+          <button 
+            id="print-official-letter-btn"
+            onClick={handlePrint} 
+            className="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 active:scale-98 cursor-pointer"
+            title={lang === 'bn' ? 'A4 পেপারে অফিসিয়াল চিঠি প্রিন্ট করুন' : 'Print Official Letter formatted for A4 paper'}
+          >
+            <Printer size={16} className="text-amber-400" />
+            <span>{lang === 'bn' ? 'অফিসিয়াল চিঠি প্রিন্ট করুন' : 'Print Official Letter'}</span>
           </button>
         </div>
       </div>

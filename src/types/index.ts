@@ -282,3 +282,16 @@ export interface AuditLog {
   createdAt?: string;
   details?: string;
 }
+
+export interface VolunteerApplication {
+  id: string;
+  name: string;
+  phone: string;
+  areaOfInterest: string;
+  areaTitle?: string;
+  availability?: string;
+  notes?: string;
+  submittedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'CONTACTED' | 'REJECTED';
+}
+

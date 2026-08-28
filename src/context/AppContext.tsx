@@ -356,7 +356,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // Purge legacy cached data and offline Firestore database instances from browser storage
+  // Purge obsolete custom legacy storage keys on boot
   useEffect(() => {
     const keysToRemove = [
       'azadi_donations',
@@ -375,24 +375,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try { localStorage.removeItem(key); } catch {}
       try { sessionStorage.removeItem(key); } catch {}
     });
-
-    if (typeof window !== 'undefined' && window.indexedDB && window.indexedDB.databases) {
-      window.indexedDB.databases().then(dbs => {
-        dbs.forEach(database => {
-          if (database.name && (database.name.includes('firestore') || database.name.includes('firebase') || database.name.includes('azadi'))) {
-            try { window.indexedDB.deleteDatabase(database.name); } catch {}
-          }
-        });
-      }).catch(() => {});
-    }
-
-    if (typeof window !== 'undefined' && 'caches' in window) {
-      caches.keys().then(names => {
-        names.forEach(name => {
-          try { caches.delete(name); } catch {}
-        });
-      }).catch(() => {});
-    }
   }, []);
 
   // Listen for Authentication state

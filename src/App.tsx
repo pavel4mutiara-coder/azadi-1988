@@ -110,6 +110,7 @@ const AppRoutes: React.FC = () => {
         
         {/* Admin Panel */}
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/volunteers" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/leadership" element={<ProtectedRoute><LeadershipManager /></ProtectedRoute>} />
         <Route path="/admin/letterhead" element={<ProtectedRoute><LetterheadManager /></ProtectedRoute>} />
         <Route path="/admin/donations" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

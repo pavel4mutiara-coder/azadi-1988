@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare, Shield, History, Image as ImageIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Heart, PieChart, FileText, Settings, Home, Info, Sparkles, Activity, BellRing, Newspaper, Contact, MessageSquare, Shield, History, Image as ImageIcon, HeartHandshake } from 'lucide-react';
 
 export const ISLAMIC_QUOTES = [
   {
@@ -96,7 +96,9 @@ export const TRANSLATIONS = {
     transparency: "Transparency",
     contact: "Contact",
     verifyDonation: "Verify Receipt",
-    more: "More"
+    more: "More",
+    volunteer: "Become a Volunteer",
+    volunteers: "Volunteers"
   },
   bn: {
     organizationName: "আজাদী সমাজ কল্যাণ সংঘ",
@@ -163,7 +165,9 @@ export const TRANSLATIONS = {
     transparency: "স্বচ্ছতা ও হিসাব",
     contact: "যোগাযোগ",
     verifyDonation: "রশিদ যাচাই",
-    more: "আরও"
+    more: "আরও",
+    volunteer: "স্বেচ্ছাসেবক হোন",
+    volunteers: "স্বেচ্ছাসেবক তালিকা"
   }
 };
 
@@ -189,6 +193,7 @@ export const MOBILE_NAV_ITEMS = [
 
 export const ADMIN_NAV_ITEMS = [
   { label: 'dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
+  { label: 'volunteers', path: '/admin/volunteers', icon: <HeartHandshake size={20} /> },
   { label: 'leadership', path: '/admin/leadership', icon: <Users size={20} /> },
   { label: 'notices', path: '/admin/notices', icon: <BellRing size={20} /> },
   { label: 'news', path: '/admin/news', icon: <Newspaper size={20} /> },

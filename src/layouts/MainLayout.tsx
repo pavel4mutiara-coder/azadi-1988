@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext';
 import { TRANSLATIONS, NAV_ITEMS, ADMIN_NAV_ITEMS, MOBILE_NAV_ITEMS, ORGANIZATION_NAME } from '../utils/constants';
 import { Link, useLocation } from 'react-router-dom';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { NewsletterSubscription } from '../components/NewsletterSubscription';
+import { VolunteerModal } from '../components/VolunteerModal';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 import { 
   Moon, Sun, Languages, Heart, MapPin, Phone, Mail, 
@@ -11,7 +13,7 @@ import {
   PlusSquare, ArrowUp, PieChart, Home, Sparkles, Lock, Menu,
   Award, Shield, ExternalLink, CheckCircle2, Image as ImageIcon,
   Info, Newspaper, Contact, MoreHorizontal, FileText, MessageSquare, History, Settings, LayoutDashboard,
-  AlertCircle, Flag
+  AlertCircle, Flag, HeartHandshake
 } from 'lucide-react';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,6 +32,9 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
   // Mobile menu drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Volunteer sign-up modal state
+  const [volunteerModalOpen, setVolunteerModalOpen] = useState(false);
 
   // Desktop 'More' menu dropdown state
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -531,6 +536,18 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
                   {/* Additional Secondary Links */}
                   <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <button
+                    id="more-menu-volunteer-btn"
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      setVolunteerModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-blue-700 dark:text-amber-400 hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors bengali cursor-pointer"
+                  >
+                    <HeartHandshake size={15} className="text-blue-600 dark:text-amber-400" />
+                    <span>{t.volunteer as string}</span>
+                  </button>
                   <Link
                     to="/contact"
                     onClick={() => setMoreMenuOpen(false)}
@@ -556,6 +573,18 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
           {/* AREA 3: RIGHT - Action Controls & Donate CTA */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 z-10">
+            {/* Become a Volunteer CTA Button (Desktop & Tablet) */}
+            <button
+              id="header-volunteer-cta-btn"
+              type="button"
+              onClick={() => setVolunteerModalOpen(true)}
+              className="hidden md:flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-[11px] uppercase tracking-wider px-2.5 sm:px-3 h-8 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-95 shrink-0 cursor-pointer bengali"
+              title={lang === 'bn' ? 'স্বেচ্ছাসেবক হিসেবে যোগ দিন' : 'Become a Volunteer'}
+            >
+              <HeartHandshake size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="whitespace-nowrap">{t.volunteer as string}</span>
+            </button>
+
             {/* Admin Dashboard Badge (if logged in as Admin) */}
             {isAdmin && (
               <Link 
@@ -737,6 +766,19 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             })}
 
             <div className="pt-4 mt-4 border-t border-slate-800/80 space-y-3">
+              <button
+                id="mobile-volunteer-cta-btn"
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setVolunteerModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-blue-700/20 text-sm uppercase tracking-wider bengali cursor-pointer transition-all active:scale-95"
+              >
+                <HeartHandshake size={18} />
+                <span>{t.volunteer as string}</span>
+              </button>
+
               <Link
                 to="/donation"
                 onClick={() => setMobileMenuOpen(false)}
@@ -825,6 +867,9 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         <div className="absolute inset-0 bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
 
         <div className="container mx-auto px-4 sm:px-6 relative z-10 space-y-12">
+          {/* Global Newsletter Subscription Banner */}
+          <NewsletterSubscription />
+
           {/* Main Footer Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
             
@@ -853,6 +898,55 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <div className="inline-flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800 text-[11px] font-bold text-slate-300">
                 <Shield size={14} className="text-emerald-400" />
                 <span>{lang === 'bn' ? 'স্বচ্ছতা ও কমপ্লায়েন্স নিশ্চিতকৃত' : 'Transparent & Verified NGO'}</span>
+              </div>
+
+              {/* Follow Us / সামাজিক যোগাযোগ সেকশন */}
+              <div id="footer-follow-us-section" className="pt-2 space-y-2.5">
+                <div className="text-[11px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1.5 bengali">
+                  <Sparkles size={12} className="text-amber-400" />
+                  <span>{lang === 'bn' ? 'আমাদের সাথে যুক্ত থাকুন (Follow Us)' : 'Follow Us'}</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <a
+                    id="footer-follow-facebook"
+                    href={settings?.facebook ? getSafeUrl(settings.facebook) : "https://www.facebook.com/azadisocialwelfare1988"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Facebook"
+                    title={lang === 'bn' ? 'আমাদের অফিসিয়াল ফেসবুক পেজে যুক্ত হন' : 'Follow us on Facebook'}
+                    className="w-9 h-9 rounded-xl bg-blue-950/80 hover:bg-blue-600 border border-blue-800/80 text-blue-400 hover:text-white flex items-center justify-center transition-all transform hover:scale-110 shadow-md group"
+                  >
+                    <Facebook size={16} className="group-hover:scale-110 transition-transform" />
+                  </a>
+
+                  <a
+                    id="footer-follow-youtube"
+                    href={settings?.youtube ? getSafeUrl(settings.youtube) : "https://www.youtube.com/@azadisocialwelfare1988"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="YouTube"
+                    title={lang === 'bn' ? 'আমাদের অফিসিয়াল ইউটিউব চ্যানেলে সাবস্ক্রাইব করুন' : 'Subscribe to our YouTube channel'}
+                    className="w-9 h-9 rounded-xl bg-red-950/80 hover:bg-red-600 border border-red-800/80 text-red-400 hover:text-white flex items-center justify-center transition-all transform hover:scale-110 shadow-md group"
+                  >
+                    <Youtube size={16} className="group-hover:scale-110 transition-transform" />
+                  </a>
+
+                  <a
+                    id="footer-follow-whatsapp"
+                    href={
+                      settings?.whatsappChannel 
+                        ? getSafeUrl(settings.whatsappChannel) 
+                        : (settings?.adminWhatsApp ? `https://wa.me/${settings.adminWhatsApp.replace(/[^0-9]/g, '')}` : "https://wa.me/8801712782564")
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="WhatsApp"
+                    title={lang === 'bn' ? 'আমাদের অফিসিয়াল হোয়াটসঅ্যাপ চ্যানেলে যুক্ত থাকুন' : 'Join our WhatsApp channel'}
+                    className="w-9 h-9 rounded-xl bg-emerald-950/80 hover:bg-emerald-600 border border-emerald-800/80 text-emerald-400 hover:text-white flex items-center justify-center transition-all transform hover:scale-110 shadow-md group"
+                  >
+                    <MessageCircle size={16} className="group-hover:scale-110 transition-transform" />
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -932,24 +1026,40 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                   <a href="mailto:info@azadi.org" className="hover:text-white transition-colors">info@azadi.org</a>
                 </div>
                 
-                <div className="pt-2 flex items-center gap-2">
+                <div className="pt-2 flex flex-wrap items-center gap-2">
                   <a 
-                    href="https://wa.me/8801712782564" 
+                    id="footer-contact-whatsapp"
+                    href={
+                      settings?.whatsappChannel 
+                        ? getSafeUrl(settings.whatsappChannel) 
+                        : (settings?.adminWhatsApp ? `https://wa.me/${settings.adminWhatsApp.replace(/[^0-9]/g, '')}` : "https://wa.me/8801712782564")
+                    } 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-400 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
+                    className="px-2.5 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-400 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
                   >
                     <MessageCircle size={13} />
                     <span>WhatsApp</span>
                   </a>
                   <a 
-                    href="https://facebook.com" 
+                    id="footer-contact-facebook"
+                    href={settings?.facebook ? getSafeUrl(settings.facebook) : "https://www.facebook.com/azadisocialwelfare1988"} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-xl bg-blue-950/80 hover:bg-blue-900 border border-blue-800 text-blue-400 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
+                    className="px-2.5 py-1.5 rounded-xl bg-blue-950/80 hover:bg-blue-900 border border-blue-800 text-blue-400 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
                   >
                     <Facebook size={13} />
                     <span>Facebook</span>
+                  </a>
+                  <a 
+                    id="footer-contact-youtube"
+                    href={settings?.youtube ? getSafeUrl(settings.youtube) : "https://www.youtube.com/@azadisocialwelfare1988"} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-400 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
+                  >
+                    <Youtube size={13} />
+                    <span>YouTube</span>
                   </a>
                 </div>
               </div>
@@ -967,13 +1077,25 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                 }
               </p>
               
-              <Link 
-                to="/donation"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider transition-all transform hover:scale-[1.02] active:scale-95 bengali"
-              >
-                <Heart size={16} fill="currentColor" />
-                <span>{t.donate as string}</span>
-              </Link>
+              <div className="space-y-2">
+                <button 
+                  id="footer-volunteer-btn"
+                  type="button"
+                  onClick={() => setVolunteerModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-950/80 hover:bg-blue-900 border border-blue-800/80 text-blue-300 hover:text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer bengali shadow-sm"
+                >
+                  <HeartHandshake size={15} className="text-blue-400" />
+                  <span>{t.volunteer as string}</span>
+                </button>
+
+                <Link 
+                  to="/donation"
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider transition-all transform hover:scale-[1.02] active:scale-95 bengali"
+                >
+                  <Heart size={16} fill="currentColor" />
+                  <span>{t.donate as string}</span>
+                </Link>
+              </div>
 
               <div className="pt-2">
                 <Link 
@@ -1012,6 +1134,12 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
         </div>
       </footer>
+
+      {/* Volunteer Signup Modal */}
+      <VolunteerModal 
+        isOpen={volunteerModalOpen} 
+        onClose={() => setVolunteerModalOpen(false)} 
+      />
     </div>
   );
 };

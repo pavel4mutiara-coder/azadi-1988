@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { AdminLoginForm } from '../../components/AdminLoginForm';
 import { TRANSLATIONS, ADMIN_NAV_ITEMS } from '../../utils/constants';
 import { parseLocalDate } from '../../utils/parseLocalDate';
-import { DonationStatus, Donation, Expense } from '../../types';
+import { DonationStatus, Donation, Expense, VolunteerApplication } from '../../types';
 import { ReceiptView } from './ReceiptView';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
@@ -32,8 +32,76 @@ import {
   AlertCircle,
   PiggyBank,
   Eye,
-  Edit2
+  Edit2,
+  HeartHandshake,
+  FileSpreadsheet,
+  UserCheck,
+  Users,
+  Mail,
+  UserPlus,
+  Filter,
+  CheckCircle,
+  ExternalLink,
+  MessageCircle
 } from 'lucide-react';
+
+const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
+  {
+    id: 'vol_20260820_001',
+    name: 'তানভীর আহমেদ',
+    phone: '01712-345678',
+    areaOfInterest: 'health_camps',
+    areaTitle: 'Free Medical & Health Camps / ফ্রি মেডিকেল ও স্বাস্থ্য ক্যাম্প',
+    availability: 'Weekends / সাপ্তাহিক ছুটির দিন',
+    notes: 'প্যারামেডিক্যাল শিক্ষার্থী, প্রাথমিক চিকিৎসা প্রদানে অভিজ্ঞ।',
+    submittedAt: '2026-08-20T10:30:00.000Z',
+    status: 'APPROVED'
+  },
+  {
+    id: 'vol_20260822_002',
+    name: 'ফারহানা ইয়াসমিন',
+    phone: '01819-876543',
+    areaOfInterest: 'education',
+    areaTitle: 'Education & Student Support / শিক্ষা সহায়তা ও মেধা বৃত্তি',
+    availability: 'Flexible / প্রয়োজন অনুযায়ী যেকোনো সময়',
+    notes: 'বিশ্ববিদ্যালয় শিক্ষার্থী, সুবিধাবঞ্চিত শিশুদের পাঠদানে আগ্রহী।',
+    submittedAt: '2026-08-22T14:15:00.000Z',
+    status: 'APPROVED'
+  },
+  {
+    id: 'vol_20260825_003',
+    name: 'মোঃ সাইদুল ইসলাম',
+    phone: '01911-223344',
+    areaOfInterest: 'relief',
+    areaTitle: 'Disaster Relief & Winter Clothes / দুর্যোগ ও শীতবস্ত্র বিতরণ',
+    availability: 'Per Event / নির্দিষ্ট ইভেন্টে',
+    notes: 'জরুরি ত্রাণ পরিবহন ও মাঠপর্যায়ে বিতরণে কাজ করতে পারি।',
+    submittedAt: '2026-08-25T09:00:00.000Z',
+    status: 'PENDING'
+  },
+  {
+    id: 'vol_20260826_004',
+    name: 'রাশেদুল করিম',
+    phone: '01678-998877',
+    areaOfInterest: 'sports',
+    areaTitle: 'Sports & Youth Development / ক্রীড়া ও যুব উন্নয়ন',
+    availability: 'Weekends / সাপ্তাহিক ছুটির দিন',
+    notes: 'স্থানীয় ফুটবল টুর্নামেন্ট ও যুব উৎসব পরিচালনায় সহায়তা দিতে চাই।',
+    submittedAt: '2026-08-26T16:45:00.000Z',
+    status: 'CONTACTED'
+  },
+  {
+    id: 'vol_20260827_005',
+    name: 'সামিয়া আক্তার',
+    phone: '01552-112233',
+    areaOfInterest: 'environment',
+    areaTitle: 'Tree Plantation & Cleanliness / বৃক্ষরোপণ ও পরিচ্ছন্নতা',
+    availability: 'Flexible / প্রয়োজন অনুযায়ী যেকোনো সময়',
+    notes: 'পরিবেশবান্ধব সচেতনতা ক্যাম্পেইন ও ফটোগ্রাফিতে দক্ষ।',
+    submittedAt: '2026-08-27T11:20:00.000Z',
+    status: 'PENDING'
+  }
+];
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -57,15 +125,27 @@ export const AdminDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Dashboard primary view toggle: 'donations' list vs 'expenses' (Financial Ledger)
-  const [dashboardView, setDashboardView] = useState<'donations' | 'expenses'>(
-    location.pathname === '/admin/expenses' ? 'expenses' : 'donations'
+  // Dashboard primary view toggle: 'donations' list vs 'expenses' (Financial Ledger) vs 'volunteers' (Registered Volunteers)
+  const [dashboardView, setDashboardView] = useState<'donations' | 'expenses' | 'volunteers'>(
+    location.pathname === '/admin/expenses' 
+      ? 'expenses' 
+      : location.pathname === '/admin/volunteers' 
+        ? 'volunteers' 
+        : 'donations'
   );
 
   React.useEffect(() => {
     console.log("[DEBUG] AdminDashboard: Pathname is", location.pathname);
     if (location.pathname === '/admin/expenses') {
       setDashboardView('expenses');
+      const element = document.getElementById('ledger-workspace');
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    } else if (location.pathname === '/admin/volunteers') {
+      setDashboardView('volunteers');
       const element = document.getElementById('ledger-workspace');
       if (element) {
         setTimeout(() => {
@@ -165,6 +245,190 @@ export const AdminDashboard: React.FC = () => {
       descBn.toLowerCase().includes(expQuery)
     );
   });
+
+  // Volunteer management state & persistent sync
+  const [volunteers, setVolunteers] = useState<VolunteerApplication[]>(() => {
+    try {
+      const raw = localStorage.getItem('azadi_volunteer_applications');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error reading volunteer applications from storage:", e);
+    }
+    return DEFAULT_VOLUNTEERS;
+  });
+
+  const saveVolunteers = (newList: VolunteerApplication[]) => {
+    setVolunteers(newList);
+    try {
+      localStorage.setItem('azadi_volunteer_applications', JSON.stringify(newList));
+    } catch (e) {
+      console.error("Failed to save volunteer applications to storage:", e);
+    }
+  };
+
+  // Sync with real-time volunteer submissions from public CTA button modal
+  React.useEffect(() => {
+    const handleVolunteerAdded = (e: any) => {
+      if (e.detail) {
+        setVolunteers(prev => {
+          if (prev.some(v => v.id === e.detail.id)) return prev;
+          const updated = [e.detail, ...prev];
+          try {
+            localStorage.setItem('azadi_volunteer_applications', JSON.stringify(updated));
+          } catch (err) {
+            console.error("Failed to persist updated volunteers:", err);
+          }
+          return updated;
+        });
+      }
+    };
+    window.addEventListener('azadi_volunteer_added', handleVolunteerAdded);
+    return () => window.removeEventListener('azadi_volunteer_added', handleVolunteerAdded);
+  }, []);
+
+  const [volunteerSearchQuery, setVolunteerSearchQuery] = useState('');
+  const [volunteerActiveTab, setVolunteerActiveTab] = useState<'all' | 'pending' | 'approved' | 'contacted'>('all');
+  const [selectedVolunteerDetails, setSelectedVolunteerDetails] = useState<VolunteerApplication | null>(null);
+  const [deletingVolunteer, setDeletingVolunteer] = useState<VolunteerApplication | null>(null);
+  const [showVolunteerForm, setShowVolunteerForm] = useState(false);
+  const [volunteerFormData, setVolunteerFormData] = useState({
+    name: '',
+    phone: '',
+    areaOfInterest: 'education',
+    areaTitle: 'Education & Student Support / শিক্ষা সহায়তা ও মেধা বৃত্তি',
+    availability: 'Weekends / সাপ্তাহিক ছুটির দিন',
+    notes: '',
+    status: 'APPROVED' as 'PENDING' | 'APPROVED' | 'CONTACTED' | 'REJECTED'
+  });
+
+  // Volunteer list filtering
+  const volQuery = volunteerSearchQuery.trim().toLowerCase();
+  const filteredVolunteers = volunteers.filter(v => {
+    // Tab filter
+    if (volunteerActiveTab === 'pending' && v.status !== 'PENDING') return false;
+    if (volunteerActiveTab === 'approved' && v.status !== 'APPROVED') return false;
+    if (volunteerActiveTab === 'contacted' && v.status !== 'CONTACTED') return false;
+
+    // Search query filter
+    if (!volQuery) return true;
+    const name = v.name || '';
+    const phone = v.phone || '';
+    const area = (v.areaTitle || v.areaOfInterest || '');
+    const notes = v.notes || '';
+    const avail = v.availability || '';
+    return (
+      name.toLowerCase().includes(volQuery) ||
+      phone.toLowerCase().includes(volQuery) ||
+      area.toLowerCase().includes(volQuery) ||
+      notes.toLowerCase().includes(volQuery) ||
+      avail.toLowerCase().includes(volQuery)
+    );
+  });
+
+  // CSV Export functionality for official records
+  const exportVolunteersToCSV = (targetList: VolunteerApplication[] = filteredVolunteers) => {
+    if (targetList.length === 0) {
+      alert(lang === 'bn' ? 'এক্সপোর্ট করার মতো কোনো স্বেচ্ছাসেবকের তথ্য পাওয়া যায়নি।' : 'No volunteer records found to export.');
+      return;
+    }
+
+    const headers = [
+      'SL',
+      'Application ID',
+      'Full Name',
+      'Contact Number',
+      'Area of Interest',
+      'Availability',
+      'Notes & Skills',
+      'Registration Date & Time',
+      'Application Status'
+    ];
+
+    const escapeCsv = (val: any) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = targetList.map((vol, index) => [
+      index + 1,
+      vol.id,
+      vol.name,
+      vol.phone,
+      vol.areaTitle || vol.areaOfInterest,
+      vol.availability || 'Weekends',
+      vol.notes || 'N/A',
+      vol.submittedAt ? new Date(vol.submittedAt).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB') : 'N/A',
+      vol.status || 'PENDING'
+    ]);
+
+    const csvContent = [
+      headers.map(escapeCsv).join(','),
+      ...rows.map(row => row.map(escapeCsv).join(','))
+    ].join('\r\n');
+
+    // UTF-8 BOM (\uFEFF) ensures flawless Bengali and Unicode display in MS Excel, LibreOffice, Apple Numbers, and Google Sheets
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `Azadi_Registered_Volunteers_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleVolunteerStatusUpdate = (id: string, newStatus: VolunteerApplication['status']) => {
+    const updated = volunteers.map(v => v.id === id ? { ...v, status: newStatus } : v);
+    saveVolunteers(updated);
+    if (selectedVolunteerDetails && selectedVolunteerDetails.id === id) {
+      setSelectedVolunteerDetails({ ...selectedVolunteerDetails, status: newStatus });
+    }
+  };
+
+  const handleDeleteVolunteer = (id: string) => {
+    const updated = volunteers.filter(v => v.id !== id);
+    saveVolunteers(updated);
+    setDeletingVolunteer(null);
+    if (selectedVolunteerDetails?.id === id) {
+      setSelectedVolunteerDetails(null);
+    }
+  };
+
+  const handleVolunteerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!volunteerFormData.name || !volunteerFormData.phone) {
+      alert(lang === 'bn' ? 'দয়া করে নাম ও মোবাইল নাম্বার পূরণ করুন।' : 'Please fill in name and contact number.');
+      return;
+    }
+    const newVol: VolunteerApplication = {
+      id: `vol_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: volunteerFormData.name.trim(),
+      phone: volunteerFormData.phone.trim(),
+      areaOfInterest: volunteerFormData.areaOfInterest,
+      areaTitle: volunteerFormData.areaTitle,
+      availability: volunteerFormData.availability,
+      notes: volunteerFormData.notes.trim() || 'Offline direct registration by admin',
+      submittedAt: new Date().toISOString(),
+      status: volunteerFormData.status
+    };
+    saveVolunteers([newVol, ...volunteers]);
+    setShowVolunteerForm(false);
+    setVolunteerFormData({
+      name: '',
+      phone: '',
+      areaOfInterest: 'education',
+      areaTitle: 'Education & Student Support / শিক্ষা সহায়তা ও মেধা বৃত্তি',
+      availability: 'Weekends / সাপ্তাহিক ছুটির দিন',
+      notes: '',
+      status: 'APPROVED'
+    });
+  };
 
   // Calculate dynamic statistics
   const stats = [
@@ -513,12 +777,13 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* LEDGER WORKSPACE: Primary Tab Switcher representing Donations vs Expenses Ledger */}
+      {/* LEDGER WORKSPACE: Primary Tab Switcher representing Donations vs Expenses Ledger vs Volunteers */}
       <div id="ledger-workspace" className="space-y-6">
-        <div className="flex border-b border-slate-200 dark:border-slate-800 pb-px gap-6 print:hidden">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 pb-px gap-3 sm:gap-6 print:hidden overflow-x-auto">
           <button 
+            id="tab-donations"
             onClick={() => navigate('/admin/donations')}
-            className={`pb-4 text-xs md:text-sm font-black uppercase tracking-wider transition-all border-b-2 relative ${dashboardView === 'donations' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            className={`pb-4 text-xs md:text-sm font-black uppercase tracking-wider transition-all border-b-2 relative whitespace-nowrap ${dashboardView === 'donations' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
           >
             {lang === 'bn' ? 'অনুদানের হিসাব (আয়)' : 'Income & Donation Ledger'}
             {pendingDonations.length > 0 && (
@@ -528,10 +793,24 @@ export const AdminDashboard: React.FC = () => {
             )}
           </button>
           <button 
+            id="tab-expenses"
             onClick={() => navigate('/admin/expenses')}
-            className={`pb-4 text-xs md:text-sm font-black uppercase tracking-wider transition-all border-b-2 relative ${dashboardView === 'expenses' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            className={`pb-4 text-xs md:text-sm font-black uppercase tracking-wider transition-all border-b-2 relative whitespace-nowrap ${dashboardView === 'expenses' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
           >
             {lang === 'bn' ? 'সামাজিক ব্যয়ের খতিয়ান' : 'Expense & Social Cost Ledger'}
+          </button>
+          <button 
+            id="tab-volunteers"
+            onClick={() => navigate('/admin/volunteers')}
+            className={`pb-4 text-xs md:text-sm font-black uppercase tracking-wider transition-all border-b-2 relative whitespace-nowrap ${dashboardView === 'volunteers' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+          >
+            <span className="flex items-center gap-1.5">
+              <HeartHandshake size={15} />
+              {lang === 'bn' ? 'নিবন্ধিত স্বেচ্ছাসেবক তালিকা' : 'Registered Volunteers'}
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-black tracking-normal">
+                {volunteers.length}
+              </span>
+            </span>
           </button>
         </div>
 
@@ -967,6 +1246,401 @@ export const AdminDashboard: React.FC = () => {
                   </table>
                 </div>
 
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* VIEW 3: REGISTERED VOLUNTEERS ROSTER & CSV EXPORT */}
+        {dashboardView === 'volunteers' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            
+            {/* Top Stat Cards for Volunteer Roster */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-lg flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
+                  <Users size={22} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    {lang === 'bn' ? 'মোট নিবন্ধিত স্বেচ্ছাসেবক' : 'Total Volunteers'}
+                  </div>
+                  <div className="text-xl md:text-2xl font-black text-slate-900 dark:text-white font-mono">
+                    {volunteers.length}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-lg flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
+                  <UserCheck size={22} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    {lang === 'bn' ? 'অনুমোদিত ও সক্রিয়' : 'Approved Active'}
+                  </div>
+                  <div className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                    {volunteers.filter(v => v.status === 'APPROVED').length}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-lg flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/30">
+                  <Clock size={22} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    {lang === 'bn' ? 'নতুন আবেদন (অপেক্ষমান)' : 'Pending Review'}
+                  </div>
+                  <div className="text-xl md:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                    {volunteers.filter(v => v.status === 'PENDING').length}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-lg flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
+                  <Phone size={22} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    {lang === 'bn' ? 'যোগাযোগকৃত / প্রক্রিয়াধীন' : 'Contacted / Engaged'}
+                  </div>
+                  <div className="text-xl md:text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                    {volunteers.filter(v => v.status === 'CONTACTED').length}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Volunteers Data Table Container */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-850 shadow-xl overflow-hidden">
+              
+              {/* Header Toolbar */}
+              <div className="p-4 md:p-6 border-b border-slate-150 dark:border-slate-800 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+                
+                {/* Left: Tab filters & Search Input */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                  
+                  {/* Status Pills */}
+                  <div className="flex bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800/60 overflow-x-auto">
+                    <button
+                      onClick={() => setVolunteerActiveTab('all')}
+                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        volunteerActiveTab === 'all' 
+                          ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <span>{lang === 'bn' ? 'সকল' : 'All'}</span>
+                      <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-[9px]">{volunteers.length}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setVolunteerActiveTab('pending')}
+                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        volunteerActiveTab === 'pending' 
+                          ? 'bg-white dark:bg-slate-800 text-amber-600 shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <Clock size={12} />
+                      <span>{lang === 'bn' ? 'অপেক্ষমান' : 'Pending'}</span>
+                      <span className="px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-[9px]">
+                        {volunteers.filter(v => v.status === 'PENDING').length}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => setVolunteerActiveTab('approved')}
+                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        volunteerActiveTab === 'approved' 
+                          ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <Check size={12} />
+                      <span>{lang === 'bn' ? 'অনুমোদিত' : 'Approved'}</span>
+                      <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[9px]">
+                        {volunteers.filter(v => v.status === 'APPROVED').length}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => setVolunteerActiveTab('contacted')}
+                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        volunteerActiveTab === 'contacted' 
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <Phone size={12} />
+                      <span>{lang === 'bn' ? 'যোগাযোগকৃত' : 'Contacted'}</span>
+                      <span className="px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 text-[9px]">
+                        {volunteers.filter(v => v.status === 'CONTACTED').length}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Search Input */}
+                  <div className="relative flex-1 max-w-md">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                      <Search size={14} />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={lang === 'bn' ? 'নাম, মোবাইল, কাজের ক্ষেত্র বা অভিজ্ঞতা দিয়ে খুঁজুন...' : 'Search by name, phone, area, skills...'}
+                      value={volunteerSearchQuery}
+                      onChange={(e) => setVolunteerSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-xs font-medium"
+                    />
+                    {volunteerSearchQuery && (
+                      <button 
+                        onClick={() => setVolunteerSearchQuery('')}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* Right: Actions (CSV Export + Add Volunteer) */}
+                <div className="flex items-center gap-2.5 self-end lg:self-auto print:hidden">
+                  
+                  {/* CSV Export Button */}
+                  <button
+                    id="export-volunteers-csv-btn"
+                    onClick={() => exportVolunteersToCSV(filteredVolunteers)}
+                    title={lang === 'bn' ? 'অফিসিয়াল রেকর্ডের জন্য CSV এক্সপোর্ট করুন' : 'Export list to CSV for official records'}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
+                  >
+                    <FileSpreadsheet size={16} />
+                    <span>{lang === 'bn' ? 'CSV এক্সপোর্ট করুন' : 'Export CSV'}</span>
+                    <span className="bg-emerald-700/80 px-1.5 py-0.5 rounded-md text-[10px] font-mono">
+                      {filteredVolunteers.length}
+                    </span>
+                  </button>
+
+                  {/* Manual Register Volunteer Button */}
+                  <button
+                    id="add-volunteer-btn"
+                    onClick={() => setShowVolunteerForm(true)}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 shadow-md shadow-blue-600/20 active:scale-95 cursor-pointer"
+                  >
+                    <UserPlus size={16} />
+                    <span>{lang === 'bn' ? 'স্বেচ্ছাসেবক এন্ট্রি' : 'Add Volunteer'}</span>
+                  </button>
+
+                </div>
+
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-950 text-[9px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                    <tr>
+                      <th className="p-4 w-12 text-center">SL</th>
+                      <th className="p-4">{lang === 'bn' ? 'স্বেচ্ছাসেবকের বিবরণ' : 'Volunteer Info'}</th>
+                      <th className="p-4">{lang === 'bn' ? 'আগ্রহের ক্ষেত্র / সেক্টর' : 'Area of Interest'}</th>
+                      <th className="p-4">{lang === 'bn' ? 'প্রাপ্যতা / সময়' : 'Availability'}</th>
+                      <th className="p-4">{lang === 'bn' ? 'দক্ষতা ও অভিজ্ঞতা' : 'Skills & Notes'}</th>
+                      <th className="p-4">{lang === 'bn' ? 'তারিখ' : 'Date'}</th>
+                      <th className="p-4 text-center">{lang === 'bn' ? 'অবস্থা' : 'Status'}</th>
+                      <th className="p-4 text-right print:hidden">{lang === 'bn' ? 'অ্যাকশন' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                    {filteredVolunteers.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-12 text-center text-slate-400">
+                          <HeartHandshake size={36} className="mx-auto mb-3 opacity-30 text-blue-500" />
+                          <div className="font-bold text-sm text-slate-600 dark:text-slate-300">
+                            {lang === 'bn' ? 'কোনো স্বেচ্ছাসেবকের রেকর্ড পাওয়া যায়নি' : 'No volunteer records found'}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            {volunteerSearchQuery 
+                              ? (lang === 'bn' ? 'সার্চ ফিল্টারের সাথে মিলে এমন কোনো ফলাফল নেই।' : 'Try changing your search keywords or active status filter.')
+                              : (lang === 'bn' ? 'ওয়েবসাইটের "Become a Volunteer" বাটনের মাধ্যমে আবেদন করা যাবে।' : 'Volunteers can register using the public navigation button.')}
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredVolunteers.map((vol, index) => (
+                        <tr key={vol.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-950/40 transition-colors">
+                          
+                          {/* Serial */}
+                          <td className="p-4 text-center font-mono font-bold text-slate-400 text-[11px]">
+                            {index + 1}
+                          </td>
+
+                          {/* Name & Phone */}
+                          <td className="p-4">
+                            <div className="font-black text-slate-900 dark:text-white leading-tight">
+                              {vol.name}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                              <Phone size={11} className="text-blue-500" />
+                              <a href={`tel:${vol.phone}`} className="hover:text-blue-600 hover:underline">
+                                {vol.phone}
+                              </a>
+                            </div>
+                          </td>
+
+                          {/* Area of Interest */}
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30 text-[11px] font-bold">
+                              {vol.areaTitle || vol.areaOfInterest}
+                            </span>
+                          </td>
+
+                          {/* Availability */}
+                          <td className="p-4 text-slate-600 dark:text-slate-300 text-[11px] font-medium whitespace-nowrap">
+                            {vol.availability || (lang === 'bn' ? 'ছুটির দিন' : 'Weekends')}
+                          </td>
+
+                          {/* Notes */}
+                          <td className="p-4 max-w-[200px]">
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed" title={vol.notes}>
+                              {vol.notes || (lang === 'bn' ? 'কোনো বিশেষ মন্তব্য নেই' : 'No additional notes provided')}
+                            </p>
+                          </td>
+
+                          {/* Date */}
+                          <td className="p-4 text-slate-400 font-mono text-[10px] whitespace-nowrap">
+                            {vol.submittedAt ? new Date(vol.submittedAt).toLocaleDateString() : 'N/A'}
+                          </td>
+
+                          {/* Status */}
+                          <td className="p-4 text-center">
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                              vol.status === 'APPROVED' 
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40' 
+                                : vol.status === 'CONTACTED'
+                                  ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40'
+                                  : vol.status === 'REJECTED'
+                                    ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40'
+                                    : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40'
+                            }`}>
+                              {vol.status === 'APPROVED' ? (lang === 'bn' ? 'অনুমোদিত' : 'APPROVED') :
+                               vol.status === 'CONTACTED' ? (lang === 'bn' ? 'যোগাযোগকৃত' : 'CONTACTED') :
+                               vol.status === 'REJECTED' ? (lang === 'bn' ? 'বাতিল' : 'REJECTED') :
+                               (lang === 'bn' ? 'অপেক্ষমান' : 'PENDING')}
+                            </span>
+                          </td>
+
+                          {/* Action Buttons */}
+                          <td className="p-4 text-right print:hidden space-x-1 whitespace-nowrap">
+                            <button
+                              onClick={() => setSelectedVolunteerDetails(vol)}
+                              title={lang === 'bn' ? 'বিস্তারিত দেখুন' : 'View Full Details'}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors inline-flex"
+                            >
+                              <Eye size={14} />
+                            </button>
+
+                            {vol.status !== 'APPROVED' && (
+                              <button
+                                onClick={() => handleVolunteerStatusUpdate(vol.id, 'APPROVED')}
+                                title={lang === 'bn' ? 'অনুমোদন দিন' : 'Approve Volunteer'}
+                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg transition-colors inline-flex"
+                              >
+                                <Check size={14} />
+                              </button>
+                            )}
+
+                            {vol.status !== 'CONTACTED' && (
+                              <button
+                                onClick={() => handleVolunteerStatusUpdate(vol.id, 'CONTACTED')}
+                                title={lang === 'bn' ? 'যোগাযোগকৃত হিসেবে চিহ্নিত করুন' : 'Mark as Contacted'}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-lg transition-colors inline-flex"
+                              >
+                                <Phone size={14} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => setDeletingVolunteer(vol)}
+                              title={lang === 'bn' ? 'মুছে ফেলুন' : 'Delete Record'}
+                              className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition-colors inline-flex"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards View */}
+              <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredVolunteers.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    {lang === 'bn' ? 'কোনো স্বেচ্ছাসেবক রেকর্ড পাওয়া যায়নি' : 'No volunteer records found'}
+                  </div>
+                ) : (
+                  filteredVolunteers.map(vol => (
+                    <div key={vol.id} className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-black text-slate-900 dark:text-white text-sm">
+                            {vol.name}
+                          </div>
+                          <a href={`tel:${vol.phone}`} className="text-xs font-mono text-blue-600 flex items-center gap-1 mt-0.5">
+                            <Phone size={10} /> {vol.phone}
+                          </a>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                          vol.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                          vol.status === 'CONTACTED' ? 'bg-indigo-100 text-indigo-700' :
+                          vol.status === 'REJECTED' ? 'bg-rose-100 text-rose-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {vol.status}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                        <span className="font-bold text-slate-400 mr-1">{lang === 'bn' ? 'ক্ষেত্র:' : 'Area:'}</span>
+                        {vol.areaTitle || vol.areaOfInterest}
+                      </div>
+
+                      {vol.notes && (
+                        <p className="text-[11px] text-slate-500 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl">
+                          {vol.notes}
+                        </p>
+                      )}
+
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {vol.submittedAt ? new Date(vol.submittedAt).toLocaleDateString() : ''}
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setSelectedVolunteerDetails(vol)}
+                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold"
+                          >
+                            {lang === 'bn' ? 'বিস্তারিত' : 'Details'}
+                          </button>
+                          <button
+                            onClick={() => setDeletingVolunteer(vol)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
             </div>
@@ -1548,6 +2222,335 @@ export const AdminDashboard: React.FC = () => {
                 }`}
               >
                 {isDeletingDonation ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                {lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VOLUNTEER DETAILS OVERLAY MODAL */}
+      {selectedVolunteerDetails && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200 no-print">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className={`p-6 md:p-8 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 ${
+              selectedVolunteerDetails.status === 'APPROVED' ? 'bg-emerald-500/10' :
+              selectedVolunteerDetails.status === 'CONTACTED' ? 'bg-indigo-500/10' :
+              selectedVolunteerDetails.status === 'REJECTED' ? 'bg-rose-500/10' :
+              'bg-amber-500/10'
+            }`}>
+              <div className="space-y-1">
+                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                  selectedVolunteerDetails.status === 'APPROVED' ? 'bg-emerald-500 text-white' :
+                  selectedVolunteerDetails.status === 'CONTACTED' ? 'bg-indigo-500 text-white' :
+                  selectedVolunteerDetails.status === 'REJECTED' ? 'bg-rose-500 text-white' :
+                  'bg-amber-500 text-white'
+                }`}>
+                  {selectedVolunteerDetails.status === 'APPROVED' ? (lang === 'bn' ? 'অনুমোদিত ও সক্রিয়' : 'Approved Volunteer') :
+                   selectedVolunteerDetails.status === 'CONTACTED' ? (lang === 'bn' ? 'যোগাযোগকৃত' : 'Contacted / Engaged') :
+                   selectedVolunteerDetails.status === 'REJECTED' ? (lang === 'bn' ? 'বাতিল' : 'Rejected') :
+                   (lang === 'bn' ? 'অপেক্ষমান আবেদন' : 'Pending Review')}
+                </span>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mt-2">
+                  {lang === 'bn' ? 'স্বেচ্ছাসেবক আবেদন বিবরণী' : 'Volunteer Application Details'}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setSelectedVolunteerDetails(null)}
+                className="p-3 bg-white dark:bg-slate-800 hover:scale-105 rounded-xl border border-slate-150 dark:border-slate-700 shadow-sm text-slate-500 dark:text-slate-400 transition-all hover:text-rose-500"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 md:p-8 space-y-5">
+              
+              {/* Name & ID Block */}
+              <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 font-sans flex justify-between items-center">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {lang === 'bn' ? 'স্বেচ্ছাসেবকের পুরো নাম' : 'Full Name'}
+                  </div>
+                  <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                    {selectedVolunteerDetails.name}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] font-mono text-slate-400">ID: {selectedVolunteerDetails.id}</div>
+                </div>
+              </div>
+
+              {/* Contact with direct call & WhatsApp */}
+              <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 font-sans space-y-2">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'মোবাইল / যোগাযোগের নম্বর' : 'Contact Number'}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
+                    {selectedVolunteerDetails.phone}
+                  </span>
+                  <div className="flex gap-2">
+                    <a
+                      href={`tel:${selectedVolunteerDetails.phone}`}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-colors"
+                    >
+                      <Phone size={12} /> {lang === 'bn' ? 'কল করুন' : 'Call'}
+                    </a>
+                    <a
+                      href={`https://wa.me/${selectedVolunteerDetails.phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-700 transition-colors"
+                    >
+                      <MessageCircle size={12} /> WhatsApp
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Area & Availability Grid */}
+              <div className="grid grid-cols-2 gap-4 font-sans">
+                <div className="space-y-1 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {lang === 'bn' ? 'আগ্রহের ক্ষেত্র' : 'Area of Interest'}
+                  </div>
+                  <div className="text-xs font-black text-slate-900 dark:text-white">
+                    {selectedVolunteerDetails.areaTitle || selectedVolunteerDetails.areaOfInterest}
+                  </div>
+                </div>
+
+                <div className="space-y-1 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {lang === 'bn' ? 'কাজের সময় / প্রাপ্যতা' : 'Availability'}
+                  </div>
+                  <div className="text-xs font-black text-slate-900 dark:text-white">
+                    {selectedVolunteerDetails.availability || (lang === 'bn' ? 'ছুটির দিন' : 'Weekends')}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes & Skills */}
+              <div className="space-y-1.5 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 font-sans">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'দক্ষতা, অভিজ্ঞতা ও প্রেরণা' : 'Skills, Experience & Motivation'}
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                  {selectedVolunteerDetails.notes || (lang === 'bn' ? 'কোনো বিশেষ বিবরণ দেওয়া হয়নি।' : 'No additional notes provided.')}
+                </p>
+              </div>
+
+              {/* Date */}
+              <div className="text-right text-[10px] text-slate-400 font-mono">
+                {lang === 'bn' ? 'নিবন্ধনের সময়: ' : 'Submitted: '}
+                {selectedVolunteerDetails.submittedAt ? new Date(selectedVolunteerDetails.submittedAt).toLocaleString() : 'N/A'}
+              </div>
+
+            </div>
+
+            {/* Footer Status Controls */}
+            <div className="p-6 md:p-8 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-2 items-center justify-between font-sans">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setDeletingVolunteer(selectedVolunteerDetails);
+                    setSelectedVolunteerDetails(null);
+                  }}
+                  className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 rounded-xl font-bold text-xs uppercase transition-all flex items-center gap-1.5"
+                >
+                  <Trash2 size={13} /> {lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedVolunteerDetails.status !== 'APPROVED' && (
+                  <button
+                    onClick={() => handleVolunteerStatusUpdate(selectedVolunteerDetails.id, 'APPROVED')}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+                  >
+                    <Check size={13} /> {lang === 'bn' ? 'অনুমোদন দিন' : 'Approve'}
+                  </button>
+                )}
+                {selectedVolunteerDetails.status !== 'CONTACTED' && (
+                  <button
+                    onClick={() => handleVolunteerStatusUpdate(selectedVolunteerDetails.id, 'CONTACTED')}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
+                  >
+                    <Phone size={13} /> {lang === 'bn' ? 'যোগাযোগকৃত' : 'Contacted'}
+                  </button>
+                )}
+                {selectedVolunteerDetails.status !== 'PENDING' && (
+                  <button
+                    onClick={() => handleVolunteerStatusUpdate(selectedVolunteerDetails.id, 'PENDING')}
+                    className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                  >
+                    <Clock size={13} /> {lang === 'bn' ? 'অপেক্ষমান' : 'Pending'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ADD VOLUNTEER DIRECT REGISTRATION MODAL */}
+      {showVolunteerForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setShowVolunteerForm(false)} className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in"></div>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-4xl border border-slate-100 dark:border-slate-800 p-8 shadow-heavy relative animate-in zoom-in-95 duration-200 bengali max-h-[90vh] overflow-y-auto z-10">
+            <button onClick={() => setShowVolunteerForm(false)} className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
+              <X size={20} />
+            </button>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">
+              {lang === 'bn' ? 'নতুন স্বেচ্ছাসেবক এন্ট্রি' : 'Register New Volunteer'}
+            </h3>
+            <form onSubmit={handleVolunteerSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'স্বেচ্ছাসেবকের পুরো নাম *' : 'Full Name *'}
+                </label>
+                <input 
+                  type="text"
+                  required
+                  placeholder={lang === 'bn' ? 'উদা: মাহফুজুর রহমান...' : 'e.g., Mahfuzur Rahman'}
+                  value={volunteerFormData.name}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, name: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-blue-500 focus:ring-2 font-bold transition-all text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'মোবাইল / যোগাযোগের নম্বর *' : 'Contact Number *'}
+                </label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="01712-345678"
+                  value={volunteerFormData.phone}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, phone: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-blue-500 focus:ring-2 font-bold transition-all text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'আগ্রহের ক্ষেত্র *' : 'Area of Interest *'}
+                </label>
+                <select 
+                  value={volunteerFormData.areaOfInterest}
+                  onChange={e => {
+                    const areaVal = e.target.value;
+                    const titles: Record<string, string> = {
+                      education: 'Education & Student Support / শিক্ষা সহায়তা ও মেধা বৃত্তি',
+                      health_camps: 'Free Medical & Health Camps / ফ্রি মেডিকেল ও স্বাস্থ্য ক্যাম্প',
+                      relief: 'Disaster Relief & Winter Clothes / দুর্যোগ ও শীতবস্ত্র বিতরণ',
+                      sports: 'Sports & Youth Development / ক্রীড়া ও যুব উন্নয়ন',
+                      environment: 'Tree Plantation & Cleanliness / বৃক্ষরোপণ ও পরিচ্ছন্নতা',
+                      social_welfare: 'General Social Welfare / সাধারণ সমাজকল্যাণ'
+                    };
+                    setVolunteerFormData({ 
+                      ...volunteerFormData, 
+                      areaOfInterest: areaVal,
+                      areaTitle: titles[areaVal] || areaVal
+                    });
+                  }}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-blue-500 focus:ring-2 font-black transition-all text-sm text-slate-900 dark:text-slate-100"
+                >
+                  <option value="education">Education & Student Support / শিক্ষা সহায়তা ও মেধা বৃত্তি</option>
+                  <option value="health_camps">Free Medical & Health Camps / ফ্রি মেডিকেল ও স্বাস্থ্য ক্যাম্প</option>
+                  <option value="relief">Disaster Relief & Winter Clothes / দুর্যোগ ও শীতবস্ত্র বিতরণ</option>
+                  <option value="sports">Sports & Youth Development / ক্রীড়া ও যুব উন্নয়ন</option>
+                  <option value="environment">Tree Plantation & Cleanliness / বৃক্ষরোপণ ও পরিচ্ছন্নতা</option>
+                  <option value="social_welfare">General Social Welfare / সাধারণ সমাজকল্যাণ</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'কাজের সময় / প্রাপ্যতা' : 'Availability'}
+                </label>
+                <input 
+                  type="text"
+                  placeholder={lang === 'bn' ? 'উদা: সাপ্তাহিক ছুটির দিন / নির্দিষ্ট ইভেন্টে' : 'e.g. Weekends / Event-based'}
+                  value={volunteerFormData.availability}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, availability: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-blue-500 focus:ring-2 font-bold transition-all text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {lang === 'bn' ? 'দক্ষতা ও বিশেষ মন্তব্য' : 'Skills & Notes'}
+                </label>
+                <textarea 
+                  rows={3}
+                  placeholder={lang === 'bn' ? 'স্বেচ্ছাসেবকের অভিজ্ঞতা বা দক্ষতা সম্পর্কে লিখুন...' : 'Notes on experience or skills...'}
+                  value={volunteerFormData.notes}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, notes: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl outline-none ring-blue-500 focus:ring-2 font-medium transition-all text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setShowVolunteerForm(false)}
+                  className="flex-1 bg-slate-50 dark:bg-slate-850 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase py-4 rounded-2xl hover:bg-slate-100 cursor-pointer text-center border border-slate-200 dark:border-slate-700"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white font-black text-xs uppercase py-4 rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-center cursor-pointer shadow-lg shadow-blue-600/20"
+                >
+                  {lang === 'bn' ? 'নিবন্ধন সম্পন্ন করুন' : 'Register Volunteer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE VOLUNTEER MODAL */}
+      {deletingVolunteer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div onClick={() => setDeletingVolunteer(null)} className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in"></div>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-100 dark:border-slate-800 p-6 md:p-8 shadow-heavy relative z-[101] animate-in zoom-in-95 duration-200 bengali">
+            <button onClick={() => setDeletingVolunteer(null)} className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600">
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 text-rose-600 mb-4">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-2xl">
+                <AlertCircle size={24} />
+              </div>
+              <h3 className="text-lg md:text-xl font-black uppercase tracking-tight">
+                {lang === 'bn' ? 'স্বেচ্ছাসেবক রেকর্ড ডিলিট' : 'Delete Volunteer Record'}
+              </h3>
+            </div>
+
+            <p className="text-xs text-slate-500 mb-6 font-medium">
+              {lang === 'bn' 
+                ? `আপনি কি নিশ্চিত যে "${deletingVolunteer.name}" এর স্বেচ্ছাসেবক রেকর্ডটি তালিকা থেকে মুছে ফেলতে চান?` 
+                : `Are you sure you want to remove "${deletingVolunteer.name}" from the volunteers list?`}
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingVolunteer(null)}
+                className="flex-1 px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-xs uppercase"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteVolunteer(deletingVolunteer.id)}
+                className="flex-1 px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-rose-600/20"
+              >
                 {lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
               </button>
             </div>

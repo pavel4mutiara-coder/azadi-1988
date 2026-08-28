@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfigFile from '../../firebase-applet-config.json';
 
 // Unified Firebase Configuration from VITE_ environment variables or firebase-applet-config.json fallback
@@ -26,11 +26,23 @@ if (typeof window !== 'undefined') {
 // Single clean Firebase initialization using provisioned config
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Firestore database instance targeting the default database of the new project
-export const db = getFirestore(app);
+// Firestore database instance targeting the configured database ID
+export const db = getFirestore(app, firebaseConfigFile.firestoreDatabaseId || '(default)');
 
 // Auth instance
 export const auth = getAuth(app);
+
+// Connection test helper per Firebase integration guidelines
+export async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("Firestore connection check: currently operating in offline mode.");
+    }
+  }
+}
+testConnection().catch(() => {});
 
 export enum OperationType {
   CREATE = 'create',
