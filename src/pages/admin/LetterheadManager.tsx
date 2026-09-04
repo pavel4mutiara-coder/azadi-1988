@@ -56,8 +56,79 @@ const isConfigEqual = (a: LetterheadConfig | null | undefined, b: LetterheadConf
 };
 
 /**
- * Inlines all images inside an element as Base64 Data URLs so that html2canvas
- * never has to make cross-origin network requests or trigger tainted canvas errors.
+ * Robust utility to convert any image URL (including Google Drive or external domains)
+ * to a pure Base64 Data URL using reliable CORS proxies and canvas fallback.
+ */
+async function toSafeDataUrl(url: string | null | undefined, fallbackUrl?: string): Promise<string | null> {
+  if (!url) return fallbackUrl ? toSafeDataUrl(fallbackUrl) : null;
+  const trimmed = url.trim();
+  if (!trimmed) return fallbackUrl ? toSafeDataUrl(fallbackUrl) : null;
+  if (trimmed.startsWith('data:image/')) return trimmed;
+
+  const candidateUrls: string[] = [];
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    candidateUrls.push(`https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&output=png`);
+    candidateUrls.push(`https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}&output=png`);
+    candidateUrls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(trimmed)}`);
+    candidateUrls.push(trimmed);
+  } else {
+    candidateUrls.push(trimmed);
+  }
+
+  for (const candidate of candidateUrls) {
+    try {
+      const res = await fetch(candidate, { mode: 'cors', cache: 'force-cache' });
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob.size > 0 && (blob.type.startsWith('image/') || blob.type === 'application/octet-stream')) {
+          return await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(null as any);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+
+  // Fallback: Offscreen image + Canvas extraction
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = trimmed;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      setTimeout(reject, 1500);
+    });
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth || 200;
+    c.height = img.naturalHeight || 200;
+    const ctx = c.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = c.toDataURL('image/png');
+      if (dataUrl && dataUrl.startsWith('data:image/')) {
+        return dataUrl;
+      }
+    }
+  } catch {
+    // Canvas tainted or unavailable
+  }
+
+  if (fallbackUrl && fallbackUrl !== trimmed) {
+    return toSafeDataUrl(fallbackUrl);
+  }
+
+  return null;
+}
+
+/**
+ * Pre-processes all <img> elements in a cloned container, converting them to Base64
+ * so html2canvas never has to make cross-origin network requests or trigger tainted canvas errors.
  */
 async function inlineAllImages(container: HTMLElement): Promise<void> {
   const images = Array.from(container.querySelectorAll('img'));
@@ -68,238 +139,29 @@ async function inlineAllImages(container: HTMLElement): Promise<void> {
       const src = (img.getAttribute('src') || img.src || '').trim();
       if (!src || src.startsWith('data:image/')) return;
 
-      // Strategy 1: If image is already fully loaded in the browser DOM, draw to an offscreen canvas
-      try {
-        if (img.complete && img.naturalWidth > 0) {
-          const offCanvas = document.createElement('canvas');
-          offCanvas.width = img.naturalWidth;
-          offCanvas.height = img.naturalHeight;
-          const ctx = offCanvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0);
-            const dataUrl = offCanvas.toDataURL('image/png');
-            if (dataUrl && dataUrl.startsWith('data:image/png')) {
-              img.src = dataUrl;
-              return;
-            }
-          }
-        }
-      } catch {
-        // Tainted canvas by cross-origin, fall back to Strategy 2
-      }
-
-      // Strategy 2: Fetch via wsrv.nl proxy which guarantees Access-Control-Allow-Origin: *
-      try {
-        let fetchUrl = src;
-        if (src.startsWith('http://') || src.startsWith('https://')) {
-          fetchUrl = `https://wsrv.nl/?url=${encodeURIComponent(src)}&output=png`;
-        }
-        const response = await fetch(fetchUrl, { mode: 'cors' });
-        if (response.ok) {
-          const blob = await response.blob();
-          const reader = new FileReader();
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          if (dataUrl) {
-            img.src = dataUrl;
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("Could not proxy image for PDF:", src, e);
-      }
-
-      // Strategy 3: Try direct fetch
-      try {
-        const directResp = await fetch(src);
-        if (directResp.ok) {
-          const blob = await directResp.blob();
-          const reader = new FileReader();
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          if (dataUrl) {
-            img.src = dataUrl;
-          }
-        }
-      } catch (e) {
-        console.warn("Direct image fetch failed:", src, e);
+      const alt = img.getAttribute('alt');
+      const fallbackLocal = alt === 'Logo' ? '/images/azadi_logo.png' : alt === 'Flag' ? '/images/bd_flag.png' : undefined;
+      const dataUrl = await toSafeDataUrl(src, fallbackLocal);
+      if (dataUrl) {
+        img.src = dataUrl;
+        img.removeAttribute('crossOrigin');
+      } else if (fallbackLocal) {
+        img.src = fallbackLocal;
+        img.removeAttribute('crossOrigin');
+      } else {
+        img.removeAttribute('crossOrigin');
       }
     })
   );
 }
 
 /**
- * Robust print function that uses an isolated hidden iframe with pristine A4 styles,
- * falling back to window.print() if iframe printing is restricted.
+ * Robust print function that uses native browser printing with rock-solid @media print styles,
+ * guaranteeing the letterhead is pinned to (0,0) on A4 paper and never renders a blank page.
  */
-function printLetterhead(element: HTMLElement, title: string = 'Official Letterhead Pad') {
-  if (!element) return;
-
-  const existingIframe = document.getElementById('letterhead-print-frame');
-  if (existingIframe && existingIframe.parentNode) {
-    existingIframe.parentNode.removeChild(existingIframe);
-  }
-
-  const iframe = document.createElement('iframe');
-  iframe.id = 'letterhead-print-frame';
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = 'none';
-  iframe.style.visibility = 'hidden';
-  iframe.style.zIndex = '-9999';
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow?.document || iframe.contentDocument;
-  if (!doc) {
-    window.print();
-    return;
-  }
-
-  // Clone element
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.id = 'print-content-node';
-  clone.style.transform = 'none';
-  clone.style.position = 'relative';
-  clone.style.left = '0';
-  clone.style.top = '0';
-  clone.style.margin = '0 auto';
-  clone.style.width = '210mm';
-  clone.style.minHeight = '297mm';
-  clone.style.boxShadow = 'none';
-  clone.style.border = 'none';
-  clone.style.overflow = 'visible';
-  clone.style.background = '#ffffff';
-  clone.style.color = '#000000';
-
-  // Ensure full editor visibility
-  const editorBody = clone.querySelector('.editor-body') as HTMLElement;
-  if (editorBody) {
-    editorBody.style.overflow = 'visible';
-    editorBody.style.maxHeight = 'none';
-    editorBody.style.height = 'auto';
-    editorBody.style.minHeight = 'auto';
-  }
-
-  // Remove UI elements marked with .no-print
-  clone.querySelectorAll('.no-print').forEach(el => el.remove());
-
-  // Collect page styles
-  const styleElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-    .map(el => el.outerHTML)
-    .join('\n');
-
-  doc.open();
-  doc.write(`
-    <!DOCTYPE html>
-    <html lang="bn">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${title}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-        ${styleElements}
-        <style>
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
-          * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            width: 210mm !important;
-            height: auto !important;
-            font-family: 'Noto Sans Bengali', 'Hind Siliguri', sans-serif !important;
-          }
-          #print-content-node {
-            width: 210mm !important;
-            min-height: 297mm !important;
-            padding: 12mm 15mm 15mm 15mm !important;
-            box-sizing: border-box !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .editor-body {
-            overflow: visible !important;
-            max-height: none !important;
-            height: auto !important;
-            min-height: auto !important;
-            page-break-inside: auto !important;
-            break-inside: auto !important;
-          }
-          p, li, blockquote, .signature-block, .stamp-block, h1, h2, h3, h4, img {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          img {
-            max-width: 100% !important;
-            display: block;
-          }
-        </style>
-      </head>
-      <body>
-        ${clone.outerHTML}
-      </body>
-    </html>
-  `);
-  doc.close();
-
-  const runPrint = () => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (err) {
-      console.warn("Iframe print blocked, falling back to window.print()", err);
-      window.print();
-    } finally {
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 5000);
-    }
-  };
-
-  const imgs = Array.from(doc.images);
-  if (imgs.length === 0) {
-    setTimeout(runPrint, 300);
-  } else {
-    let pending = imgs.length;
-    const checkDone = () => {
-      pending--;
-      if (pending <= 0) {
-        setTimeout(runPrint, 200);
-      }
-    };
-    imgs.forEach(im => {
-      if (im.complete) {
-        checkDone();
-      } else {
-        im.onload = checkDone;
-        im.onerror = checkDone;
-      }
-    });
-    setTimeout(runPrint, 1500);
-  }
+function printLetterhead(element?: HTMLElement, title: string = 'Official Letterhead Pad') {
+  document.title = title;
+  window.print();
 }
 
 const LetterheadStyles = () => (
@@ -314,67 +176,61 @@ const LetterheadStyles = () => (
       /* Global document canvas reset for physical printing */
       html, body {
         width: 210mm !important;
-        height: auto !important;
+        height: 297mm !important;
         margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        overflow: visible !important;
+        overflow: hidden !important;
       }
 
-      /* Completely remove screen navigation, headers, footers, toolbars, and no-print containers */
-      header, footer, nav, aside, .no-print, #app-layout-root > header, #app-layout-root > footer, #app-navigation, [class*="no-print"] {
+      /* Completely remove screen layout, navigation, headers, footers, toolbars, buttons, and screen-only containers */
+      header, footer, nav, aside, .screen-only, .no-print, [class*="no-print"], button, .editor-toolbar, #app-layout-root > header, #app-layout-root > footer, #app-navigation {
         display: none !important;
+        height: 0 !important;
+        overflow: hidden !important;
         visibility: hidden !important;
       }
 
-      /* Reset layout wrappers to prevent clipping from overflow: hidden or height calculations */
-      #root, #root > div, main, .min-h-screen, [class*="overflow-hidden"] {
+      /* Reset layout wrappers to be transparent flat blocks */
+      #root, #app-layout-root, main {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
         overflow: visible !important;
         height: auto !important;
         min-height: auto !important;
         max-height: none !important;
         transform: none !important;
-        background: #ffffff !important;
-        padding: 0 !important;
-        margin: 0 !important;
         display: block !important;
       }
 
-      /* Hide screen-only siblings while keeping print area visible */
-      body * {
-        visibility: hidden;
-      }
-
-      /* Force print area and all internal elements to be visible */
-      #print-area, #print-area * {
-        visibility: visible !important;
-      }
-
-      /* Precision A4 Letterhead formatting */
-      #print-area {
-        position: relative !important;
+      /* Dedicated print container: occupies exact physical A4 sheet with zero scaling or offset issues */
+      #printable-letterhead-card {
+        display: flex !important;
+        flex-direction: column !important;
+        position: absolute !important;
         left: 0 !important;
         top: 0 !important;
         width: 210mm !important;
-        height: auto !important; /* Dynamic flow for natural multipage support */
+        height: 297mm !important;
         min-height: 297mm !important;
-        padding: 12mm 15mm 15mm 15mm !important; /* Standard institutional letterhead padding */
-        margin: 0 auto !important;
+        max-height: 297mm !important;
+        padding: 12mm 15mm 15mm 15mm !important;
         box-sizing: border-box !important;
-        transform: none !important;
         box-shadow: none !important;
         border: none !important;
+        border-radius: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
         font-family: "Noto Sans Bengali", sans-serif !important;
-        overflow: visible !important;
-        display: flex !important;
-        flex-direction: column !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        overflow: hidden !important;
+        z-index: 9999999 !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
       }
 
       /* Editor body print expansion */
@@ -383,6 +239,7 @@ const LetterheadStyles = () => (
         max-height: none !important;
         min-height: auto !important;
         height: auto !important;
+        flex: 1 !important;
         page-break-inside: auto !important;
         break-inside: auto !important;
       }
@@ -465,8 +322,36 @@ export const LetterheadManager: React.FC = () => {
   const [isOverlayModalOpen, setIsOverlayModalOpen] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'signature' | 'qr'>('signature');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [logoBase64, setLogoBase64] = useState<string>('');
+  const [flagBase64, setFlagBase64] = useState<string>('');
   const [scale, setScale] = useState(1);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+
+  // Pre-load and convert logo and flag to Base64 so html2canvas and printing never encounter CORS or blank states
+  useEffect(() => {
+    let isMounted = true;
+    const rawLogo = (settings.logoUrl || settings.logo)?.trim();
+    toSafeDataUrl(rawLogo ? getOptimizedImageUrl(rawLogo, 200) : '/images/azadi_logo.png', '/images/azadi_logo.png').then((dataUrl) => {
+      if (isMounted && dataUrl) {
+        setLogoBase64(dataUrl);
+      } else if (isMounted) {
+        setLogoBase64('/images/azadi_logo.png');
+      }
+    });
+
+    const rawFlag = (settings.flagUrl || settings.flag)?.trim();
+    toSafeDataUrl(rawFlag ? getOptimizedImageUrl(rawFlag, 300) : '/images/bd_flag.png', '/images/bd_flag.png').then((dataUrl) => {
+      if (isMounted && dataUrl) {
+        setFlagBase64(dataUrl);
+      } else if (isMounted) {
+        setFlagBase64('/images/bd_flag.png');
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [settings.logoUrl, settings.logo, settings.flagUrl, settings.flag]);
  
   // Track if a restored local draft from a previous session currently differs from the base DB config
   const [hasRestoredDraft, setHasRestoredDraft] = useState(() => {
@@ -753,7 +638,8 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
 
     try {
       setIsGeneratingPDF(true);
-      const element = letterheadRef.current;
+      const printCard = document.getElementById('printable-letterhead-card');
+      const element = printCard || letterheadRef.current;
       if (!element) {
         throw new Error("Letterhead element not found");
       }
@@ -763,8 +649,9 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       
       // Enforce precise A4 pixel dimensions (794px = 210mm @ 96 DPI, 1123px = 297mm @ 96 DPI)
       clone.style.width = '794px';
+      clone.style.height = '1123px';
       clone.style.minHeight = '1123px';
-      clone.style.height = 'auto';
+      clone.style.maxHeight = '1123px';
       clone.style.transform = 'none';
       clone.style.position = 'relative';
       clone.style.left = '0';
@@ -776,7 +663,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       clone.style.padding = '12mm 15mm 15mm 15mm';
       clone.style.display = 'flex';
       clone.style.flexDirection = 'column';
-      clone.style.overflow = 'visible';
+      clone.style.overflow = 'hidden';
 
       // Ensure full text formatting is preserved inside the cloned editor
       const clonedEditor = clone.querySelector('.editor-body') as HTMLElement;
@@ -785,7 +672,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           clonedEditor.innerHTML = editorRef.current.innerHTML;
         }
         clonedEditor.style.height = 'auto';
-        clonedEditor.style.minHeight = '180mm';
+        clonedEditor.style.flex = '1';
         clonedEditor.style.maxHeight = 'none';
         clonedEditor.style.overflow = 'visible';
         clonedEditor.style.padding = '0 16px';
@@ -800,34 +687,49 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       // Strip unwanted interface elements (with .no-print class)
       clone.querySelectorAll('.no-print').forEach(el => el.remove());
 
-      // Create a dedicated rendering sandbox in the DOM (invisible but fully painted by the GPU)
+      // Use pre-loaded base64 for logo and flag if available
+      const allImgs = clone.querySelectorAll('img');
+      allImgs.forEach((img) => {
+        const alt = img.getAttribute('alt');
+        if (alt === 'Logo' && logoBase64) {
+          img.src = logoBase64;
+        } else if (alt === 'Flag' && flagBase64) {
+          img.src = flagBase64;
+        } else if (alt === 'Verification QR Code' && qrCodeDataUrl) {
+          img.src = qrCodeDataUrl;
+        }
+      });
+
+      // Create a dedicated rendering sandbox in the DOM (hidden offscreen with full opacity)
       sandbox = document.createElement('div');
       sandbox.style.position = 'fixed';
       sandbox.style.top = '0';
-      sandbox.style.left = '0';
+      sandbox.style.left = '-9999px';
       sandbox.style.width = '794px';
-      sandbox.style.height = 'auto';
-      sandbox.style.zIndex = '999999';
-      sandbox.style.opacity = '0.01';
+      sandbox.style.height = '1123px';
+      sandbox.style.zIndex = '-9999';
+      sandbox.style.opacity = '1';
       sandbox.style.pointerEvents = 'none';
-      sandbox.style.overflow = 'visible';
+      sandbox.style.overflow = 'hidden';
       sandbox.style.background = '#ffffff';
       
       sandbox.appendChild(clone);
       document.body.appendChild(sandbox);
 
-      // Inline all images (logos, flag, signature, QR) to Base64 Data URLs to eliminate CORS errors
+      // Inline all remaining images (logos, flag, signature, QR) to Base64 Data URLs to eliminate CORS errors
       await inlineAllImages(clone);
 
       // Allow fonts and layout to settle
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const canvas = await html2canvas(clone, {
         scale: 2, // High resolution (300 DPI equivalent)
         useCORS: true,
-        allowTaint: true, // Safe because all images are inlined Base64
+        allowTaint: false, // Ensures canvas is never tainted
         logging: false,
         backgroundColor: '#ffffff',
+        width: 794,
+        height: 1123,
         windowWidth: 794,
         windowHeight: 1123,
         scrollX: 0,
@@ -904,14 +806,15 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
     } catch (error) {
       console.error("PDF download/generation failed", error);
       // Fallback: offer user print preview to save as PDF if rendering encountered any device restriction
-      const fallbackToPrint = window.confirm(
+      alert(
         lang === 'bn'
-          ? 'পিডিএফ তৈরিতে সাময়িক সমস্যা হয়েছে। আপনি কি প্রিন্ট প্রিভিউ থেকে "Save as PDF" করতে চান?'
-          : 'PDF generation encountered an issue. Would you like to use Print Preview to Save as PDF?'
+          ? 'পিডিএফ তৈরিতে সাময়িক সমস্যা হয়েছে। আপনি কি প্রিন্ট আউট বা "Save as PDF" থেকে ডকুমেন্টটি সংগ্রহ করতে চান? প্রিন্ট ডায়ালগে ডেস্টিনেশন হিসেবে "Save as PDF" নির্বাচন করতে পারেন।'
+          : 'PDF download encountered an issue. Opening Print Preview; please select "Save as PDF".'
       );
-      if (fallbackToPrint && letterheadRef.current) {
-        printLetterhead(letterheadRef.current, lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড' : 'Official Letterhead Pad');
-      }
+      printLetterhead(
+        undefined, 
+        lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড - আজাদী সমাজ কল্যাণ সংঘ' : 'Official Letterhead Pad - Azadi Social Welfare Organization'
+      );
     } finally {
       if (sandbox && document.body.contains(sandbox)) {
         document.body.removeChild(sandbox);
@@ -921,14 +824,10 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
   };
 
   const handlePrint = () => {
-    if (letterheadRef.current) {
-      printLetterhead(
-        letterheadRef.current, 
-        lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড' : 'Official Letterhead Pad'
-      );
-    } else {
-      window.print();
-    }
+    printLetterhead(
+      undefined, 
+      lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড - আজাদী সমাজ কল্যাণ সংঘ' : 'Official Letterhead Pad - Azadi Social Welfare Organization'
+    );
   };
 
   // Rich Text Editor State & Core Command Helpers
@@ -1262,6 +1161,9 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20 bengali">
       <LetterheadStyles />
+      
+      {/* Screen-Only interactive editing environment */}
+      <div className="screen-only space-y-6 md:space-y-10">
       
       {isPrintPreview && (
         <style>{`
@@ -2169,7 +2071,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                   <div className="flex items-center justify-between w-full">
                     <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
                        {(settings.logoUrl || settings.logo)?.trim() ? (
-                         <img src={getOptimizedImageUrl((settings.logoUrl || settings.logo)!.trim(), 200)} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
+                         <img src={logoBase64 || getOptimizedImageUrl((settings.logoUrl || settings.logo)!.trim(), 200)} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
                        ) : (
                          <Award className="w-10 h-10 text-emerald-800" />
                        )}
@@ -2180,7 +2082,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                     </div>
                     <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
                       {(settings.flagUrl || settings.flag)?.trim() ? (
-                        <img src={getOptimizedImageUrl((settings.flagUrl || settings.flag)!.trim(), 300)} className="w-full h-full object-contain" alt="Flag" crossOrigin="anonymous" referrerPolicy="no-referrer" />
+                        <img src={flagBase64 || getOptimizedImageUrl((settings.flagUrl || settings.flag)!.trim(), 300)} className="w-full h-full object-contain" alt="Flag" crossOrigin="anonymous" referrerPolicy="no-referrer" />
                       ) : (
                         <span className="text-[10px] font-black text-slate-400">FLAG</span>
                       )}
@@ -2663,6 +2565,117 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           </div>
         </div>
       )}
+      </div>
+
+      {/* DEDICATED CLEAN PRINT CARD (Active and rendered during physical Print / Save as PDF, or cloned for PDF generation) */}
+      <div 
+        id="printable-letterhead-card" 
+        className="hidden print:flex flex-col bg-white"
+        style={{
+          width: '210mm',
+          height: '297mm',
+          minHeight: '297mm',
+          padding: '12mm 15mm 15mm 15mm',
+          boxSizing: 'border-box',
+          color: '#000000',
+          fontFamily: '"Noto Sans Bengali", sans-serif',
+        }}
+      >
+        {/* Pad Slogan Slat Header */}
+        <div className="text-center mb-4 select-none pointer-events-none">
+          <div className="inline-block px-10 py-1.5 border-b border-emerald-950/10 text-[13px] text-emerald-950 uppercase" style={{ ...BENGALI_STYLE }}>
+            {viewMode === 'bn' ? settings.sloganBn : settings.sloganEn}
+          </div>
+        </div>
+
+        {/* Main Pad Letter Header */}
+        <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
+          <div className="flex items-center justify-between w-full">
+            <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
+               {logoBase64 || (settings.logoUrl || settings.logo)?.trim() ? (
+                 <img src={logoBase64 || '/images/azadi_logo.png'} className="w-full h-full object-contain" alt="Logo" />
+               ) : (
+                 <Award className="w-10 h-10 text-emerald-800" />
+               )}
+            </div>
+            <div className="flex-1 px-4">
+              <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1" style={{ fontSize: '32px', ...BENGALI_STYLE }}>
+                {viewMode === 'bn' ? settings.nameBn : settings.nameEn}
+              </h1>
+              <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>
+                {viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}
+              </p>
+            </div>
+            <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
+              <img src={flagBase64 || '/images/bd_flag.png'} className="w-full h-full object-contain" alt="Flag" />
+            </div>
+          </div>
+        </div>
+
+        {/* Date & Reference Row */}
+        <div className="flex items-center justify-between text-xs text-slate-700 font-bold mb-4 px-4 select-none pointer-events-none">
+          <div className="font-mono">REF: ASWO/PAD/{new Date().getFullYear()}/{(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}</div>
+          <div>{lang === 'bn' ? 'তারিখ: ' : 'Date: '} <span className="underline decoration-slate-300 underline-offset-4">{today}</span></div>
+        </div>
+
+        {/* Real-time WYSIWYG Document Body for Print */}
+        <div 
+          className="editor-body flex-1 px-4 text-[14px] leading-relaxed text-slate-800"
+          style={{ 
+            ...BENGALI_STYLE, 
+            fontWeight: 500,
+          }}
+          dangerouslySetInnerHTML={{ __html: editorRef.current?.innerHTML || localConfig.bodyText || '' }}
+        />
+
+        {/* Pad Official Signatory Footer Area */}
+        <div className="pt-6 border-t border-emerald-900/5 mt-4 flex justify-between items-end select-none relative">
+          {/* Visual Stamp Block */}
+          <div className="w-24 h-24 border-4 border-double border-emerald-900/10 rounded-full flex items-center justify-center text-[8px] font-black opacity-40 select-none">STAMP</div>
+          
+          {/* Leader Signatory Block */}
+          <div className="text-center w-52 space-y-1 relative">
+            {Boolean(localConfig.signature?.trim()) && (
+              <div 
+                className="absolute mix-blend-multiply select-none flex items-center justify-center h-16 pointer-events-none"
+                style={{
+                  width: `${localConfig.signatureWidth ?? 112}px`,
+                  top: `${localConfig.signatureYOffset ?? -48}px`,
+                  left: '50%',
+                  transform: `translateX(calc(-50% + ${localConfig.signatureXOffset ?? 0}px)) rotate(${localConfig.signatureRotation ?? 0}deg)`,
+                  opacity: (localConfig.signatureOpacity ?? 100) / 100,
+                }}
+              >
+                <img 
+                  src={localConfig.signature} 
+                  className="w-full h-full object-contain" 
+                  alt="Signature" 
+                />
+              </div>
+            )}
+            <div className="h-[1.5px] bg-slate-950 w-full mb-1"></div>
+            <div className="text-lg font-black text-slate-950 leading-none" style={{ ...BENGALI_STYLE }}>{localConfig.leaderName}</div>
+            <div className="text-[11px] font-bold text-emerald-900" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{localConfig.designation}</div>
+          </div>
+        </div>
+
+        {/* Verification QR Code Overlay */}
+        {(localConfig.qrEnabled ?? true) && Boolean(qrCodeDataUrl?.trim()) && (
+          <div 
+            className="select-none pointer-events-none flex flex-col items-center justify-center absolute"
+            style={getQrStyle()}
+          >
+            <img 
+              src={qrCodeDataUrl} 
+              className="w-full h-full object-contain mix-blend-multiply" 
+              alt="Verification QR Code" 
+            />
+            <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap">
+              ASWO VERIFIED
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
