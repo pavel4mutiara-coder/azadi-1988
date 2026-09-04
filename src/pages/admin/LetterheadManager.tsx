@@ -6,13 +6,51 @@ import {
   Bold as BoldIcon, Italic as ItalicIcon, Underline as UnderlineIcon,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Indent, Outdent, Undo2, Redo2, Copy, Scissors, CheckSquare,
-  AlertTriangle, Upload, Sliders, Eye, EyeOff, QrCode
+  AlertTriangle, Upload, Sliders, Eye, EyeOff, QrCode, X
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { formatFirebaseError } from '../../lib/firebase';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { LetterheadConfig } from '../../types';
+
+const normalizeText = (str?: string): string => {
+  if (!str) return '';
+  return str.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
+const isConfigEqual = (a: LetterheadConfig | null | undefined, b: LetterheadConfig | null | undefined): boolean => {
+  if (!a || !b) return a === b;
+  if (normalizeText(a.bodyText) !== normalizeText(b.bodyText)) return false;
+  if ((a.leaderName || '').trim() !== (b.leaderName || '').trim()) return false;
+  if ((a.designation || '').trim() !== (b.designation || '').trim()) return false;
+  if ((a.signature || '') !== (b.signature || '')) return false;
+  if ((a.stampText || '').trim() !== (b.stampText || '').trim()) return false;
+  if ((a.organizationNameBn || '').trim() !== (b.organizationNameBn || '').trim()) return false;
+  if ((a.organizationNameEn || '').trim() !== (b.organizationNameEn || '').trim()) return false;
+  if ((a.addressBn || '').trim() !== (b.addressBn || '').trim()) return false;
+  if ((a.addressEn || '').trim() !== (b.addressEn || '').trim()) return false;
+  if ((a.phone || '').trim() !== (b.phone || '').trim()) return false;
+  if ((a.email || '').trim() !== (b.email || '').trim()) return false;
+  if ((a.website || '').trim() !== (b.website || '').trim()) return false;
+  if ((a.logoUrl || '').trim() !== (b.logoUrl || '').trim()) return false;
+  if ((a.signatureUrl || '').trim() !== (b.signatureUrl || '').trim()) return false;
+  if ((a.footerBn || '').trim() !== (b.footerBn || '').trim()) return false;
+  if ((a.footerEn || '').trim() !== (b.footerEn || '').trim()) return false;
+  if ((a.signatureWidth ?? 120) !== (b.signatureWidth ?? 120)) return false;
+  if ((a.signatureYOffset ?? 0) !== (b.signatureYOffset ?? 0)) return false;
+  if ((a.signatureXOffset ?? 0) !== (b.signatureXOffset ?? 0)) return false;
+  if ((a.signatureRotation ?? 0) !== (b.signatureRotation ?? 0)) return false;
+  if ((a.signatureOpacity ?? 1) !== (b.signatureOpacity ?? 1)) return false;
+  if (Boolean(a.qrEnabled) !== Boolean(b.qrEnabled)) return false;
+  if ((a.qrSize ?? 72) !== (b.qrSize ?? 72)) return false;
+  if ((a.qrPosition || 'bottom-left') !== (b.qrPosition || 'bottom-left')) return false;
+  if ((a.qrCustomText || '').trim() !== (b.qrCustomText || '').trim()) return false;
+  if ((a.qrXOffset ?? 0) !== (b.qrXOffset ?? 0)) return false;
+  if ((a.qrYOffset ?? 0) !== (b.qrYOffset ?? 0)) return false;
+  return true;
+};
 
 const LetterheadStyles = () => (
   <style>{`
@@ -163,30 +201,16 @@ export const LetterheadManager: React.FC = () => {
   const [scale, setScale] = useState(1);
   const previewContainerRef = useRef<HTMLDivElement>(null);
  
-  // Track if a restored local draft currently differs from the base DB config
+  // Track if a restored local draft from a previous session currently differs from the base DB config
   const [hasRestoredDraft, setHasRestoredDraft] = useState(() => {
     try {
       const saved = localStorage.getItem('azadi_letterhead_draft');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed.bodyText !== letterhead.bodyText ||
-               parsed.leaderName !== letterhead.leaderName ||
-               parsed.designation !== letterhead.designation ||
-               parsed.signature !== letterhead.signature ||
-               parsed.signatureWidth !== letterhead.signatureWidth ||
-               parsed.signatureYOffset !== letterhead.signatureYOffset ||
-               parsed.signatureXOffset !== letterhead.signatureXOffset ||
-               parsed.signatureRotation !== letterhead.signatureRotation ||
-               parsed.signatureOpacity !== letterhead.signatureOpacity ||
-               parsed.qrEnabled !== letterhead.qrEnabled ||
-               parsed.qrSize !== letterhead.qrSize ||
-               parsed.qrPosition !== letterhead.qrPosition ||
-               parsed.qrCustomText !== letterhead.qrCustomText ||
-               parsed.qrXOffset !== letterhead.qrXOffset ||
-               parsed.qrYOffset !== letterhead.qrYOffset;
+        return !isConfigEqual(parsed, letterhead);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to parse draft from localStorage", e);
     }
     return false;
   });
@@ -211,6 +235,14 @@ export const LetterheadManager: React.FC = () => {
   const letterheadString = JSON.stringify(letterhead);
   const localConfigString = JSON.stringify(localConfig);
 
+  // Check if letterhead loaded from DB matches what we currently have
+  useEffect(() => {
+    if (hasRestoredDraft && isConfigEqual(localConfig, letterhead)) {
+      setHasRestoredDraft(false);
+      localStorage.removeItem('azadi_letterhead_draft');
+    }
+  }, [letterheadString, hasRestoredDraft, localConfig, letterhead]);
+
   // Synchronize state when letterhead config changes from DB (only if no active local draft is being edited)
   useEffect(() => {
     if (hasRestoredDraft) return;
@@ -227,25 +259,10 @@ export const LetterheadManager: React.FC = () => {
 
   // Debounced auto-save effect to store current document state to localStorage
   useEffect(() => {
-    const isIdenticalToDB = localConfig.bodyText === letterhead.bodyText &&
-                            localConfig.leaderName === letterhead.leaderName &&
-                            localConfig.designation === letterhead.designation &&
-                            localConfig.signature === letterhead.signature &&
-                            localConfig.signatureWidth === letterhead.signatureWidth &&
-                            localConfig.signatureYOffset === letterhead.signatureYOffset &&
-                            localConfig.signatureXOffset === letterhead.signatureXOffset &&
-                            localConfig.signatureRotation === letterhead.signatureRotation &&
-                            localConfig.signatureOpacity === letterhead.signatureOpacity &&
-                            localConfig.qrEnabled === letterhead.qrEnabled &&
-                            localConfig.qrSize === letterhead.qrSize &&
-                            localConfig.qrPosition === letterhead.qrPosition &&
-                            localConfig.qrCustomText === letterhead.qrCustomText &&
-                            localConfig.qrXOffset === letterhead.qrXOffset &&
-                            localConfig.qrYOffset === letterhead.qrYOffset;
+    const isIdenticalToDB = isConfigEqual(localConfig, letterhead);
 
     if (isIdenticalToDB) {
       localStorage.removeItem('azadi_letterhead_draft');
-      setHasRestoredDraft(false);
       setAutoSaveStatus('idle');
       return;
     }
@@ -255,8 +272,8 @@ export const LetterheadManager: React.FC = () => {
     const timer = setTimeout(() => {
       try {
         localStorage.setItem('azadi_letterhead_draft', localConfigString);
-        setHasRestoredDraft(true);
         setAutoSaveStatus('saved');
+        // Do not set hasRestoredDraft(true) here!
       } catch (e) {
         console.error("Auto-save to localStorage failed", e);
         setAutoSaveStatus('idle');
@@ -264,7 +281,7 @@ export const LetterheadManager: React.FC = () => {
     }, 1500); // 1.5 seconds debounce
 
     return () => clearTimeout(timer);
-  }, [localConfigString, letterheadString]);
+  }, [localConfigString, letterheadString, localConfig, letterhead]);
 
   // Reset saved indicator back to idle after display duration
   useEffect(() => {
@@ -435,25 +452,30 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
     }
   };
 
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+
   const handleDiscardDraft = () => {
-    if (window.confirm(lang === 'bn' ? 'আপনি কি নিশ্চিত যে খসড়া সংস্করণটি বাতিল করে ডাটাবেজের সংস্করণে ফিরে যেতে চান?' : 'Are you sure you want to discard the draft and restore the database version?')) {
-      localStorage.removeItem('azadi_letterhead_draft');
-      setHasRestoredDraft(false);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = getInitialHtml(letterhead.bodyText);
-      }
-      setLocalConfig(letterhead);
+    localStorage.removeItem('azadi_letterhead_draft');
+    setHasRestoredDraft(false);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = getInitialHtml(letterhead.bodyText);
     }
+    setLocalConfig(letterhead);
+    setAutoSaveStatus('idle');
   };
 
   const handleSaveDraftToDB = async () => {
+    setIsSavingDraft(true);
     try {
       await saveLetterhead(localConfig);
       localStorage.removeItem('azadi_letterhead_draft');
       setHasRestoredDraft(false);
       alert(lang === 'bn' ? 'প্যাড সেটিংস সফলভাবে সেভ করা হয়েছে!' : 'Letterhead configuration successfully saved to Firestore!');
     } catch (e) {
+      console.error("Failed to save letterhead draft to DB", e);
       alert(lang === 'bn' ? 'সেভ করতে ব্যর্থ হয়েছে।' : 'Failed to save letterhead config.');
+    } finally {
+      setIsSavingDraft(false);
     }
   };
 
@@ -1116,7 +1138,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       {hasRestoredDraft && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top duration-300 no-print">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
+            <div className="p-2 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
               <AlertTriangle size={20} />
             </div>
             <div>
@@ -1130,7 +1152,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
             <button
               onClick={handleDiscardDraft}
               className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
@@ -1139,9 +1161,20 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
             </button>
             <button
               onClick={handleSaveDraftToDB}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase shadow transition-all cursor-pointer"
+              disabled={isSavingDraft}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase shadow transition-all cursor-pointer disabled:opacity-50"
             >
-              {lang === 'bn' ? 'ডাটাবেজে সেভ করুন' : 'Save to DB'}
+              {isSavingDraft 
+                ? (lang === 'bn' ? 'সেভ হচ্ছে...' : 'Saving...') 
+                : (lang === 'bn' ? 'ডাটাবেজে সেভ করুন' : 'Save to DB')}
+            </button>
+            <button
+              onClick={() => setHasRestoredDraft(false)}
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-amber-500/10 rounded-xl transition-colors cursor-pointer"
+              title={lang === 'bn' ? 'বন্ধ করুন' : 'Dismiss'}
+              aria-label="Dismiss draft notice"
+            >
+              <X size={16} />
             </button>
           </div>
         </div>
