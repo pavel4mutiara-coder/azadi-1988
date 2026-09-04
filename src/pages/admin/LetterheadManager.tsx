@@ -11,6 +11,9 @@ import {
 import QRCode from 'qrcode';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { formatFirebaseError } from '../../lib/firebase';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 import { LetterheadConfig } from '../../types';
@@ -52,6 +55,253 @@ const isConfigEqual = (a: LetterheadConfig | null | undefined, b: LetterheadConf
   return true;
 };
 
+/**
+ * Inlines all images inside an element as Base64 Data URLs so that html2canvas
+ * never has to make cross-origin network requests or trigger tainted canvas errors.
+ */
+async function inlineAllImages(container: HTMLElement): Promise<void> {
+  const images = Array.from(container.querySelectorAll('img'));
+  if (images.length === 0) return;
+
+  await Promise.all(
+    images.map(async (img) => {
+      const src = (img.getAttribute('src') || img.src || '').trim();
+      if (!src || src.startsWith('data:image/')) return;
+
+      // Strategy 1: If image is already fully loaded in the browser DOM, draw to an offscreen canvas
+      try {
+        if (img.complete && img.naturalWidth > 0) {
+          const offCanvas = document.createElement('canvas');
+          offCanvas.width = img.naturalWidth;
+          offCanvas.height = img.naturalHeight;
+          const ctx = offCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const dataUrl = offCanvas.toDataURL('image/png');
+            if (dataUrl && dataUrl.startsWith('data:image/png')) {
+              img.src = dataUrl;
+              return;
+            }
+          }
+        }
+      } catch {
+        // Tainted canvas by cross-origin, fall back to Strategy 2
+      }
+
+      // Strategy 2: Fetch via wsrv.nl proxy which guarantees Access-Control-Allow-Origin: *
+      try {
+        let fetchUrl = src;
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+          fetchUrl = `https://wsrv.nl/?url=${encodeURIComponent(src)}&output=png`;
+        }
+        const response = await fetch(fetchUrl, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          if (dataUrl) {
+            img.src = dataUrl;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not proxy image for PDF:", src, e);
+      }
+
+      // Strategy 3: Try direct fetch
+      try {
+        const directResp = await fetch(src);
+        if (directResp.ok) {
+          const blob = await directResp.blob();
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          if (dataUrl) {
+            img.src = dataUrl;
+          }
+        }
+      } catch (e) {
+        console.warn("Direct image fetch failed:", src, e);
+      }
+    })
+  );
+}
+
+/**
+ * Robust print function that uses an isolated hidden iframe with pristine A4 styles,
+ * falling back to window.print() if iframe printing is restricted.
+ */
+function printLetterhead(element: HTMLElement, title: string = 'Official Letterhead Pad') {
+  if (!element) return;
+
+  const existingIframe = document.getElementById('letterhead-print-frame');
+  if (existingIframe && existingIframe.parentNode) {
+    existingIframe.parentNode.removeChild(existingIframe);
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'letterhead-print-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  iframe.style.visibility = 'hidden';
+  iframe.style.zIndex = '-9999';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  // Clone element
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.id = 'print-content-node';
+  clone.style.transform = 'none';
+  clone.style.position = 'relative';
+  clone.style.left = '0';
+  clone.style.top = '0';
+  clone.style.margin = '0 auto';
+  clone.style.width = '210mm';
+  clone.style.minHeight = '297mm';
+  clone.style.boxShadow = 'none';
+  clone.style.border = 'none';
+  clone.style.overflow = 'visible';
+  clone.style.background = '#ffffff';
+  clone.style.color = '#000000';
+
+  // Ensure full editor visibility
+  const editorBody = clone.querySelector('.editor-body') as HTMLElement;
+  if (editorBody) {
+    editorBody.style.overflow = 'visible';
+    editorBody.style.maxHeight = 'none';
+    editorBody.style.height = 'auto';
+    editorBody.style.minHeight = 'auto';
+  }
+
+  // Remove UI elements marked with .no-print
+  clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+  // Collect page styles
+  const styleElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+    .map(el => el.outerHTML)
+    .join('\n');
+
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html lang="bn">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${title}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+        ${styleElements}
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            width: 210mm !important;
+            height: auto !important;
+            font-family: 'Noto Sans Bengali', 'Hind Siliguri', sans-serif !important;
+          }
+          #print-content-node {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            padding: 12mm 15mm 15mm 15mm !important;
+            box-sizing: border-box !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .editor-body {
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+            min-height: auto !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          p, li, blockquote, .signature-block, .stamp-block, h1, h2, h3, h4, img {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          img {
+            max-width: 100% !important;
+            display: block;
+          }
+        </style>
+      </head>
+      <body>
+        ${clone.outerHTML}
+      </body>
+    </html>
+  `);
+  doc.close();
+
+  const runPrint = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (err) {
+      console.warn("Iframe print blocked, falling back to window.print()", err);
+      window.print();
+    } finally {
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 5000);
+    }
+  };
+
+  const imgs = Array.from(doc.images);
+  if (imgs.length === 0) {
+    setTimeout(runPrint, 300);
+  } else {
+    let pending = imgs.length;
+    const checkDone = () => {
+      pending--;
+      if (pending <= 0) {
+        setTimeout(runPrint, 200);
+      }
+    };
+    imgs.forEach(im => {
+      if (im.complete) {
+        checkDone();
+      } else {
+        im.onload = checkDone;
+        im.onerror = checkDone;
+      }
+    });
+    setTimeout(runPrint, 1500);
+  }
+}
+
 const LetterheadStyles = () => (
   <style>{`
     @media print {
@@ -68,19 +318,34 @@ const LetterheadStyles = () => (
         margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
+        color: #000000 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-      }
-
-      /* Hide all default layout and application elements */
-      body * {
-        visibility: hidden !important;
+        overflow: visible !important;
       }
 
       /* Completely remove screen navigation, headers, footers, toolbars, and no-print containers */
-      header, footer, nav, aside, .no-print, #app-layout-root > header, #app-layout-root > footer {
+      header, footer, nav, aside, .no-print, #app-layout-root > header, #app-layout-root > footer, #app-navigation, [class*="no-print"] {
         display: none !important;
         visibility: hidden !important;
+      }
+
+      /* Reset layout wrappers to prevent clipping from overflow: hidden or height calculations */
+      #root, #root > div, main, .min-h-screen, [class*="overflow-hidden"] {
+        overflow: visible !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        transform: none !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      /* Hide screen-only siblings while keeping print area visible */
+      body * {
+        visibility: hidden;
       }
 
       /* Force print area and all internal elements to be visible */
@@ -90,14 +355,14 @@ const LetterheadStyles = () => (
 
       /* Precision A4 Letterhead formatting */
       #print-area {
-        position: absolute !important;
+        position: relative !important;
         left: 0 !important;
         top: 0 !important;
         width: 210mm !important;
         height: auto !important; /* Dynamic flow for natural multipage support */
         min-height: 297mm !important;
         padding: 12mm 15mm 15mm 15mm !important; /* Standard institutional letterhead padding */
-        margin: 0 !important;
+        margin: 0 auto !important;
         box-sizing: border-box !important;
         transform: none !important;
         box-shadow: none !important;
@@ -106,6 +371,8 @@ const LetterheadStyles = () => (
         color: #000000 !important;
         font-family: "Noto Sans Bengali", sans-serif !important;
         overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -487,51 +754,36 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
     try {
       setIsGeneratingPDF(true);
       const element = letterheadRef.current;
-      if (!element) return;
-
-      // Load html2pdf script dynamically if not present
-      let html2pdfLib = (window as any).html2pdf;
-      if (!html2pdfLib) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-          script.onload = () => {
-            html2pdfLib = (window as any).html2pdf;
-            resolve();
-          };
-          script.onerror = () => {
-            reject(new Error("Failed to load html2pdf script"));
-          };
-          document.head.appendChild(script);
-        });
-      }
-
-      if (!html2pdfLib) {
-        alert(lang === 'bn' ? 'পিডিএফ লাইব্রেরি লোড করতে ব্যর্থ হয়েছে।' : 'Failed to load PDF library.');
-        return;
+      if (!element) {
+        throw new Error("Letterhead element not found");
       }
 
       // Clone the element to render a perfect print-quality copy offscreen
       const clone = element.cloneNode(true) as HTMLDivElement;
       
-      // Prevent scrollbars, fixed heights, and let content expand naturally
-      clone.style.width = '210mm';
+      // Enforce precise A4 pixel dimensions (794px = 210mm @ 96 DPI, 1123px = 297mm @ 96 DPI)
+      clone.style.width = '794px';
+      clone.style.minHeight = '1123px';
       clone.style.height = 'auto';
-      clone.style.minHeight = '315mm'; // Perfect proportional fit for standard A4 margins when scaled by 0.857
       clone.style.transform = 'none';
       clone.style.position = 'relative';
       clone.style.left = '0';
       clone.style.top = '0';
-      clone.style.background = 'white';
-      clone.style.boxSizing = 'border-box';
-      clone.style.padding = '0'; // Margin handled natively by html2pdf config
       clone.style.margin = '0';
+      clone.style.background = '#ffffff';
+      clone.style.color = '#000000';
+      clone.style.boxSizing = 'border-box';
+      clone.style.padding = '12mm 15mm 15mm 15mm';
       clone.style.display = 'flex';
       clone.style.flexDirection = 'column';
+      clone.style.overflow = 'visible';
 
       // Ensure full text formatting is preserved inside the cloned editor
       const clonedEditor = clone.querySelector('.editor-body') as HTMLElement;
       if (clonedEditor) {
+        if (editorRef.current) {
+          clonedEditor.innerHTML = editorRef.current.innerHTML;
+        }
         clonedEditor.style.height = 'auto';
         clonedEditor.style.minHeight = '180mm';
         clonedEditor.style.maxHeight = 'none';
@@ -540,7 +792,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       }
 
       // Avoid splitting paragraphs, list items, and signatures across pages
-      clone.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, .signature-block').forEach((el) => {
+      clone.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, .signature-block, .stamp-block').forEach((el) => {
         (el as HTMLElement).style.pageBreakInside = 'avoid';
         (el as HTMLElement).style.breakInside = 'avoid';
       });
@@ -548,54 +800,78 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       // Strip unwanted interface elements (with .no-print class)
       clone.querySelectorAll('.no-print').forEach(el => el.remove());
 
-      // Create a dedicated rendering sandbox in the DOM (on-screen but layered behind the viewport)
+      // Create a dedicated rendering sandbox in the DOM (invisible but fully painted by the GPU)
       sandbox = document.createElement('div');
       sandbox.style.position = 'fixed';
       sandbox.style.top = '0';
       sandbox.style.left = '0';
-      sandbox.style.width = '210mm';
+      sandbox.style.width = '794px';
       sandbox.style.height = 'auto';
-      sandbox.style.zIndex = '-9999';
+      sandbox.style.zIndex = '999999';
+      sandbox.style.opacity = '0.01';
       sandbox.style.pointerEvents = 'none';
       sandbox.style.overflow = 'visible';
-      sandbox.style.background = 'white';
+      sandbox.style.background = '#ffffff';
       
       sandbox.appendChild(clone);
       document.body.appendChild(sandbox);
 
-      const fileName = `official_pad_${Date.now()}.pdf`;
-      const opt = {
-        margin: [12, 15, 15, 15], // Perfect top, left, bottom, right margins in mm
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          allowTaint: false, // Extremely important: must be false to avoid SecurityError on toDataURL
-          logging: false,
-          letterRendering: true,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: 794,
-          windowHeight: 1123
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
+      // Inline all images (logos, flag, signature, QR) to Base64 Data URLs to eliminate CORS errors
+      await inlineAllImages(clone);
+
+      // Allow fonts and layout to settle
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2, // High resolution (300 DPI equivalent)
+        useCORS: true,
+        allowTaint: true, // Safe because all images are inlined Base64
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794,
+        windowHeight: 1123,
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      // Clean up sandbox immediately
+      if (sandbox && document.body.contains(sandbox)) {
+        document.body.removeChild(sandbox);
+        sandbox = null;
+      }
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pdfWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Page 1
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // Multi-page handling if content expands past standard single A4 sheet
+      while (heightLeft > 5) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const fileName = `azadi_official_pad_${Date.now()}.pdf`;
 
       if (isNative) {
-        // Generate PDF as data URI string
-        const pdfBase64DataUrl = await html2pdfLib().from(clone).set(opt).output('datauristring');
-        
-        // Remove sandbox immediately after rendering completes
-        if (sandbox && document.body.contains(sandbox)) {
-          document.body.removeChild(sandbox);
-          sandbox = null;
-        }
+        const base64Content = pdf.output('datauristring').split(',')[1];
 
-        const base64Content = pdfBase64DataUrl.split(',')[1];
-
-        // On Android, request permission if required
         if (isAndroid) {
           try {
             const status = await Filesystem.checkPermissions();
@@ -622,13 +898,20 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           dialogTitle: lang === 'bn' ? 'পিডিএফ ফাইলটি সংরক্ষণ বা শেয়ার করুন' : 'Save or Share PDF',
         });
       } else {
-        // Standard Web browser download
-        await html2pdfLib().from(clone).set(opt).save();
-        alert(lang === 'bn' ? 'পিডিএফ ডাউনলোড সম্পন্ন হয়েছে!' : 'PDF download complete!');
+        // Direct browser download
+        pdf.save(fileName);
       }
     } catch (error) {
       console.error("PDF download/generation failed", error);
-      alert(lang === 'bn' ? 'পিডিএফ তৈরি করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।' : 'Failed to generate PDF. Please try again.');
+      // Fallback: offer user print preview to save as PDF if rendering encountered any device restriction
+      const fallbackToPrint = window.confirm(
+        lang === 'bn'
+          ? 'পিডিএফ তৈরিতে সাময়িক সমস্যা হয়েছে। আপনি কি প্রিন্ট প্রিভিউ থেকে "Save as PDF" করতে চান?'
+          : 'PDF generation encountered an issue. Would you like to use Print Preview to Save as PDF?'
+      );
+      if (fallbackToPrint && letterheadRef.current) {
+        printLetterhead(letterheadRef.current, lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড' : 'Official Letterhead Pad');
+      }
     } finally {
       if (sandbox && document.body.contains(sandbox)) {
         document.body.removeChild(sandbox);
@@ -638,7 +921,14 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
   };
 
   const handlePrint = () => {
-    window.print();
+    if (letterheadRef.current) {
+      printLetterhead(
+        letterheadRef.current, 
+        lang === 'bn' ? 'অফিসিয়াল লেটারহেড প্যাড' : 'Official Letterhead Pad'
+      );
+    } else {
+      window.print();
+    }
   };
 
   // Rich Text Editor State & Core Command Helpers
