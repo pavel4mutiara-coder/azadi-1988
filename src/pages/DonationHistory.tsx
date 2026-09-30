@@ -3,16 +3,18 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation } from '../types';
-import { Search, History, Calendar, Heart, FileText, CheckCircle2, Clock, Filter, Phone, Hash } from 'lucide-react';
+import { Search, History, Calendar, Heart, FileText, CheckCircle2, Clock, Filter, Phone, Hash, QrCode as QrIcon } from 'lucide-react';
 import { ReceiptView } from './admin/ReceiptView';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { parseLocalDate } from '../utils/parseLocalDate';
+import { ReceiptQRCodeModal } from '../components/ReceiptQRCodeModal';
 
 export const DonationHistory: React.FC = () => {
   const { lang, donations, settings, loadingDonations } = useApp();
   const t = TRANSLATIONS[lang];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
+  const [qrDonation, setQrDonation] = useState<Donation | null>(null);
 
   const filteredDonations = useMemo(() => {
     return [...donations].filter(d => {
@@ -106,12 +108,21 @@ export const DonationHistory: React.FC = () => {
               <div className="flex flex-col items-center md:items-end gap-3">
                 <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tighter">৳{d.amount.toLocaleString()}</div>
                 {d.status === DonationStatus.APPROVED && (
-                  <button 
-                    onClick={() => setSelectedDonation(d)}
-                    className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-90 transition-all shadow-lg"
-                  >
-                    <FileText size={14}/> {t.downloadReceipt}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button 
+                      onClick={() => setQrDonation(d)}
+                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md cursor-pointer"
+                      title={lang === 'bn' ? 'রশিদ কিউআর কোড দেখুন ও ডাউনলোড করুন' : 'View & Download Receipt QR Code'}
+                    >
+                      <QrIcon size={14}/> {lang === 'bn' ? 'কিউআর কোড' : 'QR Code'}
+                    </button>
+                    <button 
+                      onClick={() => setSelectedDonation(d)}
+                      className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-90 transition-all shadow-lg cursor-pointer"
+                    >
+                      <FileText size={14}/> {t.downloadReceipt}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -127,6 +138,17 @@ export const DonationHistory: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Standalone Receipt QR Code Modal */}
+      {qrDonation && (
+        <ReceiptQRCodeModal
+          isOpen={qrDonation !== null}
+          onClose={() => setQrDonation(null)}
+          receiptId={qrDonation.id}
+          donation={qrDonation}
+          settings={settings}
+        />
+      )}
     </div>
   );
 };

@@ -19,9 +19,11 @@ import {
   ArrowLeft,
   PieChart,
   HelpCircle,
-  FileCheck
+  FileCheck,
+  Mail
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { MonthlyImpactReportModal } from '../../components/MonthlyImpactReportModal';
 
 export const ReportsManager: React.FC = () => {
   const { 
@@ -42,6 +44,7 @@ export const ReportsManager: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [reportType, setReportType] = useState<'performance' | 'financial'>('performance');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [showImpactModal, setShowImpactModal] = useState<boolean>(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   // Derive list of years from data to populate dropdown dynamically
@@ -276,6 +279,16 @@ export const ReportsManager: React.FC = () => {
                 <option value="all" className="bg-white dark:bg-slate-900">{lang === 'bn' ? 'সর্বমোট' : 'All Time'}</option>
               </select>
             </div>
+
+            {/* Monthly Impact Report & Donor Email Button */}
+            <button 
+              onClick={() => setShowImpactModal(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-700/20 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
+              title={lang === 'bn' ? 'মাসিক প্রভাব প্রতিবেদন তৈরি ও নিবন্ধিত দাতাদের ইমেইল প্রেরণ' : 'Generate & Send Monthly Impact Report Email to Donors'}
+            >
+              <Mail size={16} className="text-amber-300" />
+              <span>{lang === 'bn' ? 'মাসিক ইমপ্যাক্ট রিপোর্ট ও ইমেইল' : 'Monthly Impact Email'}</span>
+            </button>
 
             {/* Action buttons */}
             <button 
@@ -716,6 +729,12 @@ export const ReportsManager: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Monthly Impact Report & Registered Donor Email Dispatcher Modal */}
+      <MonthlyImpactReportModal
+        isOpen={showImpactModal}
+        onClose={() => setShowImpactModal(false)}
+      />
     </div>
   );
 };

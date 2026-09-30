@@ -7,6 +7,7 @@ import { ISLAMIC_QUOTES } from '../../utils/constants';
 import { useApp } from '../../context/AppContext';
 import { parseLocalDate } from '../../utils/parseLocalDate';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { ReceiptQRCodeModal } from '../../components/ReceiptQRCodeModal';
 
 declare var html2pdf: any;
 
@@ -39,10 +40,16 @@ export const ReceiptView: React.FC<Props> = ({
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     const verificationUrl = `${window.location.origin}/verify-donation/REC-${donation.id.slice(-8)}`;
-    QRCode.toDataURL(verificationUrl, { margin: 1, width: 120 })
+    QRCode.toDataURL(verificationUrl, { 
+      margin: 1, 
+      width: 200, 
+      errorCorrectionLevel: 'H',
+      color: { dark: '#065f46', light: '#ffffff' }
+    })
       .then(url => setQrCodeDataUrl(url))
       .catch(err => console.error('Failed to generate QR code:', err));
   }, [donation.id]);
@@ -188,6 +195,13 @@ export const ReceiptView: React.FC<Props> = ({
             <ArrowLeft size={16} /> ফিরে যান
           </button>
           <div className="flex gap-2">
+            <button 
+              onClick={() => setShowQRModal(true)} 
+              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-xl font-black text-[9px] flex items-center gap-1.5 shadow-md transition-all uppercase cursor-pointer"
+              title={lang === 'bn' ? 'কিউআর কোড জেনারেটর' : 'QR Code Generator'}
+            >
+              <QrIcon size={14} /> {lang === 'bn' ? 'কিউআর কোড' : 'Receipt QR'}
+            </button>
             <button 
               onClick={handleDownload} 
               disabled={isGeneratingPDF}
@@ -362,9 +376,14 @@ export const ReceiptView: React.FC<Props> = ({
                   </div>
 
                   {qrCodeDataUrl && (
-                    <div className="flex flex-col items-center p-1 bg-white border border-slate-200 rounded-lg shadow-sm">
-                      <img src={qrCodeDataUrl} alt="Verify QR Code" className="w-14 h-14 object-contain" />
-                      <span className="text-[6px] font-black uppercase text-slate-500 tracking-tight">Scan to Verify</span>
+                    <div 
+                      onClick={() => setShowQRModal(true)}
+                      className="flex flex-col items-center p-1.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-emerald-500 transition-colors cursor-pointer group select-none"
+                      title={lang === 'bn' ? 'কিউআর কোড জেনারেটর খুলুন' : 'Click to open QR Code Generator'}
+                    >
+                      <img src={qrCodeDataUrl} alt="Verify QR Code" className="w-16 h-16 object-contain" />
+                      <span className="text-[7px] font-mono font-black text-emerald-950 mt-0.5">REC-{donation.id.slice(-8)}</span>
+                      <span className="text-[6px] font-black uppercase text-slate-500 tracking-tight group-hover:text-emerald-700">Scan to Verify</span>
                     </div>
                   )}
                 </div>
@@ -395,6 +414,15 @@ export const ReceiptView: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* Standalone Receipt QR Code Generator Modal */}
+      <ReceiptQRCodeModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        receiptId={donation.id}
+        donation={donation}
+        settings={settings}
+      />
     </div>
   );
 };

@@ -5,12 +5,15 @@ import { TRANSLATIONS } from '../utils/constants';
 import { DonationStatus, Donation } from '../types';
 import { 
   ShieldCheck, CheckCircle2, Clock, XCircle, Search, 
-  Building2, Calendar, FileText, ArrowLeft, Heart, Lock, AlertTriangle, Download
+  Building2, Calendar, FileText, ArrowLeft, Heart, Lock, AlertTriangle, Download,
+  QrCode as QrIcon, Camera
 } from 'lucide-react';
 import { parseLocalDate } from '../utils/parseLocalDate';
 import { PageHero } from '../components/PageHero';
 import { PageCTA } from '../components/PageCTA';
 import { ReceiptView } from './admin/ReceiptView';
+import { ReceiptQRCodeModal } from '../components/ReceiptQRCodeModal';
+import { ReceiptQRScannerModal } from '../components/ReceiptQRScannerModal';
 
 export const VerifyReceipt: React.FC = () => {
   const { receiptId } = useParams<{ receiptId?: string }>();
@@ -20,6 +23,8 @@ export const VerifyReceipt: React.FC = () => {
   const [searchInput, setSearchInput] = useState(receiptId || '');
   const [searchedId, setSearchedId] = useState(receiptId || '');
   const [showFullReceipt, setShowFullReceipt] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
 
   useEffect(() => {
     if (receiptId) {
@@ -91,10 +96,10 @@ export const VerifyReceipt: React.FC = () => {
         ]}
       />
 
-      {/* Search Bar */}
+      {/* Search Bar & Instant Scanner */}
       <div className="max-w-2xl mx-auto mb-12">
-        <form onSubmit={handleSearch} className="bg-white dark:bg-slate-900 p-3 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft flex items-center gap-3">
-          <div className="pl-4 text-slate-400">
+        <form onSubmit={handleSearch} className="bg-white dark:bg-slate-900 p-2.5 sm:p-3 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft flex items-center gap-2 sm:gap-3">
+          <div className="pl-3 sm:pl-4 text-slate-400">
             <Search size={22} className="text-blue-600 dark:text-amber-400" />
           </div>
           <input
@@ -102,13 +107,22 @@ export const VerifyReceipt: React.FC = () => {
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder={lang === 'bn' ? 'রশিদ নম্বর বা আইডি লিখুন (যেমন: REC-12345678)...' : 'Enter Receipt ID (e.g. REC-12345678)...'}
-            className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-white font-bold text-sm sm:text-base placeholder-slate-400 py-2"
+            className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-white font-bold text-sm sm:text-base placeholder-slate-400 py-2 min-w-0"
           />
           <button
-            type="submit"
-            className="px-6 py-3.5 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer shrink-0"
+            type="button"
+            onClick={() => setShowScannerModal(true)}
+            className="px-3 sm:px-4 py-3 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-black text-xs uppercase tracking-wider rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title={lang === 'bn' ? 'ক্যামেরা দিয়ে কিউআর কোড স্ক্যান করুন' : 'Scan Receipt QR Code with Camera'}
           >
-            {lang === 'bn' ? 'যাচাই করুন' : 'Verify Now'}
+            <Camera size={16} />
+            <span className="hidden xs:inline">{lang === 'bn' ? 'স্ক্যান' : 'Scan QR'}</span>
+          </button>
+          <button
+            type="submit"
+            className="px-5 sm:px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer shrink-0"
+          >
+            {lang === 'bn' ? 'যাচাই' : 'Verify'}
           </button>
         </form>
       </div>
@@ -221,9 +235,18 @@ export const VerifyReceipt: React.FC = () => {
                 </p>
               </div>
 
-              {/* View Full Receipt Button */}
-              {matchedDonation.status === DonationStatus.APPROVED && (
-                <div className="pt-4 flex justify-end">
+              {/* Action Buttons */}
+              <div className="pt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowQRModal(true)}
+                  className="px-5 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <QrIcon size={16} />
+                  <span>{lang === 'bn' ? 'রশিদ কিউআর কোড জেনারেটর' : 'Receipt QR Code'}</span>
+                </button>
+
+                {matchedDonation.status === DonationStatus.APPROVED && (
                   <button
                     onClick={() => setShowFullReceipt(true)}
                     className="px-6 py-3.5 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md flex items-center gap-2 transition-all cursor-pointer"
@@ -231,8 +254,8 @@ export const VerifyReceipt: React.FC = () => {
                     <FileText size={16} />
                     <span>{lang === 'bn' ? 'সম্পূর্ণ পিডিএফ রশিদ দেখুন / ডাউনলোড করুন' : 'View & Download Full PDF Receipt'}</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ) : (
@@ -268,18 +291,48 @@ export const VerifyReceipt: React.FC = () => {
         <div className="bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center space-y-4">
           <ShieldCheck size={48} className="mx-auto text-blue-600/40 dark:text-amber-400/40" />
           <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">
-            {lang === 'bn' ? 'রশিদ নম্বর লিখে সার্চ করুন' : 'Enter a Receipt ID to verify authenticity'}
+            {lang === 'bn' ? 'রশিদ নম্বর লিখে সার্চ করুন অথবা কিউআর স্ক্যান করুন' : 'Enter Receipt ID or Scan QR Code'}
           </h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
             {lang === 'bn' 
-              ? 'আপনার সংগৃহীত অথবা পিডিএফ রশিদে থাকা আইডি ব্যবহার করে সত্যতা যাচাই করতে পারবেন।' 
-              : 'Scan the QR code on your official PDF receipt or enter the Receipt ID directly.'}
+              ? 'আপনার অফিসিয়াল পিডিএফ রশিদে থাকা কিউআর কোড স্ক্যান করে অথবা আইডি লিখে এক ক্লিকে সত্যতা যাচাই করুন।' 
+              : 'Scan the QR code on your official PDF receipt or enter the Receipt ID directly to verify authenticity instantly.'}
           </p>
+          <div className="pt-2">
+            <button
+              onClick={() => setShowScannerModal(true)}
+              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-md transition-all cursor-pointer"
+            >
+              <Camera size={16} />
+              <span>{lang === 'bn' ? 'ক্যামেরা দিয়ে কিউআর স্ক্যান করুন' : 'Scan QR with Camera'}</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Institutional CTA */}
       <PageCTA />
+
+      {/* Receipt QR Code Modal */}
+      {matchedDonation && (
+        <ReceiptQRCodeModal
+          isOpen={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          receiptId={matchedDonation.id}
+          donation={matchedDonation}
+          settings={settings}
+        />
+      )}
+
+      {/* Receipt QR Scanner Modal */}
+      <ReceiptQRScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onScanSuccess={(scannedId) => {
+          setSearchInput(scannedId);
+          setSearchedId(scannedId);
+        }}
+      />
     </div>
   );
 };

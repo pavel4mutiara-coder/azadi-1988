@@ -5,6 +5,8 @@ import { TRANSLATIONS, ADMIN_NAV_ITEMS } from '../../utils/constants';
 import { parseLocalDate } from '../../utils/parseLocalDate';
 import { DonationStatus, Donation, Expense, VolunteerApplication } from '../../types';
 import { ReceiptView } from './ReceiptView';
+import { ReceiptQRCodeModal } from '../../components/ReceiptQRCodeModal';
+import { MonthlyImpactReportModal } from '../../components/MonthlyImpactReportModal';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { formatFirebaseError } from '../../lib/firebase';
@@ -42,7 +44,8 @@ import {
   Filter,
   CheckCircle,
   ExternalLink,
-  MessageCircle
+  MessageCircle,
+  QrCode as QrIcon
 } from 'lucide-react';
 
 const DEFAULT_VOLUNTEERS: VolunteerApplication[] = [
@@ -166,10 +169,12 @@ export const AdminDashboard: React.FC = () => {
   }, [location.pathname]);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [viewingReceipt, setViewingReceipt] = useState<Donation | null>(null);
+  const [qrModalDonation, setQrModalDonation] = useState<Donation | null>(null);
   const [selectedDonationDetails, setSelectedDonationDetails] = useState<Donation | null>(null);
   const [downloadingReceipt, setDownloadingReceipt] = useState<Donation | null>(null);
   const [showCashForm, setShowCashForm] = useState(false);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showImpactReportModal, setShowImpactReportModal] = useState(false);
   
   const [editingDonationId, setEditingDonationId] = useState<string | null>(null);
   const [cashFormData, setCashFormData] = useState({ 
@@ -703,13 +708,26 @@ export const AdminDashboard: React.FC = () => {
                 {lang === 'bn' ? 'সিস্টেমটি সম্পূর্ণভাবে রিয়েল-টাইম ফায়ারবেস ফায়ারস্টোর ডাটাবেজ দ্বারা সুসংগত হচ্ছে।' : 'System fully interconnected with standard real-time Firebase Firestore database.'}
               </p>
             </div>
-            {/* Download Audit Trail Report Button */}
-            <button 
-              onClick={() => window.print()}
-              className="px-6 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 hover:dark:bg-slate-700 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 border border-slate-250 dark:border-slate-700"
-            >
-              <Download size={14} /> {lang === 'bn' ? 'রিপোর্ট মুদ্রণ' : 'Print Statement'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Monthly Impact Report & Donor Email Dispatcher Button */}
+              <button 
+                id="admin-btn-monthly-impact-report"
+                onClick={() => setShowImpactReportModal(true)}
+                className="px-5 py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 shadow-lg shadow-emerald-700/20 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
+                title={lang === 'bn' ? 'মাসিক প্রভাব প্রতিবেদন তৈরি ও নিবন্ধিত দাতাদের ইমেইল প্রেরণ' : 'Generate & Send Monthly Impact Report Email to Donors'}
+              >
+                <Mail size={15} className="text-amber-300" />
+                <span>{lang === 'bn' ? 'মাসিক ইমপ্যাক্ট রিপোর্ট ও ইমেইল' : 'Monthly Impact Report Email'}</span>
+              </button>
+
+              {/* Download Audit Trail Report Button */}
+              <button 
+                onClick={() => window.print()}
+                className="px-5 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 hover:dark:bg-slate-700 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 border border-slate-250 dark:border-slate-700 cursor-pointer"
+              >
+                <Download size={14} /> {lang === 'bn' ? 'রিপোর্ট মুদ্রণ' : 'Print Statement'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -935,13 +953,22 @@ export const AdminDashboard: React.FC = () => {
                             </span>
                           )}
                           {d.status === DonationStatus.APPROVED && (
-                            <button 
-                              onClick={() => setViewingReceipt(d)} 
-                              title={lang === 'bn' ? 'রসিদ প্রিন্ট' : 'Print Receipt'}
-                              className="p-2 bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-lg inline-flex"
-                            >
-                              <FileText size={12} />
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => setQrModalDonation(d)} 
+                                title={lang === 'bn' ? 'রশিদ কিউআর কোড' : 'Receipt QR Code'}
+                                className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg inline-flex transition-all"
+                              >
+                                <QrIcon size={12} />
+                              </button>
+                              <button 
+                                onClick={() => setViewingReceipt(d)} 
+                                title={lang === 'bn' ? 'রসিদ প্রিন্ট' : 'Print Receipt'}
+                                className="p-2 bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-lg inline-flex"
+                              >
+                                <FileText size={12} />
+                              </button>
+                            </>
                           )}
                           {d.status === DonationStatus.REJECTED && (
                             <button 
@@ -1056,13 +1083,22 @@ export const AdminDashboard: React.FC = () => {
                           </>
                         )}
                         {d.status === DonationStatus.APPROVED && (
-                          <button 
-                            onClick={() => setViewingReceipt(d)} 
-                            title={lang === 'bn' ? 'রসিদ প্রিন্ট' : 'Print Receipt'}
-                            className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-xl"
-                          >
-                            <FileText size={14} />
-                          </button>
+                          <>
+                            <button 
+                              onClick={() => setQrModalDonation(d)} 
+                              title={lang === 'bn' ? 'রশিদ কিউআর কোড' : 'Receipt QR Code'}
+                              className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl inline-flex transition-all"
+                            >
+                              <QrIcon size={14} />
+                            </button>
+                            <button 
+                              onClick={() => setViewingReceipt(d)} 
+                              title={lang === 'bn' ? 'রসিদ প্রিন্ট' : 'Print Receipt'}
+                              className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-xl"
+                            >
+                              <FileText size={14} />
+                            </button>
+                          </>
                         )}
                         {d.status === DonationStatus.REJECTED && (
                           <button 
@@ -2047,6 +2083,12 @@ export const AdminDashboard: React.FC = () => {
                 {selectedDonationDetails.status === DonationStatus.APPROVED && (
                   <>
                     <button
+                      onClick={() => setQrModalDonation(selectedDonationDetails)}
+                      className="px-4 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-1.5 shadow-lg cursor-pointer"
+                    >
+                      <QrIcon size={14} /> {lang === 'bn' ? 'কিউআর কোড' : 'Receipt QR'}
+                    </button>
+                    <button
                       onClick={() => setDownloadingReceipt(selectedDonationDetails)}
                       disabled={downloadingReceipt !== null}
                       title={lang === 'bn' ? 'রসিদ পিডিএফ ডাউনলোড করুন' : 'Download Receipt PDF'}
@@ -2580,6 +2622,23 @@ export const AdminDashboard: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Standalone Receipt QR Code Modal */}
+      {qrModalDonation && (
+        <ReceiptQRCodeModal
+          isOpen={qrModalDonation !== null}
+          onClose={() => setQrModalDonation(null)}
+          receiptId={qrModalDonation.id}
+          donation={qrModalDonation}
+          settings={settings}
+        />
+      )}
+
+      {/* Monthly Impact Report & Registered Donor Email Dispatcher Modal */}
+      <MonthlyImpactReportModal
+        isOpen={showImpactReportModal}
+        onClose={() => setShowImpactReportModal(false)}
+      />
 
     </div>
   );
