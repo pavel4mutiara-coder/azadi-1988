@@ -377,17 +377,17 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <span className="text-slate-700">|</span>
             <span className="flex items-center gap-1 text-slate-300">
               <MapPin size={12} className="text-blue-400 shrink-0" />
-              <span>{lang === 'bn' ? 'মিরবক্সটুলা, সিলেট, বাংলাদেশ' : 'Mirbox Tula, Sylhet, Bangladesh'}</span>
+              <span>{lang === 'bn' ? (settings?.addressBn || 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ') : (settings?.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh')}</span>
             </span>
           </div>
 
           <div className="flex items-center gap-4">
-            <a href="tel:+8801712782564" className="flex items-center gap-1 hover:text-amber-400 transition-colors">
+            <a href={`tel:${settings?.phone || '+8801711975488'}`} className="flex items-center gap-1 hover:text-amber-400 transition-colors">
               <Phone size={12} className="text-amber-400" />
-              <span>+880 1712-782564</span>
+              <span>{settings?.phone || '+880 1711-975488'}</span>
             </a>
             <span className="text-slate-700">|</span>
-            <a href="https://wa.me/8801712782564" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+            <a href={`https://wa.me/${(settings?.adminWhatsApp || '8801711975488').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
               <MessageCircle size={12} />
               <span>WhatsApp</span>
             </a>
@@ -791,11 +791,13 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-xs space-y-2 text-slate-400">
                 <div className="flex items-center gap-2 text-slate-300 font-bold">
                   <MapPin size={14} className="text-blue-400" />
-                  <span>{lang === 'bn' ? 'মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ' : 'Mirbox Tula, Sylhet-3100, Bangladesh'}</span>
+                  <span>{lang === 'bn' ? (settings?.addressBn || 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ') : (settings?.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300 font-bold">
                   <Phone size={14} className="text-amber-400" />
-                  <span>+880 1712-782564</span>
+                  <a href={`tel:${settings?.phone || '+8801711975488'}`} className="hover:text-amber-400 transition-colors">
+                    <span>{settings?.phone || '+880 1711-975488'}</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -936,7 +938,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                     href={
                       settings?.whatsappChannel 
                         ? getSafeUrl(settings.whatsappChannel) 
-                        : (settings?.adminWhatsApp ? `https://wa.me/${settings.adminWhatsApp.replace(/[^0-9]/g, '')}` : "https://wa.me/8801712782564")
+                        : (settings?.adminWhatsApp ? `https://wa.me/${settings.adminWhatsApp.replace(/[^0-9]/g, '')}` : "https://wa.me/8801711975488")
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1015,15 +1017,15 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <div className="space-y-2.5 text-xs text-slate-400">
                 <div className="flex items-start gap-2.5">
                   <MapPin size={16} className="text-blue-400 shrink-0 mt-0.5" />
-                  <span className="bengali">{lang === 'bn' ? 'মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ' : 'Mirbox Tula, Sylhet-3100, Bangladesh'}</span>
+                  <span className="bengali">{lang === 'bn' ? (settings?.addressBn || 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ') : (settings?.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh')}</span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <Phone size={16} className="text-amber-400 shrink-0" />
-                  <a href="tel:+8801712782564" className="hover:text-white transition-colors">+880 1712-782564</a>
+                  <a href={`tel:${settings?.phone || '+8801711975488'}`} className="hover:text-white transition-colors">{settings?.phone || '+880 1711-975488'}</a>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <Mail size={16} className="text-emerald-400 shrink-0" />
-                  <a href="mailto:info@azadi.org" className="hover:text-white transition-colors">info@azadi.org</a>
+                  <a href={`mailto:${settings?.email || 'azadisocialwelfareorganization@gmail.com'}`} className="hover:text-white transition-colors">{settings?.email || 'azadisocialwelfareorganization@gmail.com'}</a>
                 </div>
                 
                 <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -1032,7 +1034,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                     href={
                       settings?.whatsappChannel 
                         ? getSafeUrl(settings.whatsappChannel) 
-                        : (settings?.adminWhatsApp ? `https://wa.me/${settings.adminWhatsApp.replace(/[^0-9]/g, '')}` : "https://wa.me/8801712782564")
+                        : (settings?.adminWhatsApp ? `https://wa.me/${settings.adminWhatsApp.replace(/[^0-9]/g, '')}` : "https://wa.me/8801711975488")
                     } 
                     target="_blank" 
                     rel="noopener noreferrer"

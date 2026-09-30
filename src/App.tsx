@@ -46,6 +46,7 @@ const Gallery = lazyWithRetry(() => import('./pages/Gallery').then(m => ({ defau
 const Transparency = lazyWithRetry(() => import('./pages/Transparency').then(m => ({ default: m.Transparency })));
 const Contact = lazyWithRetry(() => import('./pages/Contact').then(m => ({ default: m.Contact })));
 const VerifyReceipt = lazyWithRetry(() => import('./pages/VerifyReceipt').then(m => ({ default: m.VerifyReceipt })));
+const VerifyDocument = lazyWithRetry(() => import('./pages/VerifyDocument').then(m => ({ default: m.VerifyDocument })));
 
 // Admin Pages
 const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -107,6 +108,10 @@ const AppRoutes: React.FC = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/verify-donation" element={<VerifyReceipt />} />
         <Route path="/verify-donation/:receiptId" element={<VerifyReceipt />} />
+        <Route path="/verify-receipt" element={<VerifyReceipt />} />
+        <Route path="/verify-receipt/:receiptId" element={<VerifyReceipt />} />
+        <Route path="/verify-document" element={<VerifyDocument />} />
+        <Route path="/verify" element={<VerifyDocument />} />
         
         {/* Admin Panel */}
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

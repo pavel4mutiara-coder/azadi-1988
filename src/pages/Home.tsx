@@ -79,7 +79,7 @@ export default function Home() {
             </span>
             <span className="inline-flex items-center gap-1.5 bg-blue-900/60 text-blue-200 px-3 sm:px-3.5 py-1.5 rounded-full border border-blue-700/50 shadow-sm text-center">
               <MapPin size={14} className="text-blue-400 shrink-0" />
-              <span>{lang === 'bn' ? 'মিরবক্সটুলা, সিলেট, বাংলাদেশ' : 'Mirbox Tula, Sylhet, Bangladesh'}</span>
+              <span>{lang === 'bn' ? (settings?.addressBn || 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ') : (settings?.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh')}</span>
             </span>
           </div>
 
@@ -934,30 +934,30 @@ export default function Home() {
                 <MapPin size={18} className="text-blue-600 shrink-0 mt-0.5" />
                 <span className="bengali">
                   {lang === 'bn' 
-                    ? settings?.addressBn || 'মিরবক্সটুলা, সিলেট-৩১০০, বাংলাদেশ' 
-                    : settings?.addressEn || 'Mirbox Tula, Sylhet-3100, Bangladesh'
+                    ? settings?.addressBn || 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ' 
+                    : settings?.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh'
                   }
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
                 <Phone size={18} className="text-amber-500 shrink-0" />
-                <a href={`tel:${settings?.phone || '+8801712782564'}`} className="hover:text-blue-600 font-bold">
-                  {settings?.phone || '+880 1712-782564'}
+                <a href={`tel:${settings?.phone || '+8801711975488'}`} className="hover:text-blue-600 font-bold">
+                  {settings?.phone || '+880 1711-975488'}
                 </a>
               </div>
 
               <div className="flex items-center gap-3">
                 <Mail size={18} className="text-emerald-500 shrink-0" />
-                <a href={`mailto:${settings?.email || 'info@azadi.org'}`} className="hover:text-blue-600 font-bold">
-                  {settings?.email || 'info@azadi.org'}
+                <a href={`mailto:${settings?.email || 'azadisocialwelfareorganization@gmail.com'}`} className="hover:text-blue-600 font-bold">
+                  {settings?.email || 'azadisocialwelfareorganization@gmail.com'}
                 </a>
               </div>
             </div>
 
             <div className="pt-2 flex flex-wrap gap-3">
               <a 
-                href={`https://wa.me/${(settings?.adminWhatsApp || '8801712782564').replace(/\+/g, '')}`} 
+                href={`https://wa.me/${(settings?.adminWhatsApp || '8801711975488').replace(/\+/g, '')}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all"
@@ -967,7 +967,7 @@ export default function Home() {
               </a>
 
               <a 
-                href="https://maps.google.com/?q=Mirboxtula,Sylhet,Bangladesh" 
+                href={`https://maps.google.com/?q=${encodeURIComponent(settings?.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh')}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-black text-xs px-4 py-2.5 rounded-xl transition-all hover:bg-slate-200"

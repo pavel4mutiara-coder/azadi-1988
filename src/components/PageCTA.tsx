@@ -39,7 +39,7 @@ export const PageCTA: React.FC = () => {
             <span>{lang === 'bn' ? 'দান করুন' : 'Donate Now'}</span>
           </Link>
           <a
-            href={`https://wa.me/${settings?.whatsappNumber || '8801712782564'}`}
+            href={`https://wa.me/${(settings?.adminWhatsApp || '8801711975488').replace(/[^0-9]/g, '')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-black text-sm uppercase tracking-wider rounded-2xl border border-slate-700 flex items-center justify-center gap-2.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"

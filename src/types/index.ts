@@ -203,6 +203,16 @@ export interface LetterheadConfig {
   qrCustomText?: string;
   qrXOffset?: number;
   qrYOffset?: number;
+  regNoBn?: string;
+  regNoEn?: string;
+  showWatermark?: boolean;
+  watermarkOpacity?: number;
+  headerStyle?: 'classic' | 'modern' | 'executive' | 'compact';
+  showAddressInHeader?: boolean;
+  showAddressInFooter?: boolean;
+  bismillahText?: string;
+  subHeaderNatureBn?: string;
+  subHeaderNatureEn?: string;
   updatedAt?: string;
 }
 

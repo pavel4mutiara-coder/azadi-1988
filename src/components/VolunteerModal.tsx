@@ -343,7 +343,7 @@ export const VolunteerModal: React.FC<VolunteerModalProps> = ({ isOpen, onClose 
                       setPhone(e.target.value);
                       if (error) setError(null);
                     }}
-                    placeholder={lang === 'bn' ? 'যেমন: 01712-782564' : 'e.g. +880 1712-782564'}
+                    placeholder={lang === 'bn' ? 'যেমন: 01711-975488' : 'e.g. +880 1711-975488'}
                     className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 focus:border-blue-600 dark:focus:border-amber-400 focus:ring-2 focus:ring-blue-600/10 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-mono font-medium transition-all outline-none"
                     disabled={isLoading}
                   />

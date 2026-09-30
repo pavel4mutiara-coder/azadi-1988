@@ -6,7 +6,9 @@ import {
   Bold as BoldIcon, Italic as ItalicIcon, Underline as UnderlineIcon,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Indent, Outdent, Undo2, Redo2, Copy, Scissors, CheckSquare,
-  AlertTriangle, Upload, Sliders, Eye, EyeOff, QrCode, X
+  AlertTriangle, Upload, Sliders, Eye, EyeOff, QrCode, X,
+  Receipt, ExternalLink, RefreshCw, FileCheck, Sparkles,
+  MapPin, Building2, Phone, Mail, Globe, Award, ShieldCheck, ChevronDown, ChevronUp, RotateCcw
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Capacitor } from '@capacitor/core';
@@ -37,6 +39,15 @@ const isConfigEqual = (a: LetterheadConfig | null | undefined, b: LetterheadConf
   if ((a.phone || '').trim() !== (b.phone || '').trim()) return false;
   if ((a.email || '').trim() !== (b.email || '').trim()) return false;
   if ((a.website || '').trim() !== (b.website || '').trim()) return false;
+  if ((a.regNoBn || '').trim() !== (b.regNoBn || '').trim()) return false;
+  if ((a.regNoEn || '').trim() !== (b.regNoEn || '').trim()) return false;
+  if ((a.bismillahText || '').trim() !== (b.bismillahText || '').trim()) return false;
+  if ((a.subHeaderNatureBn || '').trim() !== (b.subHeaderNatureBn || '').trim()) return false;
+  if ((a.subHeaderNatureEn || '').trim() !== (b.subHeaderNatureEn || '').trim()) return false;
+  if (Boolean(a.showWatermark ?? true) !== Boolean(b.showWatermark ?? true)) return false;
+  if ((a.watermarkOpacity ?? 4) !== (b.watermarkOpacity ?? 4)) return false;
+  if (Boolean(a.showAddressInHeader ?? true) !== Boolean(b.showAddressInHeader ?? true)) return false;
+  if (Boolean(a.showAddressInFooter ?? true) !== Boolean(b.showAddressInFooter ?? true)) return false;
   if ((a.logoUrl || '').trim() !== (b.logoUrl || '').trim()) return false;
   if ((a.signatureUrl || '').trim() !== (b.signatureUrl || '').trim()) return false;
   if ((a.footerBn || '').trim() !== (b.footerBn || '').trim()) return false;
@@ -295,7 +306,7 @@ const LetterheadStyles = () => (
 );
 
 export const LetterheadManager: React.FC = () => {
-  const { lang, settings, letterhead, saveLetterhead } = useApp();
+  const { lang, settings, letterhead, saveLetterhead, donations } = useApp();
   const t = TRANSLATIONS[lang];
   
   // Initialize state from local draft if it exists, otherwise fall back to database state
@@ -326,6 +337,79 @@ export const LetterheadManager: React.FC = () => {
   const [flagBase64, setFlagBase64] = useState<string>('');
   const [scale, setScale] = useState(1);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+
+  // QR Verification Modes: 'document' | 'receipt' | 'custom'
+  const [qrMode, setQrMode] = useState<'document' | 'receipt' | 'custom'>('document');
+
+  // Official Document State
+  const [docType, setDocType] = useState<string>('official_document');
+  const [docTitle, setDocTitle] = useState<string>('অফিসিয়াল বিজ্ঞপ্তি ও কার্যবিবরণী');
+  const [docRef, setDocRef] = useState<string>(() => {
+    const year = new Date().getFullYear();
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `ASWO/DOC/${year}/${rand}`;
+  });
+
+  // Official Receipt State
+  const [receiptSelectedDonationId, setReceiptSelectedDonationId] = useState<string>('');
+  const [receiptId, setReceiptId] = useState<string>(() => {
+    const rand = Math.random().toString(36).substring(2, 10).toUpperCase();
+    return `REC-${rand}`;
+  });
+  const [receiptDonorName, setReceiptDonorName] = useState<string>('জনাব মোহাম্মদ রফিকুল ইসলাম');
+  const [receiptAmount, setReceiptAmount] = useState<string>('৫,০০০');
+  const [receiptPurpose, setReceiptPurpose] = useState<string>('সাধারণ কল্যাণ ও শিক্ষা সহায়তা তহবিল');
+  const [receiptPaymentMethod, setReceiptPaymentMethod] = useState<string>('bKash / অনলাইন পেমেন্ট');
+  const [receiptDate, setReceiptDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+
+  // Verification Testing modal state
+  const [isTestVerifyModalOpen, setIsTestVerifyModalOpen] = useState(false);
+
+  // Collapsible toggle for the Official Address & Information sidebar panel
+  const [isOfficialInfoOpen, setIsOfficialInfoOpen] = useState(true);
+
+  // Cascading Address & Official Credentials with robust defaults
+  const activeAddressBn = localConfig.addressBn || settings.addressBn || 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ';
+  const activeAddressEn = localConfig.addressEn || settings.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh';
+  const activePhone = localConfig.phone || settings.phone || '+880 1711-975488';
+  const activeEmail = localConfig.email || settings.email || 'azadisocialwelfareorganization@gmail.com';
+  const activeWebsite = localConfig.website || settings.website || 'www.azadiswo.org';
+  const activeRegNoBn = localConfig.regNoBn || 'রেজিঃ নং- সসে/সিলে/১৯৮৮ (সমাজসেবা ও যুব উন্নয়ন অধিদপ্তর নিবন্ধিত)';
+  const activeRegNoEn = localConfig.regNoEn || 'Govt. Reg. No: ASWO/SYL/1988 (Approved by Social Services & Youth Dev.)';
+  const activeEstablishedBn = settings.establishedBn || '১০ জুন ১৯৮৮ খ্রিঃ';
+  const activeEstablishedEn = settings.establishedEn || '10 June 1988';
+  const activeSloganBn = settings.sloganBn || 'শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া';
+  const activeSloganEn = settings.sloganEn || 'Education · Unity · Service · Peace · Sports';
+  const activeSubHeaderNatureBn = localConfig.subHeaderNatureBn || 'সমাজসেবা ও যুব উন্নয়ন অধিদপ্তর নিবন্ধিত জনকল্যাণমূলক অরাজনৈতিক প্রতিষ্ঠান';
+  const activeSubHeaderNatureEn = localConfig.subHeaderNatureEn || 'A Registered Non-Political Voluntary Social Welfare Organization';
+  const showWatermark = localConfig.showWatermark ?? true;
+  const watermarkOpacity = ((localConfig.watermarkOpacity ?? 4) / 100);
+  const showHeaderAddress = localConfig.showAddressInHeader ?? true;
+  const showFooterAddress = localConfig.showAddressInFooter ?? true;
+
+  // Helper to quickly reset to the full authentic official address of Azadi Social Welfare Organization
+  const handleResetToOfficialDefaults = () => {
+    setLocalConfig(prev => ({
+      ...prev,
+      organizationNameBn: 'আজাদী সমাজ কল্যাণ সংঘ',
+      organizationNameEn: 'Azadi Social Welfare Organization',
+      addressBn: 'ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ',
+      addressEn: 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh',
+      phone: '+880 1711-975488',
+      email: 'azadisocialwelfareorganization@gmail.com',
+      website: 'www.azadiswo.org',
+      regNoBn: 'রেজিঃ নং- সসে/সিলে/১৯৮৮ (সমাজসেবা ও যুব উন্নয়ন অধিদপ্তর নিবন্ধিত)',
+      regNoEn: 'Govt. Reg. No: ASWO/SYL/1988 (Approved by Social Services & Youth Dev.)',
+      bismillahText: 'বিসমিল্লাহির রাহমানির রাহিম',
+      subHeaderNatureBn: 'সমাজসেবা ও যুব উন্নয়ন অধিদপ্তর নিবন্ধিত জনকল্যাণমূলক অরাজনৈতিক প্রতিষ্ঠান',
+      subHeaderNatureEn: 'A Registered Non-Political Voluntary Social Welfare Organization',
+      showWatermark: true,
+      watermarkOpacity: 4,
+      showAddressInHeader: true,
+      showAddressInFooter: true,
+    }));
+    alert(lang === 'bn' ? 'ডিফল্ট অফিসিয়াল ঠিকানা ও তথ্য সফলভাবে লোড করা হয়েছে!' : 'Official address and details loaded successfully!');
+  };
 
   // Pre-load and convert logo and flag to Base64 so html2canvas and printing never encounter CORS or blank states
   useEffect(() => {
@@ -450,12 +534,202 @@ export const LetterheadManager: React.FC = () => {
     setToday(new Date().toLocaleDateString(viewMode === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
   }, [viewMode]);
 
-  // Generate QR code content dynamically based on document metadata
+  // Helper to generate a fresh document reference ID
+  const generateNewDocRef = () => {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newRef = `ASWO/DOC/${year}/${month}/${rand}`;
+    setDocRef(newRef);
+    return newRef;
+  };
+
+  // Helper to generate a fresh receipt ID
+  const generateNewReceiptId = () => {
+    const rand = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const newId = `REC-${rand}`;
+    setReceiptId(newId);
+    return newId;
+  };
+
+  // When a donation is picked from the database list
+  const handleSelectDonationForReceipt = (donationId: string) => {
+    setReceiptSelectedDonationId(donationId);
+    const d = donations.find(item => item.id === donationId);
+    if (d) {
+      const recNumber = `REC-${d.id.slice(-8).toUpperCase()}`;
+      setReceiptId(recNumber);
+      setReceiptDonorName(d.donorName || d.name || 'সম্মানিত শুভাকাঙ্ক্ষী');
+      setReceiptAmount(d.amount ? d.amount.toLocaleString() : '0');
+      setReceiptPurpose(d.purpose || 'সাধারণ কল্যাণ তহবিল');
+      setReceiptPaymentMethod(d.paymentMethod || d.method || 'অনলাইন পেমেন্ট');
+      setReceiptDate(d.date ? d.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+    }
+  };
+
+  // Inserter: Formatted Official Money Receipt Table
+  const insertReceiptTemplate = () => {
+    const formattedReceiptHtml = `
+<div style="font-family: 'Noto Sans Bengali', sans-serif; border: 2px solid #065f46; border-radius: 8px; padding: 18px; margin: 12px 0; background-color: #f0fdf4;">
+  <div style="text-align: center; border-bottom: 2px dashed #059669; padding-bottom: 10px; margin-bottom: 12px;">
+    <h3 style="font-size: 18px; font-weight: 900; color: #064e3b; margin: 0; text-transform: uppercase;">অফিসিয়াল অর্থ প্রাপ্তি রশিদ</h3>
+    <p style="font-size: 11px; font-weight: 700; color: #047857; margin: 2px 0 0 0;">OFFICIAL DONATION & MONEY RECEIPT</p>
+  </div>
+  
+  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 10px; color: #1e293b;">
+    <div><strong>রশিদ নম্বর (Receipt No):</strong> <span style="font-family: monospace; color: #047857;">${receiptId.toUpperCase()}</span></div>
+    <div><strong>তারিখ (Date):</strong> <span>${receiptDate || today}</span></div>
+  </div>
+
+  <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; background: white;">
+    <tbody>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 8px 12px; font-weight: bold; color: #475569; width: 35%;">প্রাপ্ত ব্যক্তির নাম (Received From):</td>
+        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${receiptDonorName || 'সম্মানিত অনুদানকারী'}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 8px 12px; font-weight: bold; color: #475569;">টাকার পরিমাণ (Amount):</td>
+        <td style="padding: 8px 12px; font-weight: 900; color: #047857; font-size: 15px;">৳ ${receiptAmount} BDT</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 8px 12px; font-weight: bold; color: #475569;">অনুদানের খাত / উদ্দেশ্য (Fund / Purpose):</td>
+        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${receiptPurpose || 'সাধারণ কল্যাণ তহবিল'}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px; font-weight: bold; color: #475569;">পরিশোধ মাধ্যম (Payment Method):</td>
+        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${receiptPaymentMethod || 'অনলাইন / ক্যাশ'}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-size: 11px; color: #475569; text-align: center; border-top: 1px solid #a7f3d0; padding-top: 8px;">
+    <em>* এই রশিদের সত্যতা যাচাই করতে সংযুক্ত কিউআর কোডটি স্মার্টফোন দিয়ে স্ক্যান করুন অথবা azadi.org/verify দেখুন।</em>
+  </div>
+</div>
+<p><br></p>
+`;
+    setLocalConfig(prev => ({
+      ...prev,
+      bodyText: (prev.bodyText || '') + formattedReceiptHtml
+    }));
+    if (editorRef.current) {
+      editorRef.current.innerHTML = (editorRef.current.innerHTML || '') + formattedReceiptHtml;
+    }
+  };
+
+  // Inserter: Official Document Templates
+  const insertDocumentTemplate = (templateKey: 'certificate' | 'notice' | 'resolution' | 'appreciation') => {
+    let templateHtml = '';
+    let newTitle = '';
+    let newType = 'official_document';
+
+    if (templateKey === 'certificate') {
+      newTitle = 'অফিসিয়াল প্রত্যয়নপত্র (Official Certificate)';
+      newType = 'certificate';
+      templateHtml = `
+<div style="text-align: center; margin-bottom: 16px;">
+  <h2 style="font-size: 20px; font-weight: 900; color: #064e3b; text-decoration: underline; margin-bottom: 6px;">প্রত্যয়নপত্র</h2>
+  <p style="font-size: 12px; color: #475569; font-weight: bold;">TO WHOM IT MAY CONCERN</p>
+</div>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  এই মর্মে প্রত্যয়ন করা যাচ্ছে যে, জনাব/জনাবা <strong>[নাম এখানে লিখুন]</strong>, পিতা/স্বামী: <strong>[পিতার নাম]</strong>, গ্রাম/মহল্লা: <strong>[ঠিকানা]</strong> আজাদী সমাজ কল্যাণ সংঘের একজন নিবেদিতপ্রাণ ও সক্রিয় সদস্য/স্বেচ্ছাসেবক।
+</p>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  আমাদের জানা মতে তিনি সর্বদা সততা, নিষ্ঠা ও আন্তরিকতার সাথে সামাজিক উন্নয়নমূলক কর্মকাণ্ডে অংশগ্রহণ করে আসছেন। তার নৈতিক চরিত্র অত্যন্ত প্রশংসনীয় এবং তিনি কোনো প্রকার রাষ্ট্র ও সমাজবিরোধী কার্যকলাপের সাথে জড়িত নন।
+</p>
+<p style="line-height: 1.8;">
+  আমরা তার ভবিষ্যৎ জীবনের সর্বাঙ্গীন উন্নতি ও সাফল্য কামনা করি।
+</p>
+`;
+    } else if (templateKey === 'notice') {
+      newTitle = 'জরুরি অফিসিয়াল বিজ্ঞপ্তি (Official Notice)';
+      newType = 'notice';
+      templateHtml = `
+<div style="text-align: center; margin-bottom: 16px;">
+  <h2 style="font-size: 20px; font-weight: 900; color: #064e3b; text-decoration: underline; margin-bottom: 6px;">জরুরি বিজ্ঞপ্তি</h2>
+  <p style="font-size: 12px; color: #475569; font-weight: bold;">OFFICIAL NOTICE & CIRCULAR</p>
+</div>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  আজাদী সমাজ কল্যাণ সংঘের সকল কার্যনির্বাহী সদস্য, সাধারণ সদস্য ও সম্মানিত শুভানুধ্যায়ীদের অবগতির জন্য জানানো যাচ্ছে যে, আগামী <strong>[তারিখ]</strong> রোজ <strong>[বার]</strong>, বিকাল <strong>[সময়]</strong> ঘটিকায় সংঘের কেন্দ্রীয় কার্যালয়ে এক জরুরি সাধারণ সভা অনুষ্ঠিত হবে।
+</p>
+<p style="font-weight: bold; margin-bottom: 6px;">সভার আলোচ্য বিষয়সূচি:</p>
+<ol style="padding-left: 20px; line-height: 1.8; margin-bottom: 12px;">
+  <li>বিগত সভার কার্যবিবরণী পাঠ ও অনুমোদন।</li>
+  <li>আসন্ন সমাজসেবামূলক ও ত্রাণ বিতরণ প্রকল্পের অগ্রগতি পর্যালোচনা।</li>
+  <li>আর্থিক হিসাব ও অনুদান তহবিল নিরীক্ষণ।</li>
+  <li>বিবিধ ও সভাপতির অনুমতিক্রমে অন্যান্য আলোচনা।</li>
+</ol>
+<p style="line-height: 1.8;">
+  উক্ত সভায় সংশ্লিষ্ট সকলকে যথাসময়ে উপস্থিত থাকার জন্য বিশেষভাবে অনুরোধ করা যাচ্ছে।
+</p>
+`;
+    } else if (templateKey === 'resolution') {
+      newTitle = 'কার্যনির্বাহী কমিটির সিদ্ধান্ত (Executive Resolution)';
+      newType = 'resolution';
+      templateHtml = `
+<div style="text-align: center; margin-bottom: 16px;">
+  <h2 style="font-size: 20px; font-weight: 900; color: #064e3b; text-decoration: underline; margin-bottom: 6px;">কার্যনির্বাহী কমিটির সিদ্ধান্তপত্র</h2>
+  <p style="font-size: 12px; color: #475569; font-weight: bold;">EXECUTIVE COMMITTEE RESOLUTION</p>
+</div>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  আজাদী সমাজ কল্যাণ সংঘের কার্যনির্বাহী কমিটির সভায় সর্বসম্মতিক্রমে নিম্নোক্ত সিদ্ধান্তসমূহ গৃহীত হয়েছে:
+</p>
+<ul style="padding-left: 20px; line-height: 1.8; margin-bottom: 12px;">
+  <li><strong>সিদ্ধান্ত ১:</strong> সংঘের কল্যাণমূলক কর্মকাণ্ডের স্বচ্ছতা বৃদ্ধির লক্ষ্যে অফিসিয়াল ডকুমেন্টস ও রশিদে ডিজিটাল কিউআর ভেরিফিকেশন সিস্টেম কার্যকর রাখা হবে।</li>
+  <li><strong>সিদ্ধান্ত ২:</strong> শিক্ষা সহায়তা ও স্বাস্থ্যসেবা উপ-কমিটির প্রস্তাবিত বাজেট অনুমোদন করা হলো।</li>
+  <li><strong>সিদ্ধান্ত ৩:</strong> সকল সদস্যের উপস্থিতিতে নিয়মিত অডিট কার্যক্রম পরিচালনা করা হবে।</li>
+</ul>
+<p style="line-height: 1.8;">
+  গৃহীত সিদ্ধান্ত অবিলম্বে কার্যকর করার জন্য সংশ্লিষ্ট দায়িত্বপ্রাপ্ত কর্মকর্তাদের নির্দেশ প্রদান করা হলো।
+</p>
+`;
+    } else {
+      newTitle = 'অনুদান প্রাপ্তি স্বীকার ও ধন্যবাদপত্র (Appreciation Letter)';
+      newType = 'appreciation';
+      templateHtml = `
+<div style="text-align: center; margin-bottom: 16px;">
+  <h2 style="font-size: 20px; font-weight: 900; color: #064e3b; text-decoration: underline; margin-bottom: 6px;">কৃতজ্ঞতা ও ধন্যবাদপত্র</h2>
+  <p style="font-size: 12px; color: #475569; font-weight: bold;">LETTER OF APPRECIATION & GRATITUDE</p>
+</div>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  শ্রদ্ধেয় <strong>[সম্মানিত দাতা/সংগঠনের নাম]</strong>,
+</p>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  আসসালামু আলাইকুম। আজাদী সমাজ কল্যাণ সংঘের মানবিক ও সমাজকল্যাণমূলক কার্যক্রমে আপনার আন্তরিক সহযোগিতা ও অনুদানের জন্য আমরা সংঘ পরিবারের পক্ষ থেকে আন্তরিক মোবারকবাদ ও গভীর কৃতজ্ঞতা জ্ঞাপন করছি।
+</p>
+<p style="text-align: justify; line-height: 1.8; margin-bottom: 12px;">
+  আপনার এই মহান অনুদান আর্তমানবতার সেবা, সুবিধাবঞ্চিত শিশুদের শিক্ষা সহায়তা এবং সামাজিক পুনর্বাসনে গুরুত্বপূর্ণ ভূমিকা রাখবে।
+</p>
+<p style="line-height: 1.8;">
+  মহান আল্লাহ আপনার এই সৎকর্ম কবুল করুন এবং আপনাকে উত্তম প্রতিদান দান করুন। আমিন।
+</p>
+`;
+    }
+
+    setDocTitle(newTitle);
+    setDocType(newType);
+    setLocalConfig(prev => ({
+      ...prev,
+      bodyText: templateHtml
+    }));
+    if (editorRef.current) {
+      editorRef.current.innerHTML = templateHtml;
+    }
+  };
+
+  // Generate QR code content dynamically based on selected Mode:
   const qrVerificationText = useMemo(() => {
-    if (localConfig.qrCustomText) {
+    if (qrMode === 'custom' && localConfig.qrCustomText) {
       return localConfig.qrCustomText;
     }
-    // Automatically generate verification code based on document metadata
+
+    if (qrMode === 'receipt') {
+      const cleanRec = (receiptId || 'REC-GENERAL').trim().toUpperCase();
+      const origin = window.location.origin;
+      return `${origin}/verify-donation/${cleanRec}`;
+    }
+
+    // Default: 'document' verification mode
     const textContent = localConfig.bodyText || '';
     let hash = 0;
     for (let i = 0; i < textContent.length; i++) {
@@ -464,15 +738,15 @@ export const LetterheadManager: React.FC = () => {
       hash |= 0; // Convert to 32bit integer
     }
     const refHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 6);
-    const refId = `ASWO/PAD/${new Date().getFullYear()}/${(localConfig.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}-${refHash}`;
-    
-    return `ASWO VERIFY
-Ref: ${refId}
-Signatory: ${localConfig.leaderName || ''}
-Designation: ${localConfig.designation || ''}
-Words: ${wordCount}
-Date: ${today || new Date().toISOString().split('T')[0]}`;
-  }, [localConfig.qrCustomText, localConfig.bodyText, localConfig.leaderName, localConfig.designation, wordCount, today]);
+    const cleanRef = (docRef || `ASWO/DOC/${new Date().getFullYear()}/${refHash}`).trim();
+    const cleanTitle = (docTitle || 'Official Document').trim();
+    const sigName = (localConfig.leaderName || 'ADMIN').trim();
+    const sigDesig = (localConfig.designation || '').trim();
+    const issueDate = today || new Date().toISOString().split('T')[0];
+    const origin = window.location.origin;
+
+    return `${origin}/verify-document?ref=${encodeURIComponent(cleanRef)}&title=${encodeURIComponent(cleanTitle)}&type=${encodeURIComponent(docType)}&sig=${encodeURIComponent(sigName)}&desig=${encodeURIComponent(sigDesig)}&date=${encodeURIComponent(issueDate)}&h=${refHash}`;
+  }, [qrMode, localConfig.qrCustomText, receiptId, docRef, docTitle, docType, localConfig.leaderName, localConfig.designation, localConfig.bodyText, today]);
 
   // Regenerate QR Code base64 Data URL
   useEffect(() => {
@@ -1375,6 +1649,234 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
       <div className={isPrintPreview ? "w-full space-y-6" : "grid lg:grid-cols-12 gap-6 items-start"}>
         {/* Left Side settings: Signatory details & Draw Signature */}
         <div className={`lg:col-span-3 space-y-6 no-print ${isPrintPreview ? 'hidden' : ''}`}>
+          {/* OFFICIAL IDENTITY & FULL ADDRESS CARD (অফিসিয়াল পরিচিতি ও সম্পূর্ণ ঠিকানা) */}
+          <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
+                  <MapPin size={17} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <span>{lang === 'bn' ? 'অফিসিয়াল ঠিকানা ও পরিচিতি' : 'Official Address & Info'}</span>
+                  </h3>
+                  <p className="text-[9px] text-slate-400 font-bold">
+                    {lang === 'bn' ? 'লেটারহেডের ঠিকানা ও সরকারি নিবন্ধন' : 'Pad address & registration'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOfficialInfoOpen(!isOfficialInfoOpen)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                title={isOfficialInfoOpen ? (lang === 'bn' ? 'সংকুচিত করুন' : 'Collapse') : (lang === 'bn' ? 'প্রসারিত করুন' : 'Expand')}
+              >
+                {isOfficialInfoOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+
+            {isOfficialInfoOpen && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Full Address Bengali */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={11} className="text-emerald-500" />
+                      {lang === 'bn' ? 'সম্পূর্ণ ঠিকানা (বাংলা)' : 'Full Address (Bengali)'}
+                    </span>
+                    <span className="text-[9px] text-emerald-600 font-mono font-bold">Bangla</span>
+                  </label>
+                  <textarea 
+                    rows={2}
+                    value={localConfig.addressBn ?? activeAddressBn} 
+                    onChange={e => setLocalConfig({ ...localConfig, addressBn: e.target.value })}
+                    placeholder="ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 resize-none leading-relaxed"
+                  />
+                </div>
+
+                {/* Full Address English */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Building2 size={11} className="text-emerald-500" />
+                      {lang === 'bn' ? 'সম্পূর্ণ ঠিকানা (ইংরেজি)' : 'Full Address (English)'}
+                    </span>
+                    <span className="text-[9px] text-blue-600 font-mono font-bold">English</span>
+                  </label>
+                  <textarea 
+                    rows={2}
+                    value={localConfig.addressEn ?? activeAddressEn} 
+                    onChange={e => setLocalConfig({ ...localConfig, addressEn: e.target.value })}
+                    placeholder="Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 resize-none leading-relaxed font-sans"
+                  />
+                </div>
+
+                {/* Direct Contacts Grid: Phone & Website */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Phone size={10} className="text-emerald-500" />
+                      {lang === 'bn' ? 'মোবাইল / ফোন' : 'Phone'}
+                    </label>
+                    <input 
+                      type="text"
+                      value={localConfig.phone ?? activePhone}
+                      onChange={e => setLocalConfig({ ...localConfig, phone: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Globe size={10} className="text-emerald-500" />
+                      {lang === 'bn' ? 'ওয়েবসাইট' : 'Website'}
+                    </label>
+                    <input 
+                      type="text"
+                      value={localConfig.website ?? activeWebsite}
+                      onChange={e => setLocalConfig({ ...localConfig, website: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Address */}
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <Mail size={10} className="text-emerald-500" />
+                    {lang === 'bn' ? 'অফিসিয়াল ইমেইল' : 'Official Email'}
+                  </label>
+                  <input 
+                    type="email"
+                    value={localConfig.email ?? activeEmail}
+                    onChange={e => setLocalConfig({ ...localConfig, email: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                {/* Registration & Approval */}
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <ShieldCheck size={10} className="text-emerald-500" />
+                    {lang === 'bn' ? 'সরকারি নিবন্ধন ও অনুমোদন' : 'Govt. Registration'}
+                  </label>
+                  <input 
+                    type="text"
+                    value={localConfig.regNoBn ?? activeRegNoBn}
+                    onChange={e => setLocalConfig({ ...localConfig, regNoBn: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                {/* Layout Toggles: Show Address in Header / Footer */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+                  <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-400 block">
+                    {lang === 'bn' ? 'লেআউট ও প্রদর্শন সেটিংস' : 'Display & Layout Settings'}
+                  </span>
+
+                  <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🔝</span>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                          {lang === 'bn' ? 'হেডারে ঠিকানা প্রদর্শন' : 'Show Address in Header'}
+                        </div>
+                        <div className="text-[8.5px] text-slate-400">
+                          {lang === 'bn' ? 'লোগো ও নামের নিচে ঠিকানা' : 'Compact address under header title'}
+                        </div>
+                      </div>
+                    </div>
+                    <input 
+                      type="checkbox"
+                      checked={localConfig.showAddressInHeader ?? true}
+                      onChange={e => setLocalConfig({ ...localConfig, showAddressInHeader: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🔻</span>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                          {lang === 'bn' ? 'ফুটারে সম্পূর্ণ ঠিকানা ও তথ্য' : 'Show Full Address in Footer'}
+                        </div>
+                        <div className="text-[8.5px] text-slate-400">
+                          {lang === 'bn' ? '৩-কলাম বিশিষ্ট প্রফেশনাল ফুটার' : '3-column comprehensive official footer'}
+                        </div>
+                      </div>
+                    </div>
+                    <input 
+                      type="checkbox"
+                      checked={localConfig.showAddressInFooter ?? true}
+                      onChange={e => setLocalConfig({ ...localConfig, showAddressInFooter: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🛡️</span>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                          {lang === 'bn' ? 'সিকিউরিটি ওয়াটারমার্ক' : 'Security Watermark'}
+                        </div>
+                        <div className="text-[8.5px] text-slate-400">
+                          {lang === 'bn' ? 'পৃষ্ঠার মাঝে হালকা মনোগ্রাম' : 'Central semi-transparent watermark'}
+                        </div>
+                      </div>
+                    </div>
+                    <input 
+                      type="checkbox"
+                      checked={localConfig.showWatermark ?? true}
+                      onChange={e => setLocalConfig({ ...localConfig, showWatermark: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                    />
+                  </label>
+
+                  {/* Watermark opacity slider */}
+                  {(localConfig.showWatermark ?? true) && (
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                      <div className="flex items-center justify-between text-[9px] font-black uppercase text-slate-400">
+                        <span>{lang === 'bn' ? 'ওয়াটারমার্ক অপাসিটি' : 'Watermark Opacity'}</span>
+                        <span className="font-mono text-emerald-600 font-bold">{localConfig.watermarkOpacity ?? 4}%</span>
+                      </div>
+                      <input 
+                        type="range"
+                        min="1"
+                        max="15"
+                        value={localConfig.watermarkOpacity ?? 4}
+                        onChange={e => setLocalConfig({ ...localConfig, watermarkOpacity: Number(e.target.value) })}
+                        className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Reset Action */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetToOfficialDefaults}
+                    className="flex-1 py-2 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={12} />
+                    <span>{lang === 'bn' ? 'ডিফল্ট ঠিকানায় রিসেট' : 'Reset Address'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save size={12} />
+                    <span>{isSaving ? (lang === 'bn' ? '...' : '...') : (lang === 'bn' ? 'সেভ' : 'Save')}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md space-y-6">
             <h3 className="text-xs font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-widest">
               <Edit3 size={18} className="text-emerald-500" /> 
@@ -1608,19 +2110,29 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
             )}
           </div>
 
-          {/* QR Code Verification Panel */}
+          {/* QR Code Verification & Authentication Panel */}
           <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md space-y-6">
-            <h3 className="text-xs font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-widest">
-              <QrCode size={18} className="text-emerald-500" /> 
-              {lang === 'bn' ? 'ডকুমেন্ট ভেরিফিকেশন কিউআর' : 'Document Verification QR'}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-widest">
+                <QrCode size={18} className="text-emerald-500" /> 
+                {lang === 'bn' ? 'কিউআর কোড ও সত্যতা যাচাইকরণ' : 'QR Verification & Authenticity'}
+              </h3>
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+                SCANNABLE
+              </span>
+            </div>
 
             <div className="space-y-4">
               {/* Enabled toggle */}
               <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                  {lang === 'bn' ? 'ভেরিফিকেশন কিউআর সক্রিয়' : 'Enable QR Verification'}
-                </span>
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider block">
+                    {lang === 'bn' ? 'ভেরিফিকেশন কিউআর কোড সক্রিয়' : 'Enable Verification QR Code'}
+                  </span>
+                  <span className="text-[8px] text-slate-400 block">
+                    {lang === 'bn' ? 'স্ক্যান করে সত্যতা যাচাইয়ের লিংক এনকোড করবে' : 'Encodes online authenticity verification link'}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setLocalConfig({ ...localConfig, qrEnabled: !(localConfig.qrEnabled ?? true) })}
@@ -1634,6 +2146,281 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
 
               {(localConfig.qrEnabled ?? true) && (
                 <>
+                  {/* Mode Selector Tabs: Document vs Receipt vs Custom */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-400">
+                      {lang === 'bn' ? 'যাচাইকরণের ধরন নির্বাচন করুন' : 'Verification Target Mode'}
+                    </label>
+                    <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setQrMode('document')}
+                        className={`py-2 px-1 text-[10px] font-black rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                          qrMode === 'document'
+                            ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <FileText size={14} />
+                        <span>{lang === 'bn' ? 'অফিসিয়াল নথি' : 'Document'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setQrMode('receipt')}
+                        className={`py-2 px-1 text-[10px] font-black rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                          qrMode === 'receipt'
+                            ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <Receipt size={14} />
+                        <span>{lang === 'bn' ? 'মানি রশিদ' : 'Receipt'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setQrMode('custom')}
+                        className={`py-2 px-1 text-[10px] font-black rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                          qrMode === 'custom'
+                            ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <QrCode size={14} />
+                        <span>{lang === 'bn' ? 'কাস্টম লিংক' : 'Custom'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DOCUMENT MODE CONTROLS */}
+                  {qrMode === 'document' && (
+                    <div className="space-y-3 p-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-[10px] font-black uppercase text-emerald-800 dark:text-emerald-300">
+                        <span className="flex items-center gap-1.5">
+                          <FileCheck size={14} />
+                          {lang === 'bn' ? 'অফিসিয়াল নথি ও পত্র ভেরিফিকেশন' : 'Official Document Verification'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={generateNewDocRef}
+                          className="flex items-center gap-1 text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          <RefreshCw size={11} />
+                          <span>{lang === 'bn' ? 'নতুন স্মারক নং' : 'New Ref'}</span>
+                        </button>
+                      </div>
+
+                      {/* Doc Reference Number */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-slate-500">
+                          {lang === 'bn' ? 'স্মারক / রেফারেন্স নম্বর' : 'Reference / Memo Number'}
+                        </label>
+                        <input
+                          type="text"
+                          value={docRef}
+                          onChange={e => setDocRef(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                          placeholder="ASWO/DOC/2026/..."
+                        />
+                      </div>
+
+                      {/* Document Subject/Title */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-slate-500">
+                          {lang === 'bn' ? 'নথির বিষয় / শিরোনাম' : 'Document Subject / Title'}
+                        </label>
+                        <input
+                          type="text"
+                          value={docTitle}
+                          onChange={e => setDocTitle(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                          placeholder="বিষয় লিখুন..."
+                        />
+                      </div>
+
+                      {/* Quick Document Templates */}
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-[9px] font-black uppercase text-slate-500 flex items-center justify-between">
+                          <span>{lang === 'bn' ? 'নমুনা অফিসিয়াল টেমপ্লেট লোড করুন' : 'Load Official Template'}</span>
+                          <Sparkles size={12} className="text-amber-500" />
+                        </label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => insertDocumentTemplate('certificate')}
+                            className="p-2 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-left text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                          >
+                            📜 {lang === 'bn' ? 'প্রত্যয়নপত্র' : 'Certificate'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => insertDocumentTemplate('notice')}
+                            className="p-2 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-left text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                          >
+                            📢 {lang === 'bn' ? 'জরুরি নোটিশ' : 'Notice'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => insertDocumentTemplate('resolution')}
+                            className="p-2 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-left text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                          >
+                            ⚖️ {lang === 'bn' ? 'কমিটির সিদ্ধান্ত' : 'Resolution'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => insertDocumentTemplate('appreciation')}
+                            className="p-2 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-left text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                          >
+                            🤝 {lang === 'bn' ? 'ধন্যবাদপত্র' : 'Appreciation'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* RECEIPT MODE CONTROLS */}
+                  {qrMode === 'receipt' && (
+                    <div className="space-y-3 p-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-[10px] font-black uppercase text-emerald-800 dark:text-emerald-300">
+                        <span className="flex items-center gap-1.5">
+                          <Receipt size={14} />
+                          {lang === 'bn' ? 'অফিসিয়াল রশিদ ভেরিফিকেশন' : 'Official Receipt Verification'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={generateNewReceiptId}
+                          className="flex items-center gap-1 text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          <RefreshCw size={11} />
+                          <span>{lang === 'bn' ? 'নতুন রশিদ নং' : 'New Rec No'}</span>
+                        </button>
+                      </div>
+
+                      {/* Pick from database donations if any */}
+                      {donations && donations.length > 0 && (
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase text-slate-500">
+                            {lang === 'bn' ? 'অনুমোদিত অনুদান থেকে লিংক করুন (ঐচ্ছিক)' : 'Link From Approved Donation'}
+                          </label>
+                          <select
+                            value={receiptSelectedDonationId}
+                            onChange={e => handleSelectDonationForReceipt(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 truncate"
+                          >
+                            <option value="">{lang === 'bn' ? '-- অনুদান নির্বাচন করুন --' : '-- Select Donation --'}</option>
+                            {donations.slice(0, 15).map(d => (
+                              <option key={d.id} value={d.id}>
+                                {d.donorName || d.name || 'Donor'} - ৳{d.amount?.toLocaleString()} ({d.purpose || 'General'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Receipt ID */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-slate-500">
+                          {lang === 'bn' ? 'রশিদ নম্বর' : 'Receipt ID'}
+                        </label>
+                        <input
+                          type="text"
+                          value={receiptId}
+                          onChange={e => setReceiptId(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                          placeholder="REC-XXXXX"
+                        />
+                      </div>
+
+                      {/* Recipient / Donor Name */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase text-slate-500">
+                            {lang === 'bn' ? 'দাতার নাম' : 'Donor Name'}
+                          </label>
+                          <input
+                            type="text"
+                            value={receiptDonorName}
+                            onChange={e => setReceiptDonorName(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase text-slate-500">
+                            {lang === 'bn' ? 'টাকার পরিমাণ' : 'Amount'}
+                          </label>
+                          <input
+                            type="text"
+                            value={receiptAmount}
+                            onChange={e => setReceiptAmount(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold font-mono text-slate-800 dark:text-slate-100"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Fund Purpose */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-slate-500">
+                          {lang === 'bn' ? 'অনুদানের খাত' : 'Purpose / Fund'}
+                        </label>
+                        <input
+                          type="text"
+                          value={receiptPurpose}
+                          onChange={e => setReceiptPurpose(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100"
+                        />
+                      </div>
+
+                      {/* Insert Table Button */}
+                      <button
+                        type="button"
+                        onClick={insertReceiptTemplate}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Receipt size={14} />
+                        <span>{lang === 'bn' ? 'লেটারহেডে মানি রশিদ যুক্ত করুন' : 'Insert Money Receipt into Pad'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* CUSTOM MODE CONTROLS */}
+                  {qrMode === 'custom' && (
+                    <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in duration-200">
+                      <label className="text-[10px] font-black uppercase text-slate-500">
+                        {lang === 'bn' ? 'কাস্টম কিউআর টেক্সট বা ওয়েব লিংক' : 'Custom Verification Text or URL'}
+                      </label>
+                      <textarea
+                        value={localConfig.qrCustomText || ''}
+                        onChange={e => setLocalConfig({ ...localConfig, qrCustomText: e.target.value })}
+                        rows={3}
+                        className="w-full text-xs font-mono p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  )}
+
+                  {/* Scannable Verification Link & Quick Test Action */}
+                  <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase text-slate-400">
+                        {lang === 'bn' ? 'উৎপাদিত সত্যতা যাচাই লিংক' : 'Live Verification URL'}
+                      </span>
+                      <a
+                        href={qrVerificationText}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline font-black flex items-center gap-1"
+                      >
+                        <ExternalLink size={11} />
+                        <span>{lang === 'bn' ? 'টেস্ট ভেরিফিকেশন' : 'Test Link'}</span>
+                      </a>
+                    </div>
+                    <p className="text-[9px] font-mono text-slate-600 dark:text-slate-400 break-all bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 select-all">
+                      {qrVerificationText}
+                    </p>
+                  </div>
+
                   {/* Position selector */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400">
@@ -1697,43 +2484,6 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                         className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                       />
                     </div>
-                  </div>
-
-                  {/* Metadata Content Area */}
-                  <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                    <label className="text-[10px] font-black uppercase text-slate-400 flex justify-between">
-                      <span>{lang === 'bn' ? 'কিউআর এনকোড ডাটা' : 'QR Encoded Data'}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (localConfig.qrCustomText) {
-                            setLocalConfig({ ...localConfig, qrCustomText: '' });
-                          } else {
-                            setLocalConfig({ ...localConfig, qrCustomText: qrVerificationText });
-                          }
-                        }}
-                        className="text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline font-black uppercase cursor-pointer"
-                      >
-                        {localConfig.qrCustomText 
-                          ? (lang === 'bn' ? 'অটো জেনারেট করুন' : 'Reset to Auto') 
-                          : (lang === 'bn' ? 'কাস্টমাইজ করুন' : 'Customize')}
-                      </button>
-                    </label>
-                    <textarea
-                      value={localConfig.qrCustomText ? localConfig.qrCustomText : qrVerificationText}
-                      readOnly={!localConfig.qrCustomText}
-                      onChange={e => setLocalConfig({ ...localConfig, qrCustomText: e.target.value })}
-                      rows={4}
-                      className={`w-full text-[10px] font-mono p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 resize-none ${
-                        localConfig.qrCustomText ? 'focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500' : 'cursor-not-allowed select-none'
-                      }`}
-                      placeholder="Automatically derived document metadata..."
-                    />
-                    <p className="text-[8px] text-slate-400 font-bold leading-tight">
-                      {lang === 'bn' 
-                        ? 'এই কিউআর কোডটি স্ক্যান করলে উপরোক্ত ভেরিফিকেশন তথ্য বা কাস্টম লিংক পাওয়া যাবে।' 
-                        : 'Scanning this QR code reveals the official digital verification record above.'}
-                    </p>
                   </div>
                 </>
               )}
@@ -2047,7 +2797,7 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                 style={{ 
                   width: '210mm', 
                   height: '297mm', 
-                  padding: '12mm 15mm 15mm 15mm', 
+                  padding: '10mm 14mm 10mm 14mm', 
                   boxSizing: 'border-box',
                   color: '#000000',
                   fontFamily: '"Noto Sans Bengali", sans-serif',
@@ -2059,41 +2809,113 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                   marginLeft: scale < 1 ? 0 : '-105mm', // Centers the A4 page on desktop when scale is 1
                 }}
               >
-                {/* Pad Slogan Slat Header */}
-                <div className="text-center mb-4 select-none pointer-events-none">
-                  <div className="inline-block px-10 py-1.5 border-b border-emerald-950/10 text-[13px] text-emerald-950 uppercase" style={{ ...BENGALI_STYLE }}>
-                    {viewMode === 'bn' ? settings.sloganBn : settings.sloganEn}
+                {/* Security Monogram Watermark */}
+                {showWatermark && (
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+                    style={{ opacity: watermarkOpacity }}
+                  >
+                    <img 
+                      src={logoBase64 || '/images/azadi_logo.png'} 
+                      className="w-[300px] h-[300px] object-contain grayscale" 
+                      alt="Watermark" 
+                    />
+                  </div>
+                )}
+
+                {/* Top Slogan & Bismillah Slat */}
+                <div className="relative z-10 flex items-center justify-between border-b border-emerald-950/15 pb-1 mb-2 text-[10px] text-emerald-950 select-none pointer-events-none" style={{ ...BENGALI_STYLE }}>
+                  <div className="flex items-center gap-1.5 text-[9px] text-emerald-800 font-bold">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    <span>{viewMode === 'bn' ? activeEstablishedBn : activeEstablishedEn}</span>
+                  </div>
+                  <div className="font-bold tracking-wide text-emerald-900 uppercase text-[10px] bg-emerald-50/80 px-3 py-0.5 rounded-full border border-emerald-900/10">
+                    <span>{viewMode === 'bn' ? (localConfig.bismillahText || 'বিসমিল্লাহির রাহমানির রাহিম') : 'BISMILLAHIR RAHMANIR RAHIM'}</span>
+                    <span className="mx-2 text-emerald-400">•</span>
+                    <span>{viewMode === 'bn' ? activeSloganBn : activeSloganEn}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[9px] text-emerald-800 font-bold">
+                    <span>{viewMode === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ অনুমোদিত' : 'Govt. Approved & Regd.'}</span>
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                   </div>
                 </div>
 
-                {/* Main Pad Letter Header */}
-                <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
-                       {(settings.logoUrl || settings.logo)?.trim() ? (
-                         <img src={logoBase64 || getOptimizedImageUrl((settings.logoUrl || settings.logo)!.trim(), 200)} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
-                       ) : (
-                         <Award className="w-10 h-10 text-emerald-800" />
-                       )}
+                {/* Main Pad Letter Header with Full Address & National Identity */}
+                <div className="relative z-10 flex items-center justify-between gap-3 select-none pointer-events-none pb-1.5">
+                  {/* Left: Organization Logo */}
+                  <div className="w-[82px] h-[82px] p-1.5 border-2 border-emerald-700 rounded-full bg-white shadow-xs ring-2 ring-amber-400/30 flex items-center justify-center overflow-hidden shrink-0">
+                    {logoBase64 || (settings.logoUrl || settings.logo)?.trim() ? (
+                      <img src={logoBase64 || '/images/azadi_logo.png'} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" />
+                    ) : (
+                      <Award className="w-10 h-10 text-emerald-800" />
+                    )}
+                  </div>
+
+                  {/* Center: Names, Credentials & Full Address */}
+                  <div className="flex-1 text-center px-1">
+                    <h1 className="text-[25px] font-black text-emerald-950 leading-tight tracking-tight mb-0.5" style={{ ...BENGALI_STYLE, fontWeight: 900 }}>
+                      {viewMode === 'bn' ? (localConfig.organizationNameBn || settings.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ') : (localConfig.organizationNameEn || settings.nameEn || 'Azadi Social Welfare Organization')}
+                    </h1>
+                    <p className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.15em] leading-none mb-1 font-sans">
+                      {viewMode === 'bn' ? (localConfig.organizationNameEn || settings.nameEn || 'AZADI SOCIAL WELFARE ORGANIZATION') : (localConfig.organizationNameBn || settings.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ')}
+                    </p>
+                    <p className="text-[9.5px] font-bold text-slate-600 leading-tight mb-0.5" style={{ ...BENGALI_STYLE }}>
+                      {viewMode === 'bn' ? activeSubHeaderNatureBn : activeSubHeaderNatureEn}
+                      <span className="mx-1 text-slate-400">|</span>
+                      <span className="text-emerald-800 font-semibold">{viewMode === 'bn' ? activeRegNoBn : activeRegNoEn}</span>
+                    </p>
+
+                    {/* Complete Address in Header */}
+                    {showHeaderAddress && (
+                      <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-800 leading-tight my-0.5 bg-slate-50/90 py-0.5 px-2 rounded border border-slate-200/80" style={{ ...BENGALI_STYLE }}>
+                        <span className="text-emerald-700 font-black text-[10px]">📍</span>
+                        <span>{viewMode === 'bn' ? activeAddressBn : activeAddressEn}</span>
+                      </div>
+                    )}
+
+                    {/* Header Contacts */}
+                    <div className="flex items-center justify-center flex-wrap gap-x-2.5 gap-y-0.5 text-[8.5px] font-bold text-emerald-950 mt-0.5">
+                      <span className="flex items-center gap-1 font-mono"><span className="text-emerald-700">📞</span>{activePhone}</span>
+                      <span className="text-amber-500 font-black">•</span>
+                      <span className="flex items-center gap-1 font-mono"><span className="text-emerald-700">✉️</span>{activeEmail}</span>
+                      <span className="text-amber-500 font-black">•</span>
+                      <span className="flex items-center gap-1 font-mono"><span className="text-emerald-700">🌐</span>{activeWebsite}</span>
                     </div>
-                    <div className="flex-1 px-4">
-                      <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1" style={{ fontSize: '32px', ...BENGALI_STYLE }}>{viewMode === 'bn' ? settings.nameBn : settings.nameEn}</h1>
-                      <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>{viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}</p>
+                  </div>
+
+                  {/* Right: Bangladesh Flag & National Identity */}
+                  <div className="w-[82px] flex flex-col items-center justify-center shrink-0">
+                    <div className="w-[74px] h-[48px] border border-slate-200 rounded p-0.5 bg-white shadow-xs flex items-center justify-center overflow-hidden">
+                      <img src={flagBase64 || '/images/bd_flag.png'} className="w-full h-full object-contain" alt="Flag" crossOrigin="anonymous" referrerPolicy="no-referrer" />
                     </div>
-                    <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
-                      {(settings.flagUrl || settings.flag)?.trim() ? (
-                        <img src={flagBase64 || getOptimizedImageUrl((settings.flagUrl || settings.flag)!.trim(), 300)} className="w-full h-full object-contain" alt="Flag" crossOrigin="anonymous" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="text-[10px] font-black text-slate-400">FLAG</span>
-                      )}
-                    </div>
+                    <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-tighter mt-1 text-center leading-tight">
+                      {viewMode === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ' : 'Govt. of Bangladesh'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dual-Line Decorative Divider with Center Ornament */}
+                <div className="relative z-10 mb-2 select-none pointer-events-none">
+                  <div className="h-[2px] bg-emerald-900 w-full rounded-full"></div>
+                  <div className="h-[1px] bg-amber-500 w-full mt-[1.5px] relative flex items-center justify-center">
+                    <span className="absolute bg-white px-2 text-[7px] text-emerald-900 font-serif leading-none">❖</span>
                   </div>
                 </div>
 
                 {/* Date & Reference Row */}
-                <div className="flex items-center justify-between text-xs text-slate-700 font-bold mb-4 px-4 select-none pointer-events-none">
-                  <div className="font-mono">REF: ASWO/PAD/{new Date().getFullYear()}/{(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}</div>
-                  <div>{lang === 'bn' ? 'তারিখ: ' : 'Date: '} <span className="underline decoration-slate-300 underline-offset-4">{today}</span></div>
+                <div className="relative z-10 flex items-center justify-between text-xs text-slate-700 font-bold mb-3 px-2 select-none pointer-events-none">
+                  <div className="font-mono text-[10.5px] bg-slate-50 px-2 py-0.5 rounded border border-slate-200/70">
+                    <span className="text-slate-500 font-sans mr-1">{viewMode === 'bn' ? 'স্মারক নং:' : 'Ref No:'}</span>
+                    <span className="font-bold text-slate-900">
+                      {qrMode === 'receipt' 
+                        ? `${receiptId || 'REC-GENERAL'}`
+                        : `${docRef || `ASWO/PAD/${new Date().getFullYear()}/${(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}`}`}
+                    </span>
+                  </div>
+                  <div className="text-[10.5px]">
+                    <span className="text-slate-500 font-sans mr-1">{viewMode === 'bn' ? 'তারিখ:' : 'Date:'}</span>
+                    <span className="underline decoration-slate-300 underline-offset-4 font-bold text-slate-900">{today}</span>
+                  </div>
                 </div>
 
                 {/* REAL-TIME WYSIWYG DOCUMENT EDITING BODY AREA */}
@@ -2130,9 +2952,13 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                 </div>
 
                 {/* Pad Official Signatory Footer Area */}
-                <div className="pt-6 border-t border-emerald-900/5 mt-4 flex justify-between items-end select-none">
+                <div className="relative z-10 pt-4 border-t border-emerald-900/10 mt-3 flex justify-between items-end select-none">
                   {/* Visual Stamp Block */}
-                  <div className="w-24 h-24 border-4 border-double border-emerald-900/10 rounded-full flex items-center justify-center text-[8px] font-black opacity-40 select-none">STAMP</div>
+                  <div className="w-24 h-24 border-4 border-double border-emerald-900/25 rounded-full flex flex-col items-center justify-center text-[7.5px] font-black text-emerald-950/70 select-none bg-emerald-50/20 p-1 text-center leading-tight">
+                    <span>আজাদী সমাজ কল্যাণ সংঘ</span>
+                    <span className="text-[10px] my-0.5 text-amber-600">★</span>
+                    <span>সিলমোহর ও তারিখ</span>
+                  </div>
                   
                   {/* Leader Signatory Block */}
                   <div className="text-center w-52 space-y-1 relative">
@@ -2177,6 +3003,56 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                   </div>
                 </div>
 
+                {/* Official Comprehensive 3-Column Footer (সম্পূর্ণ অফিসিয়াল ফুটার) */}
+                {showFooterAddress && (
+                  <div className="relative z-10 mt-3 pt-2 border-t-2 border-emerald-900 select-none">
+                    <div className="h-[1px] bg-amber-500 w-full mb-1.5"></div>
+                    
+                    <div className="grid grid-cols-3 gap-2 text-[8.5px] text-slate-700 leading-tight" style={{ ...BENGALI_STYLE }}>
+                      {/* Col 1: Full Address */}
+                      <div className="flex items-start gap-1">
+                        <span className="text-emerald-700 font-black text-[10px] shrink-0">📍</span>
+                        <div>
+                          <strong className="text-emerald-950 block text-[9px] font-black">{viewMode === 'bn' ? 'প্রধান কার্যালয়:' : 'Head Office:'}</strong>
+                          <span className="text-slate-600 block">{viewMode === 'bn' ? activeAddressBn : activeAddressEn}</span>
+                        </div>
+                      </div>
+
+                      {/* Col 2: Direct Contact */}
+                      <div className="flex items-start gap-1 border-x border-slate-200 px-1.5">
+                        <span className="text-emerald-700 font-black text-[10px] shrink-0">📞</span>
+                        <div>
+                          <strong className="text-emerald-950 block text-[9px] font-black">{viewMode === 'bn' ? 'জরুরি যোগাযোগ:' : 'Official Contact:'}</strong>
+                          <span className="font-mono text-slate-700 font-bold block">{activePhone}</span>
+                          <span className="font-mono text-slate-600 block truncate">{activeEmail}</span>
+                        </div>
+                      </div>
+
+                      {/* Col 3: Online & Reg */}
+                      <div className="flex items-start gap-1">
+                        <span className="text-emerald-700 font-black text-[10px] shrink-0">🏛️</span>
+                        <div>
+                          <strong className="text-emerald-950 block text-[9px] font-black">{viewMode === 'bn' ? 'অনলাইন ও নিবন্ধন:' : 'Online & Registration:'}</strong>
+                          <span className="font-mono text-slate-700 font-bold block">{activeWebsite}</span>
+                          <span className="text-slate-600 block text-[7.5px] leading-tight">{viewMode === 'bn' ? activeRegNoBn : activeRegNoEn}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Ribbon */}
+                    <div className="mt-1 pt-0.5 border-t border-dashed border-emerald-900/20 flex items-center justify-between text-[7.5px] text-slate-500">
+                      <span className="font-bold text-emerald-900" style={{ ...BENGALI_STYLE }}>
+                        {viewMode === 'bn' 
+                          ? '“শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া — মানবতার সেবায় নিবেদিত এক বিশ্বস্ত অরাজনৈতিক সামাজিক প্রতিষ্ঠান”' 
+                          : '“Education · Unity · Service · Peace · Sports — Dedicated to the Service of Humanity”'}
+                      </span>
+                      <span className="font-mono text-slate-400">
+                        {viewMode === 'bn' ? '* নথির সত্যতা যাচাই করতে কিউআর কোড স্ক্যান করুন' : '* Scan QR to verify document'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Document Verification QR Code Overlay */}
                 {(localConfig.qrEnabled ?? true) && Boolean(qrCodeDataUrl?.trim()) && (
                   <div 
@@ -2199,8 +3075,8 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
                       alt="Verification QR Code" 
                       crossOrigin="anonymous"
                     />
-                    <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap">
-                      ASWO VERIFIED
+                    <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap text-center">
+                      {qrMode === 'receipt' ? 'RECEIPT VERIFIED' : 'ASWO VERIFIED'}
                     </div>
                     {!isPrintPreview && (
                       <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
@@ -2575,47 +3451,121 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           width: '210mm',
           height: '297mm',
           minHeight: '297mm',
-          padding: '12mm 15mm 15mm 15mm',
+          maxHeight: '297mm',
+          padding: '10mm 14mm 10mm 14mm',
           boxSizing: 'border-box',
           color: '#000000',
           fontFamily: '"Noto Sans Bengali", sans-serif',
+          position: 'relative',
         }}
       >
-        {/* Pad Slogan Slat Header */}
-        <div className="text-center mb-4 select-none pointer-events-none">
-          <div className="inline-block px-10 py-1.5 border-b border-emerald-950/10 text-[13px] text-emerald-950 uppercase" style={{ ...BENGALI_STYLE }}>
-            {viewMode === 'bn' ? settings.sloganBn : settings.sloganEn}
+        {/* Security Monogram Watermark for Print */}
+        {showWatermark && (
+          <div 
+            className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+            style={{ opacity: watermarkOpacity }}
+          >
+            <img 
+              src={logoBase64 || '/images/azadi_logo.png'} 
+              className="w-[300px] h-[300px] object-contain grayscale" 
+              alt="Watermark" 
+            />
+          </div>
+        )}
+
+        {/* Top Slogan & Bismillah Slat */}
+        <div className="relative z-10 flex items-center justify-between border-b border-emerald-950/15 pb-1 mb-2 text-[10px] text-emerald-950 select-none pointer-events-none" style={{ ...BENGALI_STYLE }}>
+          <div className="flex items-center gap-1.5 text-[9px] text-emerald-800 font-bold">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+            <span>{viewMode === 'bn' ? activeEstablishedBn : activeEstablishedEn}</span>
+          </div>
+          <div className="font-bold tracking-wide text-emerald-900 uppercase text-[10px] bg-emerald-50/80 px-3 py-0.5 rounded-full border border-emerald-900/10">
+            <span>{viewMode === 'bn' ? (localConfig.bismillahText || 'বিসমিল্লাহির রাহমানির রাহিম') : 'BISMILLAHIR RAHMANIR RAHIM'}</span>
+            <span className="mx-2 text-emerald-400">•</span>
+            <span>{viewMode === 'bn' ? activeSloganBn : activeSloganEn}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[9px] text-emerald-800 font-bold">
+            <span>{viewMode === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ অনুমোদিত' : 'Govt. Approved & Regd.'}</span>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"></span>
           </div>
         </div>
 
-        {/* Main Pad Letter Header */}
-        <div className="flex flex-col items-center text-center gap-4 border-b-2 border-emerald-900 pb-4 mb-6 select-none pointer-events-none">
-          <div className="flex items-center justify-between w-full">
-            <div className="w-20 h-20 p-1 border-2 border-emerald-600 rounded-full bg-white flex items-center justify-center overflow-hidden">
-               {logoBase64 || (settings.logoUrl || settings.logo)?.trim() ? (
-                 <img src={logoBase64 || '/images/azadi_logo.png'} className="w-full h-full object-contain" alt="Logo" />
-               ) : (
-                 <Award className="w-10 h-10 text-emerald-800" />
-               )}
+        {/* Main Pad Letter Header with Full Address & National Identity */}
+        <div className="relative z-10 flex items-center justify-between gap-3 select-none pointer-events-none pb-1.5">
+          {/* Left: Organization Logo */}
+          <div className="w-[82px] h-[82px] p-1.5 border-2 border-emerald-700 rounded-full bg-white shadow-xs ring-2 ring-amber-400/30 flex items-center justify-center overflow-hidden shrink-0">
+            {logoBase64 || (settings.logoUrl || settings.logo)?.trim() ? (
+              <img src={logoBase64 || '/images/azadi_logo.png'} className="w-full h-full object-contain" alt="Logo" />
+            ) : (
+              <Award className="w-10 h-10 text-emerald-800" />
+            )}
+          </div>
+
+          {/* Center: Names, Credentials & Full Address */}
+          <div className="flex-1 text-center px-1">
+            <h1 className="text-[25px] font-black text-emerald-950 leading-tight tracking-tight mb-0.5" style={{ ...BENGALI_STYLE, fontWeight: 900 }}>
+              {viewMode === 'bn' ? (localConfig.organizationNameBn || settings.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ') : (localConfig.organizationNameEn || settings.nameEn || 'Azadi Social Welfare Organization')}
+            </h1>
+            <p className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.15em] leading-none mb-1 font-sans">
+              {viewMode === 'bn' ? (localConfig.organizationNameEn || settings.nameEn || 'AZADI SOCIAL WELFARE ORGANIZATION') : (localConfig.organizationNameBn || settings.nameBn || 'আজাদী সমাজ কল্যাণ সংঘ')}
+            </p>
+            <p className="text-[9.5px] font-bold text-slate-600 leading-tight mb-0.5" style={{ ...BENGALI_STYLE }}>
+              {viewMode === 'bn' ? activeSubHeaderNatureBn : activeSubHeaderNatureEn}
+              <span className="mx-1 text-slate-400">|</span>
+              <span className="text-emerald-800 font-semibold">{viewMode === 'bn' ? activeRegNoBn : activeRegNoEn}</span>
+            </p>
+
+            {/* Complete Address in Header */}
+            {showHeaderAddress && (
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-800 leading-tight my-0.5 bg-slate-50/90 py-0.5 px-2 rounded border border-slate-200/80" style={{ ...BENGALI_STYLE }}>
+                <span className="text-emerald-700 font-black text-[10px]">📍</span>
+                <span>{viewMode === 'bn' ? activeAddressBn : activeAddressEn}</span>
+              </div>
+            )}
+
+            {/* Header Contacts */}
+            <div className="flex items-center justify-center flex-wrap gap-x-2.5 gap-y-0.5 text-[8.5px] font-bold text-emerald-950 mt-0.5">
+              <span className="flex items-center gap-1 font-mono"><span className="text-emerald-700">📞</span>{activePhone}</span>
+              <span className="text-amber-500 font-black">•</span>
+              <span className="flex items-center gap-1 font-mono"><span className="text-emerald-700">✉️</span>{activeEmail}</span>
+              <span className="text-amber-500 font-black">•</span>
+              <span className="flex items-center gap-1 font-mono"><span className="text-emerald-700">🌐</span>{activeWebsite}</span>
             </div>
-            <div className="flex-1 px-4">
-              <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1" style={{ fontSize: '32px', ...BENGALI_STYLE }}>
-                {viewMode === 'bn' ? settings.nameBn : settings.nameEn}
-              </h1>
-              <p className="text-[10px] font-bold text-emerald-800" style={{ ...BENGALI_STYLE, fontWeight: 700 }}>
-                {viewMode === 'bn' ? settings.establishedBn : settings.establishedEn}
-              </p>
-            </div>
-            <div className="w-20 h-12 border border-slate-100 bg-white flex items-center justify-center rounded-sm">
+          </div>
+
+          {/* Right: Bangladesh Flag & National Identity */}
+          <div className="w-[82px] flex flex-col items-center justify-center shrink-0">
+            <div className="w-[74px] h-[48px] border border-slate-200 rounded p-0.5 bg-white shadow-xs flex items-center justify-center overflow-hidden">
               <img src={flagBase64 || '/images/bd_flag.png'} className="w-full h-full object-contain" alt="Flag" />
             </div>
+            <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-tighter mt-1 text-center leading-tight">
+              {viewMode === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ' : 'Govt. of Bangladesh'}
+            </span>
+          </div>
+        </div>
+
+        {/* Dual-Line Decorative Divider with Center Ornament */}
+        <div className="relative z-10 mb-2 select-none pointer-events-none">
+          <div className="h-[2px] bg-emerald-900 w-full rounded-full"></div>
+          <div className="h-[1px] bg-amber-500 w-full mt-[1.5px] relative flex items-center justify-center">
+            <span className="absolute bg-white px-2 text-[7px] text-emerald-900 font-serif leading-none">❖</span>
           </div>
         </div>
 
         {/* Date & Reference Row */}
-        <div className="flex items-center justify-between text-xs text-slate-700 font-bold mb-4 px-4 select-none pointer-events-none">
-          <div className="font-mono">REF: ASWO/PAD/{new Date().getFullYear()}/{(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}</div>
-          <div>{lang === 'bn' ? 'তারিখ: ' : 'Date: '} <span className="underline decoration-slate-300 underline-offset-4">{today}</span></div>
+        <div className="relative z-10 flex items-center justify-between text-xs text-slate-700 font-bold mb-3 px-2 select-none pointer-events-none">
+          <div className="font-mono text-[10.5px] bg-slate-50 px-2 py-0.5 rounded border border-slate-200/70">
+            <span className="text-slate-500 font-sans mr-1">{viewMode === 'bn' ? 'স্মারক নং:' : 'Ref No:'}</span>
+            <span className="font-bold text-slate-900">
+              {qrMode === 'receipt' 
+                ? `${receiptId || 'REC-GENERAL'}`
+                : `${docRef || `ASWO/PAD/${new Date().getFullYear()}/${(letterhead?.leaderName?.split(' ')[0] || 'ADMIN').toUpperCase()}`}`}
+            </span>
+          </div>
+          <div className="text-[10.5px]">
+            <span className="text-slate-500 font-sans mr-1">{viewMode === 'bn' ? 'তারিখ:' : 'Date:'}</span>
+            <span className="underline decoration-slate-300 underline-offset-4 font-bold text-slate-900">{today}</span>
+          </div>
         </div>
 
         {/* Real-time WYSIWYG Document Body for Print */}
@@ -2629,9 +3579,13 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
         />
 
         {/* Pad Official Signatory Footer Area */}
-        <div className="pt-6 border-t border-emerald-900/5 mt-4 flex justify-between items-end select-none relative">
+        <div className="relative z-10 pt-4 border-t border-emerald-900/10 mt-3 flex justify-between items-end select-none">
           {/* Visual Stamp Block */}
-          <div className="w-24 h-24 border-4 border-double border-emerald-900/10 rounded-full flex items-center justify-center text-[8px] font-black opacity-40 select-none">STAMP</div>
+          <div className="w-24 h-24 border-4 border-double border-emerald-900/25 rounded-full flex flex-col items-center justify-center text-[7.5px] font-black text-emerald-950/70 select-none bg-emerald-50/20 p-1 text-center leading-tight">
+            <span>আজাদী সমাজ কল্যাণ সংঘ</span>
+            <span className="text-[10px] my-0.5 text-amber-600">★</span>
+            <span>সিলমোহর ও তারিখ</span>
+          </div>
           
           {/* Leader Signatory Block */}
           <div className="text-center w-52 space-y-1 relative">
@@ -2659,6 +3613,56 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
           </div>
         </div>
 
+        {/* Official Comprehensive 3-Column Footer (সম্পূর্ণ অফিসিয়াল ফুটার) */}
+        {showFooterAddress && (
+          <div className="relative z-10 mt-3 pt-2 border-t-2 border-emerald-900 select-none">
+            <div className="h-[1px] bg-amber-500 w-full mb-1.5"></div>
+            
+            <div className="grid grid-cols-3 gap-2 text-[8.5px] text-slate-700 leading-tight" style={{ ...BENGALI_STYLE }}>
+              {/* Col 1: Full Address */}
+              <div className="flex items-start gap-1">
+                <span className="text-emerald-700 font-black text-[10px] shrink-0">📍</span>
+                <div>
+                  <strong className="text-emerald-950 block text-[9px] font-black">{viewMode === 'bn' ? 'প্রধান কার্যালয়:' : 'Head Office:'}</strong>
+                  <span className="text-slate-600 block">{viewMode === 'bn' ? activeAddressBn : activeAddressEn}</span>
+                </div>
+              </div>
+
+              {/* Col 2: Direct Contact */}
+              <div className="flex items-start gap-1 border-x border-slate-200 px-1.5">
+                <span className="text-emerald-700 font-black text-[10px] shrink-0">📞</span>
+                <div>
+                  <strong className="text-emerald-950 block text-[9px] font-black">{viewMode === 'bn' ? 'জরুরি যোগাযোগ:' : 'Official Contact:'}</strong>
+                  <span className="font-mono text-slate-700 font-bold block">{activePhone}</span>
+                  <span className="font-mono text-slate-600 block truncate">{activeEmail}</span>
+                </div>
+              </div>
+
+              {/* Col 3: Online & Reg */}
+              <div className="flex items-start gap-1">
+                <span className="text-emerald-700 font-black text-[10px] shrink-0">🏛️</span>
+                <div>
+                  <strong className="text-emerald-950 block text-[9px] font-black">{viewMode === 'bn' ? 'অনলাইন ও নিবন্ধন:' : 'Online & Registration:'}</strong>
+                  <span className="font-mono text-slate-700 font-bold block">{activeWebsite}</span>
+                  <span className="text-slate-600 block text-[7.5px] leading-tight">{viewMode === 'bn' ? activeRegNoBn : activeRegNoEn}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Ribbon */}
+            <div className="mt-1 pt-0.5 border-t border-dashed border-emerald-900/20 flex items-center justify-between text-[7.5px] text-slate-500">
+              <span className="font-bold text-emerald-900" style={{ ...BENGALI_STYLE }}>
+                {viewMode === 'bn' 
+                  ? '“শিক্ষা · ঐক্য · সেবা · শান্তি · ক্রীড়া — মানবতার সেবায় নিবেদিত এক বিশ্বস্ত অরাজনৈতিক সামাজিক প্রতিষ্ঠান”' 
+                  : '“Education · Unity · Service · Peace · Sports — Dedicated to the Service of Humanity”'}
+              </span>
+              <span className="font-mono text-slate-400">
+                {viewMode === 'bn' ? '* নথির সত্যতা যাচাই করতে কিউআর কোড স্ক্যান করুন' : '* Scan QR to verify document'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Verification QR Code Overlay */}
         {(localConfig.qrEnabled ?? true) && Boolean(qrCodeDataUrl?.trim()) && (
           <div 
@@ -2670,8 +3674,8 @@ Date: ${today || new Date().toISOString().split('T')[0]}`;
               className="w-full h-full object-contain mix-blend-multiply" 
               alt="Verification QR Code" 
             />
-            <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap">
-              ASWO VERIFIED
+            <div className="text-[6px] text-slate-400 font-mono tracking-tighter uppercase leading-none mt-0.5 whitespace-nowrap text-center">
+              {qrMode === 'receipt' ? 'RECEIPT VERIFIED' : 'ASWO VERIFIED'}
             </div>
           </div>
         )}

@@ -229,9 +229,27 @@ export const SettingsManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Address (EN)</label>
-              <textarea rows={2} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" value={localSettings.addressEn} onChange={e => setLocalSettings({...localSettings, addressEn: e.target.value})} />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">ঠিকানা (বাংলা)</label>
+                <textarea 
+                  rows={2} 
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold font-bengali" 
+                  value={localSettings.addressBn || ''} 
+                  onChange={e => setLocalSettings({...localSettings, addressBn: e.target.value})} 
+                  placeholder="ওয়ার্ড নং ১৭, ১নং রাস্তা, মিরবক্সটুলা, সিলেট, বাংলাদেশ"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Address (English)</label>
+                <textarea 
+                  rows={2} 
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-bold" 
+                  value={localSettings.addressEn || ''} 
+                  onChange={e => setLocalSettings({...localSettings, addressEn: e.target.value})} 
+                  placeholder="Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh"
+                />
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">

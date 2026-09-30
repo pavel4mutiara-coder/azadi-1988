@@ -24,11 +24,12 @@ export const Contact: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
-  const cleanPhone = settings.phone.replace(/[^0-9+]/g, '');
-  const cleanWhatsApp = (settings.adminWhatsApp || '8801712782564').replace(/[^0-9]/g, '');
+  const cleanPhone = (settings.phone || '+8801711975488').replace(/[^0-9+]/g, '');
+  const cleanWhatsApp = (settings.adminWhatsApp || '8801711975488').replace(/[^0-9]/g, '');
   const waUrl = `https://wa.me/${cleanWhatsApp}`;
-  const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent('Mirbox Tula, Sylhet, Bangladesh')}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent('Mirbox Tula, Sylhet, Bangladesh')}`;
+  const mapAddress = settings.addressEn || 'Ward No. 17, Road No. 1, Mirboxtula, Sylhet, Bangladesh';
+  const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapAddress)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapAddress)}`;
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
